@@ -1,9 +1,10 @@
+import Link from "next/link";
 import { ArrowRight, DopaMark } from "./icons";
 
 const changelog = [
   {
     title: "TRIBE v2 cortical drivers",
-    body: "Inspect which brain ROIs (video vs text-audio) move ROI predictions for each creative.",
+    body: "Inspect the five most responsive predicted cortical regions for each creative.",
     date: "Jul 22, 2026",
   },
   {
@@ -13,12 +14,12 @@ const changelog = [
   },
   {
     title: "Competitor scrape properties",
-    body: "Competitor research now tags hooks, offers, and predicted ROI so you can compare rivals on the same brain→metric stack.",
+    body: "Competitor research tags hooks, offers, and predicted average CTR so you can compare creatives consistently.",
     date: "Jun 30, 2026",
   },
   {
     title: "Agent-assisted flight updates",
-    body: "Flight updates pull recent scores, timeline peaks, and agent actions into a single briefing.",
+    body: "Flight updates pull recent scores, cortical response summaries, and agent actions into one briefing.",
     date: "Jun 17, 2026",
   },
 ];
@@ -26,7 +27,7 @@ const changelog = [
 const quotes = [
   {
     quote:
-      "We kill weak ads before spend — TRIBE v2 plus Dopa’s metric heads changed how we A/B.",
+      "We compare ad concepts before spend — TRIBE v2 plus Dopa’s CTR prediction changed how we review creative.",
     name: "Maya Chen",
     role: "Growth Lead, illustrative",
   },
@@ -37,7 +38,7 @@ const quotes = [
   },
   {
     quote:
-      "Dopa is excellent for pre-spend scoring. Brain signal to ROI in one dashboard.",
+      "Dopa puts a predicted average CTR and modeled cortical response in one dashboard.",
     name: "Jordan Lee",
     role: "Media Buyer, illustrative",
   },
@@ -124,12 +125,12 @@ export function FinalCta() {
           Available today.
         </h2>
         <div className="relative mt-8 flex flex-wrap items-center justify-center gap-3">
-          <a
+          <Link
             href="/?modal=signup"
             className="inline-flex h-10 items-center rounded-lg bg-white px-4 text-[14px] font-medium text-[#08090a] hover:opacity-90"
           >
             Get started
-          </a>
+          </Link>
           <a
             href="#contact"
             className="inline-flex h-10 items-center rounded-lg border border-white/[0.1] px-4 text-[14px] text-foreground hover:bg-white/[0.04]"
@@ -154,42 +155,6 @@ export function FinalCta() {
   );
 }
 
-const footerCols = [
-  {
-    title: "Product",
-    links: ["Intake", "Plan", "Build", "Diffs", "Monitor", "Pricing", "Security"],
-  },
-  {
-    title: "Features",
-    links: [
-      "TRIBE v2",
-      "Agents",
-      "Metric heads",
-      "Competitor scrape",
-      "Insights",
-      "A/B replace",
-      "Integrations",
-      "Changelog",
-    ],
-  },
-  {
-    title: "Company",
-    links: ["About", "Customers", "Careers", "Blog", "Method", "Quality", "Brand"],
-  },
-  {
-    title: "Resources",
-    links: ["Switch", "Download", "Docs", "Developers", "Status", "Enterprise", "Startups"],
-  },
-  {
-    title: "Connect",
-    links: ["Contact us", "Community", "X (Twitter)", "GitHub", "YouTube"],
-  },
-  {
-    title: "Legal",
-    links: ["Privacy", "Terms", "DPA", "AUP"],
-  },
-];
-
 export function Footer() {
   return (
     <footer id="contact" className="border-t border-white/[0.06] bg-[#08090a]">
@@ -200,10 +165,10 @@ export function Footer() {
           <span className="text-[12px] text-tertiary ml-2">© {new Date().getFullYear()} Dopa, Inc.</span>
         </div>
         <div className="flex flex-wrap items-center gap-6 text-[13px] text-secondary">
-          <a href="/demo" className="transition-colors hover:text-white">Demo</a>
-          <a href="/dashboard" className="transition-colors hover:text-white">Dashboard</a>
-          <a href="/privacy" className="transition-colors hover:text-white">Privacy</a>
-          <a href="/terms" className="transition-colors hover:text-white">Terms</a>
+          <Link href="/demo" className="transition-colors hover:text-white">Demo</Link>
+          <Link href="/dashboard" className="transition-colors hover:text-white">Dashboard</Link>
+          <Link href="/privacy" className="transition-colors hover:text-white">Privacy</Link>
+          <Link href="/terms" className="transition-colors hover:text-white">Terms</Link>
         </div>
       </div>
     </footer>

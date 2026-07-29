@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { DemoHeader } from "@/components/demo/DemoHeader";
 import { Footer } from "@/components/landing/Closing";
 
@@ -26,7 +25,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-[16px] font-medium text-white mb-2">2. Data We Collect</h2>
             <p>
-              We collect information you provide directly to us when creating an account, uploading ad creative files (video, image, audio), or interacting with our neural prediction tools. Uploaded ad assets are analyzed using our multimodal models to compute predictive metrics (ROI, CVR, iCTR).
+              We collect information you provide directly to us when creating an account, uploading ad video files, or interacting with our prediction tools. Uploaded ad assets are analyzed to produce a predicted average click-through rate and modeled cortical response.
             </p>
           </section>
 

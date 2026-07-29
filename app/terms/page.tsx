@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { DemoHeader } from "@/components/demo/DemoHeader";
 import { Footer } from "@/components/landing/Closing";
 

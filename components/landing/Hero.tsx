@@ -16,8 +16,8 @@ export function Hero() {
 
           <div className="animate-fade-up-delay mt-6 flex flex-col gap-4 sm:mt-7 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
             <p className="max-w-[420px] text-[15px] leading-6 text-[#8a8f98] md:text-[16px] md:leading-7">
-              Upload ads → TRIBE v2 brain → Dopa predicts ROI, CVR, and clicks.
-              Designed for the AI era.
+              Upload an ad, predict its average click-through rate, and inspect
+              the cortical response modeled by TRIBE v2.
             </p>
 
             <a

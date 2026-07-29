@@ -139,8 +139,8 @@ export function HeroIssueDemo() {
             <code className="rounded-[4px] bg-white/[0.06] px-1.5 py-[1px] font-mono text-[12px] text-[#d0d6e0]">
               TRIBE v2
             </code>{" "}
-            brain encoding, then dopa-model predicts ROI, CVR, and click timeline before
-            spend.
+            cortical encoding, then dopa-model predicts average click-through
+            rate before spend.
           </p>
 
           <div className="mt-10">
@@ -159,11 +159,12 @@ export function HeroIssueDemo() {
               />
               <Activity
                 avatar={<Avatar initials="TI" color="#3d4450" />}
-                name="Metric head"
+                name="Dopa model"
                 time="2min ago"
                 body={
                   <>
-                    predicted <Chip>ROI 2.84×</Chip> and <Chip>Tier 5</Chip>
+                    returned <Chip>Predicted CTR 2.84%</Chip> with{" "}
+                    <Chip>cortical playback</Chip>
                   </>
                 }
               />
@@ -198,8 +199,10 @@ export function HeroIssueDemo() {
                   </span>
                 </div>
                 <div className="text-[13px] text-[#8a8f98]">
-                  Ran brain → metrics ·{" "}
-                  <span className="text-[#d0d6e0]">Predicted lift ready for review</span>
+                  Ran cortical encode → CTR ·{" "}
+                  <span className="text-[#d0d6e0]">
+                    Average-subject prediction ready for review
+                  </span>
                 </div>
                 <div className="mt-2 text-[12px] text-[#62666d]">
                   Dopa moved creative from Queue to Boost · just now
@@ -271,8 +274,10 @@ export function HeroIssueDemo() {
             Thinking...
           </p>
           <div className="rounded-md border border-white/[0.06] bg-black/30 px-2 py-1.5 text-[10px]">
-            <div className="text-[#62666d]">brain_combined → roi head</div>
-            <div className="text-emerald-400/90">ROI 2.84× · Tier 5</div>
+            <div className="text-[#62666d]">brain_video → mean CTR head</div>
+            <div className="text-emerald-400/90">
+              Predicted average CTR 2.84%
+            </div>
           </div>
           <p className="text-[#62666d]">Worked for 7s</p>
         </div>

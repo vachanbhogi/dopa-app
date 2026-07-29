@@ -115,7 +115,7 @@ export function DashboardShell({
             {active === "googleAds" && <GoogleAdsTab />}
             {active === "keywords" && <PlaceholderPanel title="Keywords" body="Track trending ad keywords and messaging hooks across your campaigns." />}
             {active === "competitors" && <PlaceholderPanel title="Competitors" body="Scrape competitor ads from the open web and score them on the same brain → metric stack." />}
-            {active === "metrics" && <PlaceholderPanel title="Metrics" body="High-level ROI trends, tier distributions, and budget efficiency across all campaigns." />}
+            {active === "metrics" && <PlaceholderPanel title="Metrics" body="Predicted average CTR results and model runtime details across analyzed creatives." />}
             {active === "settings" && <PlaceholderPanel title="Settings" body="Manage your workspace, team members, and API integrations." />}
           </div>
         </main>

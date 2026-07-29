@@ -3,12 +3,12 @@ import { ArrowRight } from "./icons";
 const pillars = [
   {
     title: "TRIBE v2 brain",
-    body: "Meta’s neural encoder predicts cortical responses to your ad’s video, audio, and language.",
+    body: "Meta’s neural encoder predicts an average-subject cortical response to your ad’s video frames.",
     fig: "FIG 0.2",
   },
   {
     title: "Metric prediction",
-    body: "dopa-model maps brain features to ROI, CVR, mean iCTR, and max iCTR before you spend.",
+    body: "dopa-model maps those cortical features to one predicted average click-through rate.",
     fig: "FIG 0.3",
   },
   {
@@ -24,8 +24,8 @@ export function Species() {
       <div className="mx-auto max-w-[1200px] px-5 py-24 md:px-8 md:py-32">
         <h2 className="mx-auto max-w-[820px] text-center text-[28px] font-medium leading-[1.2] tracking-[-0.03em] text-foreground md:text-[40px]">
           A new species of campaign tool. Purpose-built for marketing teams with AI
-          workflows at its core, Dopa predicts ad performance from the brain — then
-          runs the campaign.
+          workflows at its core, Dopa predicts average CTR from modeled cortical
+          response — then puts the evidence in context.
         </h2>
 
         <div className="mt-16 grid gap-10 md:mt-24 md:grid-cols-3 md:gap-8">
@@ -109,8 +109,8 @@ export function Intake() {
       issues: [
         "Score UGC unbox vs studio walkthrough",
         "Scrape Rival Labs summer hooks",
-        "Simulate A/B lift before spend",
-        "Boost Tier 5 creatives into always-on",
+        "Compare predicted CTR before spend",
+        "Review highest-scoring creatives",
       ],
     },
     {
@@ -120,14 +120,17 @@ export function Intake() {
         { title: "Kill soft-CTA variant", tags: ["A/B", "Pause"] },
         { title: "TRIBE encode batch · 12 cuts", tags: ["Brain"] },
         { title: "Competitor price-slash montage", tags: ["Research"] },
-        { title: "Peak click at 7s — move CTA earlier", tags: ["Timeline"] },
+        {
+          title: "Strongest cortical response at 7s",
+          tags: ["Response"],
+        },
       ],
     },
     {
       title: "In Progress",
       count: 3,
       issues: [
-        { title: "Predict ROI for founder talking head", id: "AD-1881" },
+        { title: "Predict average CTR for founder cut", id: "AD-1881" },
         { title: "Launch Summer Drop flight", tags: ["Campaign"], id: "MKT-1028" },
         { title: "Replace live A/B with brain delta", tags: ["A/B"], id: "AD-2010" },
       ],
@@ -136,10 +139,18 @@ export function Intake() {
       title: "Done",
       count: 53,
       issues: [
-        { title: "Paused Studio walkthrough (Tier 2)", tags: ["Pause"], id: "AD-1755" },
-        { title: "Boosted unbox hook (Tier 5)", id: "AD-1942" },
+        {
+          title: "Reviewed Studio walkthrough score",
+          tags: ["Review"],
+          id: "AD-1755",
+        },
+        { title: "Compared unbox hook score", id: "AD-1942" },
         { title: "Competitor scrape · 3 brands", id: "RES-012" },
-        { title: "Published click timeline report", tags: ["Report"], id: "AD-1660" },
+        {
+          title: "Published cortical response report",
+          tags: ["Report"],
+          id: "AD-1660",
+        },
       ],
     },
   ];
@@ -205,8 +216,8 @@ export function Intake() {
             <div className="space-y-3 text-[13px] leading-5">
               <Slack name="maya" text="Has anyone scored the new unbox cut against Rival Labs?" />
               <Slack name="lena" text="Live A/B is burning budget on the soft CTA — can we pretest?" />
-              <Slack name="maya" text="Yea, we should run TRIBE v2 then let dopa-model predict ROI before spend..." />
-              <Slack name="alex" text="Feels like we could kill losers from brain deltas and only ship Tier 4–5 creatives." />
+              <Slack name="maya" text="Yea, we should run TRIBE v2 and compare predicted average CTR before spend..." />
+              <Slack name="alex" text="Let’s review the CTR estimates beside the modeled cortical response." />
               <div className="rounded-md border border-dashed border-white/[0.1] bg-white/[0.02] px-3 py-2 text-secondary">
                 <span className="text-accent">@Dopa</span> score these cuts, pause weak ones, and
                 assign winners to me
@@ -259,7 +270,8 @@ export function Plan() {
           </h2>
           <p className="mt-4 text-[16px] leading-7 text-secondary">
             Plan flights from creative idea to spend. Align your team on predicted
-            winners, roadmaps, and clear briefs grounded in brain→metric scores.
+            creative options, roadmaps, and clear briefs grounded in predicted
+            CTR and cortical-response evidence.
           </p>
         </div>
 
@@ -343,8 +355,8 @@ export function Build() {
             Move campaigns forward across teams and agents
           </h2>
           <p className="mt-4 text-[16px] leading-7 text-secondary">
-            Deploy agents that score creatives with TRIBE v2, predict metrics, and
-            manage flights end-to-end — or work alongside your team.
+            Deploy agents that score creatives with TRIBE v2, predict average
+            CTR, and manage flights end-to-end — or work alongside your team.
           </p>
         </div>
 
@@ -356,12 +368,14 @@ export function Build() {
             <div className="space-y-3 p-4 font-mono text-[12px] leading-5 text-secondary">
               <p className="text-foreground">On it! I&apos;ve received your request.</p>
               <p>Kicked off TRIBE v2 encode on summer-drop/unbox.mp4</p>
-              <p>Extracting brain_text_audio · brain_video · brain_combined</p>
+              <p>Extracting brain_video cortical response</p>
               <p className="text-tertiary">
-                dopa-model$ predict --targets roi,cvr,mean_ictr,max_ictr
+                dopa-model$ predict --target mean_ctr
               </p>
-              <p className="text-emerald-400">ROI 2.84× · Tier 5</p>
-              <p>Locating peak attention second on click timeline</p>
+              <p className="text-emerald-400">
+                Predicted average CTR 2.84%
+              </p>
+              <p>Ranking the five most responsive cortical parcels</p>
               <p className="text-tertiary">Thought for 5s</p>
             </div>
           </div>
@@ -395,7 +409,7 @@ export function Build() {
             { id: "3.1", label: "Creatives" },
             { id: "3.2", label: "Agents" },
             { id: "3.3", label: "TRIBE v2" },
-            { id: "3.4", label: "Metric heads" },
+            { id: "3.4", label: "CTR model" },
             { id: "3.5", label: "Flights" },
           ]}
         />
@@ -407,12 +421,12 @@ export function Build() {
 const beforeCode = `// live A/B — wait weeks for spend signal
 shipVariant("soft_cta")
 await splitTest({ budget: 5000 })
-// unknown ROI until post-hoc`;
+// live CTR arrives after spend`;
 
-const afterCode = `// Dopa — TRIBE v2 → metrics first
-const brain = await tribeV2.encode(ad)
-const { roi, tier } = dopa.predict(brain)
-if (tier >= 4) ship(ad)  // ROI 2.84×`;
+const afterCode = `// Dopa — one pre-spend model estimate
+const result = await dopa.analyze(ad)
+review(result.predictedAverageCtr)
+inspect(result.corticalResponse)`;
 
 export function Diffs() {
   return (
@@ -424,8 +438,9 @@ export function Diffs() {
             Review creatives and agent output
           </h2>
           <p className="mt-4 text-[16px] leading-7 text-secondary">
-            Compare live A/B to Dopa’s brain→metric path at a glance. Review predicted
-            lift, discuss, and ship — all within Dopa.
+            Compare live CTR with Dopa’s predicted average CTR at a glance.
+            Review the modeled cortical response, discuss, and decide — all
+            within Dopa.
           </p>
         </div>
 
@@ -459,8 +474,8 @@ export function Monitor() {
             Understand performance at scale
           </h2>
           <p className="mt-4 text-[16px] leading-7 text-secondary">
-            Take the guesswork out of media spend with predicted metrics, flight
-            updates, and dashboards that surface what needs your attention.
+            Put predicted average CTR beside flight updates and dashboards that
+            surface what needs your attention.
           </p>
         </div>
 
@@ -493,7 +508,7 @@ export function Monitor() {
               statusTone="warning"
               by="maya · 1 day ago"
               bullets={[
-                "Unbox hook is Tier 5, but studio walkthrough is still Tier 2",
+                "Unbox hook has the higher predicted average CTR",
                 "Risk of wasted spend if weak cuts stay in the flight",
               ]}
             />
@@ -503,7 +518,7 @@ export function Monitor() {
               statusTone="success"
               by="alex · 3 hours ago"
               bullets={[
-                "Rival Labs UGC scored ROI 1.1× vs your 2.8×",
+                "Rival Labs UGC predicted CTR is 1.1% vs your 2.8%",
                 "Research agent queued nightly scrape for 3 brands",
               ]}
             />
