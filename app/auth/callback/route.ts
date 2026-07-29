@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server";
 import {
   GOOGLE_ADS_TOKEN_COOKIE,
   GOOGLE_ADS_TOKEN_MAX_AGE_SECONDS,
+  isValidGoogleAdsTokenEncryptionKey,
   sealGoogleAdsToken,
 } from "@/utils/google-ads-token";
 import { safeNextUrl } from "@/utils/safe-next-url";
@@ -9,6 +10,10 @@ import { NO_STORE_HEADERS } from "@/utils/http-security";
 import { siteOriginFromRequest } from "@/utils/site-origin";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+
+function privateRedirect(url: URL) {
+  return NextResponse.redirect(url, { headers: NO_STORE_HEADERS });
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -26,30 +31,29 @@ export async function GET(request: Request) {
   const googleAdsRequested = searchParams.get("google_ads") === "1";
 
   if (code) {
-    const supabase = createClient(await cookies());
+    const cookieStore = await cookies();
+    const supabase = createClient(cookieStore);
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      const response = NextResponse.redirect(redirectUrl);
-
       if (googleAdsRequested) {
         const providerToken = data.session?.provider_token;
         const providerRefreshToken =
-          data.session?.provider_refresh_token;
+          data.session?.provider_refresh_token ?? undefined;
         const encryptionKey =
           process.env.GOOGLE_ADS_TOKEN_ENCRYPTION_KEY;
 
-        if (!providerToken || !providerRefreshToken) {
+        if (!providerToken) {
           redirectUrl.searchParams.set("googleAds", "oauth_error");
-          return NextResponse.redirect(redirectUrl);
+          return privateRedirect(redirectUrl);
         }
 
-        if (!encryptionKey) {
+        if (!isValidGoogleAdsTokenEncryptionKey(encryptionKey)) {
           redirectUrl.searchParams.set(
             "googleAds",
             "configuration_required",
           );
-          return NextResponse.redirect(redirectUrl);
+          return privateRedirect(redirectUrl);
         }
 
         let sealedToken: string;
@@ -67,22 +71,28 @@ export async function GET(request: Request) {
             "googleAds",
             "configuration_required",
           );
-          return NextResponse.redirect(redirectUrl);
+          return privateRedirect(redirectUrl);
         }
+        redirectUrl.searchParams.set(
+          "googleAds",
+          providerRefreshToken ? "connected" : "connected_temporary",
+        );
+        const response = privateRedirect(redirectUrl);
         response.cookies.set(GOOGLE_ADS_TOKEN_COOKIE, sealedToken, {
           httpOnly: true,
-          secure: new URL(origin).protocol === "https:",
+          secure: new URL(request.url).protocol === "https:",
           sameSite: "lax",
           path: "/",
           maxAge: GOOGLE_ADS_TOKEN_MAX_AGE_SECONDS,
         });
+        return response;
       }
 
-      return response;
+      return privateRedirect(redirectUrl);
     }
   }
 
   const failureUrl = new URL("/login", origin);
   failureUrl.searchParams.set("error", "Could not authenticate");
-  return NextResponse.redirect(failureUrl);
+  return privateRedirect(failureUrl);
 }

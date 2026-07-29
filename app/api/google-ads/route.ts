@@ -11,6 +11,7 @@ import {
   GOOGLE_ADS_TOKEN_COOKIE,
   GOOGLE_ADS_TOKEN_MAX_AGE_SECONDS,
   isGoogleAdsAccessTokenFresh,
+  isValidGoogleAdsTokenEncryptionKey,
   openGoogleAdsToken,
   sealGoogleAdsToken,
 } from "@/utils/google-ads-token";
@@ -79,7 +80,8 @@ export async function GET() {
   const missingEnvVars = [
     !credentials.customerId && "GOOGLE_ADS_CUSTOMER_ID",
     !credentials.developerToken && "GOOGLE_ADS_DEVELOPER_TOKEN",
-    !encryptionKey && "GOOGLE_ADS_TOKEN_ENCRYPTION_KEY",
+    !isValidGoogleAdsTokenEncryptionKey(encryptionKey) &&
+      "GOOGLE_ADS_TOKEN_ENCRYPTION_KEY",
     !oauthClientId && "GOOGLE_ADS_OAUTH_CLIENT_ID",
     !oauthClientSecret && "GOOGLE_ADS_OAUTH_CLIENT_SECRET",
   ].filter((name): name is string => Boolean(name));
@@ -91,7 +93,7 @@ export async function GET() {
         configured: false,
         source: "unavailable",
         code: "configuration_required",
-        error: "Google Ads server configuration is incomplete.",
+        error: "Google Ads server configuration is incomplete or invalid.",
         campaigns: [],
       },
       503,
@@ -114,7 +116,7 @@ export async function GET() {
 
     if (tokens && isGoogleAdsAccessTokenFresh(tokens)) {
       credentials.accessToken = tokens.accessToken;
-    } else if (tokens) {
+    } else if (tokens?.refreshToken) {
       try {
         credentials.accessToken = await refreshGoogleAccessToken(
           oauthClientId,
@@ -145,6 +147,20 @@ export async function GET() {
         response.cookies.delete(GOOGLE_ADS_TOKEN_COOKIE);
         return response;
       }
+    } else if (tokens) {
+      const response = json(
+        {
+          success: false,
+          configured: true,
+          source: "unavailable",
+          code: "oauth_required",
+          error: "Google Ads authorization expired. Reconnect your account.",
+          campaigns: [],
+        },
+        428,
+      );
+      response.cookies.delete(GOOGLE_ADS_TOKEN_COOKIE);
+      return response;
     }
   }
 

@@ -59,11 +59,17 @@ function connectionStateFor(
 }
 
 function oauthNotice(result: string | undefined): string | null {
+  if (result === "connected") {
+    return "Google Ads connected successfully.";
+  }
+  if (result === "connected_temporary") {
+    return "Google Ads connected. Google did not provide long-lived access, so you may need to reconnect after this session expires.";
+  }
   if (result === "configuration_required") {
-    return "Google authorization succeeded, but secure token storage is not configured.";
+    return "Google authorization succeeded, but secure token storage is not configured correctly.";
   }
   if (result === "oauth_error") {
-    return "Google did not return an Ads access token. Reconnect and approve the requested access.";
+    return "Google sign-in succeeded, but Google did not return an Ads access token. Reconnect and approve the requested access.";
   }
   return null;
 }
@@ -183,6 +189,7 @@ export function GoogleAdsTab({
       if (response.ok && data.success) {
         setCampaigns(data.campaigns);
         setAccount(data.accountDetails);
+        setApiError(null);
         setConnectionState("connected");
         return;
       }
@@ -307,6 +314,11 @@ export function GoogleAdsTab({
     account?.currencyCode && /^[A-Z]{3}$/.test(account.currencyCode)
       ? account.currencyCode
       : "USD";
+  const accountLabel =
+    account?.descriptiveName ??
+    (account?.customerId
+      ? `Google Ads #${account.customerId}`
+      : "Connected account");
 
   return (
     <div className="space-y-8">
@@ -328,12 +340,14 @@ export function GoogleAdsTab({
           {connectionState === "connected" ? (
             <>
               <button
+                type="button"
                 onClick={refreshGoogleAds}
                 className="rounded-lg border border-white/10 px-3 py-1.5 text-[12px] text-secondary transition-colors hover:border-white/20 hover:text-white"
               >
                 Refresh
               </button>
               <button
+                type="button"
                 onClick={() => void handleDisconnect()}
                 className="rounded-lg border border-white/10 px-3 py-1.5 text-[12px] text-secondary transition-colors hover:border-red-400/30 hover:text-red-400"
               >
@@ -347,6 +361,7 @@ export function GoogleAdsTab({
             />
           ) : (
             <button
+              type="button"
               onClick={refreshGoogleAds}
               className="rounded-lg border border-white/10 px-3 py-1.5 text-[12px] text-secondary transition-colors hover:border-white/20 hover:text-white"
             >
@@ -357,9 +372,13 @@ export function GoogleAdsTab({
       </div>
 
       {notice && (
-        <div className="flex items-center justify-between rounded-lg border border-brand/30 bg-brand/10 px-4 py-3 text-[13px] text-brand animate-fade-in">
+        <div
+          role="status"
+          className="flex items-center justify-between rounded-lg border border-brand/30 bg-brand/10 px-4 py-3 text-[13px] text-brand animate-fade-in"
+        >
           <span>{notice}</span>
           <button
+            type="button"
             onClick={() => setNotice(null)}
             className="text-brand/70 hover:text-brand"
             aria-label="Dismiss notice"
@@ -380,6 +399,7 @@ export function GoogleAdsTab({
           }
           action={
             <button
+              type="button"
               onClick={refreshGoogleAds}
               className="mt-6 rounded-lg bg-white px-5 py-2.5 text-[14px] font-medium text-black transition-transform hover:scale-[1.02] active:scale-[0.98]"
             >
@@ -413,8 +433,7 @@ export function GoogleAdsTab({
               <div>
                 Account:{" "}
                 <span className="font-medium text-white">
-                  {account?.descriptiveName ??
-                    `Google Ads #${account?.customerId}`}
+                  {accountLabel}
                 </span>
               </div>
               <div className="hidden text-white/20 sm:block">|</div>
@@ -473,9 +492,13 @@ export function GoogleAdsTab({
                 <h3 className="text-[14px] font-medium text-white">
                   Live Google Ads Campaigns ({filteredCampaigns.length})
                 </h3>
-                <div className="flex items-center gap-1.5 overflow-x-auto rounded-lg border border-white/[0.06] bg-white/[0.02] p-1">
+                <div
+                  className="flex items-center gap-1.5 overflow-x-auto rounded-lg border border-white/[0.06] bg-white/[0.02] p-1"
+                  aria-label="Filter campaigns by channel"
+                >
                   {filters.map((option) => (
                     <button
+                      type="button"
                       key={option}
                       onClick={() => setFilter(option)}
                       className={`rounded-md px-2.5 py-1 text-[12px] transition-colors ${
@@ -483,6 +506,7 @@ export function GoogleAdsTab({
                           ? "bg-white/10 font-medium text-white"
                           : "text-secondary hover:text-white"
                       }`}
+                      aria-pressed={filter === option}
                     >
                       {option}
                     </button>
@@ -504,43 +528,54 @@ export function GoogleAdsTab({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/[0.04]">
-                      {filteredCampaigns.map((campaign) => (
-                        <tr
-                          key={campaign.id}
-                          className="transition-colors hover:bg-white/[0.02]"
-                        >
-                          <td className="px-4 py-3.5">
-                            <div className="font-medium text-white">
-                              {campaign.name}
-                            </div>
-                            <div className="mt-0.5 text-[11px] text-tertiary">
-                              {humanizeChannel(campaign.channelType)}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3.5 font-medium text-white">
-                            {new Intl.NumberFormat("en-US", {
-                              style: "currency",
-                              currency,
-                              maximumFractionDigits: 2,
-                            }).format(campaign.spend)}
-                          </td>
-                          <td className="px-4 py-3.5 font-medium text-white">
-                            {campaign.ctr.toFixed(2)}%
-                          </td>
-                          <td className="px-4 py-3.5 text-white">
-                            {campaign.conversions.toLocaleString()}
-                          </td>
-                          <td className="px-4 py-3.5 font-medium text-emerald-400">
-                            {campaign.roas.toFixed(2)}×
-                          </td>
-                          <td className="px-4 py-3.5">
-                            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                              {campaign.status}
-                            </span>
+                      {filteredCampaigns.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="px-4 py-10 text-center text-secondary"
+                          >
+                            No campaigns match this filter.
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        filteredCampaigns.map((campaign) => (
+                          <tr
+                            key={campaign.id}
+                            className="transition-colors hover:bg-white/[0.02]"
+                          >
+                            <td className="px-4 py-3.5">
+                              <div className="font-medium text-white">
+                                {campaign.name}
+                              </div>
+                              <div className="mt-0.5 text-[11px] text-tertiary">
+                                {humanizeChannel(campaign.channelType)}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3.5 font-medium text-white">
+                              {new Intl.NumberFormat("en-US", {
+                                style: "currency",
+                                currency,
+                                maximumFractionDigits: 2,
+                              }).format(campaign.spend)}
+                            </td>
+                            <td className="px-4 py-3.5 font-medium text-white">
+                              {campaign.ctr.toFixed(2)}%
+                            </td>
+                            <td className="px-4 py-3.5 text-white">
+                              {campaign.conversions.toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3.5 font-medium text-emerald-400">
+                              {campaign.roas.toFixed(2)}×
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                                {campaign.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -576,6 +611,7 @@ function ConnectionBadge({ state }: { state: ConnectionState }) {
 
   return (
     <span
+      role="status"
       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
         connected
           ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
@@ -603,6 +639,7 @@ function ConnectButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={isConnecting}
       className={`inline-flex items-center gap-2.5 rounded-lg bg-white font-medium text-black shadow-lg transition-all hover:bg-white/90 active:scale-[0.97] disabled:cursor-wait disabled:opacity-70 ${
@@ -626,7 +663,10 @@ function ConnectButton({
 
 function LoadingState() {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.015] px-6 py-20 text-center">
+    <div
+      role="status"
+      className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.015] px-6 py-20 text-center"
+    >
       <span className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white" />
       <p className="mt-4 text-[13px] text-secondary">
         Checking Google Ads authorization and campaign data…

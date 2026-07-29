@@ -6,6 +6,7 @@ import {
 } from "../utils/google-ads-client";
 import {
   isGoogleAdsAccessTokenFresh,
+  isValidGoogleAdsTokenEncryptionKey,
   openGoogleAdsToken,
   sealGoogleAdsToken,
 } from "../utils/google-ads-token";
@@ -224,6 +225,42 @@ await test("encrypts, binds, expires, and rejects tampered OAuth tokens", async 
     ),
     null,
   );
+});
+
+await test("keeps a fresh Google access token when no refresh token is returned", async () => {
+  const secret = Buffer.alloc(32, 9).toString("base64");
+  const now = 2_000_000;
+  const sealed = await sealGoogleAdsToken(
+    {
+      accessToken: "temporary-google-access-token",
+      refreshToken: undefined,
+    },
+    secret,
+    "user-456",
+    now,
+  );
+
+  assert.deepEqual(
+    await openGoogleAdsToken(sealed, secret, "user-456", now),
+    {
+      accessToken: "temporary-google-access-token",
+      refreshToken: undefined,
+      accessTokenExpiresAt: now + 55 * 60 * 1000,
+    },
+  );
+});
+
+await test("rejects malformed Google Ads token encryption keys", async () => {
+  assert.equal(
+    isValidGoogleAdsTokenEncryptionKey(Buffer.alloc(32, 4).toString("base64")),
+    true,
+  );
+  assert.equal(
+    isValidGoogleAdsTokenEncryptionKey(Buffer.alloc(31, 4).toString("base64")),
+    false,
+  );
+  assert.equal(isValidGoogleAdsTokenEncryptionKey("not-base64"), false);
+  assert.equal(isValidGoogleAdsTokenEncryptionKey(undefined), false);
 });
 
 await test("keeps authentication redirects on the Dopa origin", async () => {

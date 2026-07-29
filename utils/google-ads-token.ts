@@ -12,7 +12,7 @@ export const GOOGLE_ADS_TOKEN_MAX_AGE_SECONDS = Math.floor(
 
 type StoredGoogleAdsToken = {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
   userId: string;
   accessTokenExpiresAt: number;
   cookieExpiresAt: number;
@@ -31,6 +31,18 @@ function decodeKey(secret: string): Uint8Array {
     );
   }
   return bytes;
+}
+
+export function isValidGoogleAdsTokenEncryptionKey(
+  secret: string | null | undefined,
+): secret is string {
+  if (!secret) return false;
+  try {
+    decodeKey(secret);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -61,7 +73,7 @@ async function importKey(secret: string): Promise<CryptoKey> {
 export async function sealGoogleAdsToken(
   tokens: {
     accessToken: string;
-    refreshToken: string;
+    refreshToken?: string;
   },
   secret: string,
   userId: string,
@@ -70,18 +82,16 @@ export async function sealGoogleAdsToken(
   if (!tokens.accessToken.trim()) {
     throw new Error("Cannot store an empty Google Ads access token.");
   }
-  if (!tokens.refreshToken.trim()) {
-    throw new Error("Cannot store an empty Google Ads refresh token.");
-  }
   if (!userId.trim()) {
     throw new Error("Cannot store a Google Ads token without a user ID.");
   }
 
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await importKey(secret);
+  const refreshToken = tokens.refreshToken?.trim() || undefined;
   const payload: StoredGoogleAdsToken = {
     accessToken: tokens.accessToken.trim(),
-    refreshToken: tokens.refreshToken.trim(),
+    refreshToken,
     userId: userId.trim(),
     accessTokenExpiresAt: now + ACCESS_TOKEN_LIFETIME_MS,
     cookieExpiresAt: now + COOKIE_LIFETIME_MS,
@@ -132,8 +142,9 @@ export async function openGoogleAdsToken(
       !isJsonObject(payload) ||
       typeof payload.accessToken !== "string" ||
       !payload.accessToken ||
-      typeof payload.refreshToken !== "string" ||
-      !payload.refreshToken ||
+      (payload.refreshToken !== undefined &&
+        (typeof payload.refreshToken !== "string" ||
+          !payload.refreshToken.trim())) ||
       typeof payload.userId !== "string" ||
       payload.userId !== expectedUserId ||
       typeof payload.accessTokenExpiresAt !== "number" ||

@@ -32,6 +32,7 @@ export async function getGoogleAdsSession(
   if (isGoogleAdsAccessTokenFresh(tokens)) {
     return { accessToken: tokens.accessToken, clearCookie: false };
   }
+  if (!tokens.refreshToken) return { clearCookie: true };
 
   const clientId = process.env.GOOGLE_ADS_OAUTH_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_ADS_OAUTH_CLIENT_SECRET;
