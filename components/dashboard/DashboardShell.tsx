@@ -42,6 +42,10 @@ const tabs: { id: DashboardTab; label: string; icon: string }[] = [
   { id: "googleAds", label: "Google Ads", icon: "google" },
 ];
 
+function isDashboardTab(value: string | null): value is DashboardTab {
+  return value === "settings" || (value !== null && tabs.some((tab) => tab.id === value));
+}
+
 export function DashboardShell({
   displayName,
   email,
@@ -64,6 +68,7 @@ export function DashboardShell({
   const [businessMenuOpen, setBusinessMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
+  const [businessError, setBusinessError] = useState<string | null>(null);
   const businessMenuRef = useRef<HTMLDivElement>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const [isSelectingBusiness, startSelectBusiness] = useTransition();
@@ -87,15 +92,17 @@ export function DashboardShell({
     if (!businessMenuOpen && !accountMenuOpen) return;
 
     const handlePointerDown = (event: MouseEvent) => {
+      if (!(event.target instanceof Node)) return;
+
       if (
         businessMenuOpen &&
-        !businessMenuRef.current?.contains(event.target as Node)
+        !businessMenuRef.current?.contains(event.target)
       ) {
         setBusinessMenuOpen(false);
       }
       if (
         accountMenuOpen &&
-        !accountMenuRef.current?.contains(event.target as Node)
+        !accountMenuRef.current?.contains(event.target)
       ) {
         setAccountMenuOpen(false);
       }
@@ -116,22 +123,44 @@ export function DashboardShell({
     };
   }, [businessMenuOpen, accountMenuOpen]);
 
+  useEffect(() => {
+    const handleHistoryChange = () => {
+      const tab = new URL(window.location.href).searchParams.get("tab");
+      if (isDashboardTab(tab)) {
+        setActive(tab);
+      }
+    };
+    window.addEventListener("popstate", handleHistoryChange);
+    return () => window.removeEventListener("popstate", handleHistoryChange);
+  }, []);
+
+  const selectTab = (tab: DashboardTab) => {
+    setActive(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", tab);
+    if (tab !== "googleAds") url.searchParams.delete("googleAds");
+    window.history.pushState(null, "", url);
+  };
+
   return (
-    <div className="relative flex h-screen bg-[#08090a] text-foreground">
+    <div className="relative flex h-dvh flex-col bg-[#08090a] text-foreground md:h-screen md:flex-row">
       <div className="dopa-grain pointer-events-none absolute inset-0 z-0 opacity-30" aria-hidden />
 
       {/* ── Sidebar ── */}
-      <aside className="relative z-10 flex w-55 shrink-0 flex-col bg-[#08090a]">
+      <aside className="relative z-10 flex w-full shrink-0 flex-col border-b border-white/6 bg-[#08090a] md:w-55 md:border-b-0">
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(88,92,140,0.08),transparent_55%)]"
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute inset-y-3 right-0 w-px bg-gradient-to-b from-transparent via-white/6 to-transparent"
+          className="pointer-events-none absolute inset-y-3 right-0 hidden w-px bg-gradient-to-b from-transparent via-white/6 to-transparent md:block"
           aria-hidden
         />
 
-        <div className="relative px-3 py-3" ref={businessMenuRef}>
+        <div
+          className="relative border-b border-white/6 px-3 py-3 md:border-b-0"
+          ref={businessMenuRef}
+        >
           <button
             type="button"
             onClick={() => {
@@ -180,10 +209,16 @@ export function DashboardShell({
                     aria-selected={isSelected}
                     disabled={isSelectingBusiness}
                     onClick={() => {
+                      const previousBusinessId = selectedBusinessId;
                       setSelectedBusinessId(business.id);
                       setBusinessMenuOpen(false);
+                      setBusinessError(null);
                       startSelectBusiness(async () => {
-                        await selectBusiness(business.id);
+                        const result = await selectBusiness(business.id);
+                        if (result.error) {
+                          setSelectedBusinessId(previousBusinessId);
+                          setBusinessError(result.error);
+                        }
                       });
                     }}
                     className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] transition-[background-color,color] duration-150 ${
@@ -204,7 +239,7 @@ export function DashboardShell({
                 type="button"
                 onClick={() => {
                   setBusinessMenuOpen(false);
-                  setActive("business");
+                  selectTab("business");
                 }}
                 className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-secondary transition-[background-color,color] duration-150 hover:bg-white/4 hover:text-white"
               >
@@ -214,14 +249,18 @@ export function DashboardShell({
           ) : null}
         </div>
 
-        <nav className="relative flex-1 space-y-0.5 px-2 pt-3" aria-label="Dashboard">
+        <nav
+          className="relative flex gap-0.5 overflow-x-auto px-2 py-2 md:flex-1 md:block md:space-y-0.5 md:pt-3"
+          aria-label="Dashboard"
+        >
           {tabs.map((tab) => {
             const isActive = active === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActive(tab.id)}
-                className={`group relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2.25 text-[13px] transition-[background-color,color] duration-150 active:scale-[0.98] ${
+                type="button"
+                onClick={() => selectTab(tab.id)}
+                className={`group relative flex w-auto shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2.25 text-[13px] transition-[background-color,color] duration-150 active:scale-[0.98] md:w-full ${
                   isActive ? navItemActive : navItemIdle
                 }`}
               >
@@ -269,7 +308,7 @@ export function DashboardShell({
                 type="button"
                 role="menuitem"
                 onClick={() => {
-                  setActive("settings");
+                  selectTab("settings");
                   setAccountMenuOpen(false);
                 }}
                 className={dropdownItem}
@@ -311,7 +350,7 @@ export function DashboardShell({
       </aside>
 
       {/* ── Main ── */}
-      <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
+      <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <header className="relative flex h-13 shrink-0 items-center px-4 sm:px-6">
           <div className="z-10 flex min-w-0 shrink-0 items-center gap-2">
             <span className="truncate text-[12px] text-tertiary">{selectedBusiness?.name}</span>
@@ -319,7 +358,7 @@ export function DashboardShell({
             <h1 className="truncate text-[15px] font-medium text-white">{activeTabLabel}</h1>
           </div>
 
-          <div className="pointer-events-none absolute inset-x-4 flex justify-center sm:inset-x-6">
+          <div className="pointer-events-none absolute inset-x-4 hidden justify-center sm:inset-x-6 md:flex">
             <button
               type="button"
               onClick={() => setCommandMenuOpen(true)}
@@ -362,7 +401,15 @@ export function DashboardShell({
             className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[radial-gradient(ellipse_at_50%_0%,rgba(88,92,140,0.12),transparent_65%)]"
             aria-hidden
           />
-          <div key={active} className="relative mx-auto w-full max-w-7xl px-6 py-8 md:px-8">
+          <div key={active} className="relative mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 md:px-8">
+            {businessError ? (
+              <p
+                role="alert"
+                className="mb-5 rounded-lg border border-red-400/20 bg-red-400/[0.07] px-4 py-3 text-[12px] text-red-200"
+              >
+                {businessError}
+              </p>
+            ) : null}
             {active === "business" && (
               <BusinessTab
                 businesses={businesses}
@@ -374,7 +421,10 @@ export function DashboardShell({
             ) : null}
 
             {active === "products" && selectedBusiness ? (
-              <ProductsTab businessId={selectedBusiness.id} business={selectedBusiness} />
+              <ProductsTab
+                businessId={selectedBusiness.id}
+                business={selectedBusiness}
+              />
             ) : null}
             {active === "keywords" && selectedBusiness ? (
               <KeywordsTab business={selectedBusiness} />
@@ -396,35 +446,22 @@ export function DashboardShell({
       <CommandMenu
         open={commandMenuOpen}
         onOpenChange={setCommandMenuOpen}
-        onSelectTab={setActive}
+        onSelectTab={selectTab}
         businesses={businesses}
         selectedBusinessId={selectedBusinessId}
         onSelectBusiness={(id) => {
+          const previousBusinessId = selectedBusinessId;
           setSelectedBusinessId(id);
+          setBusinessError(null);
           startSelectBusiness(async () => {
-            await selectBusiness(id);
+            const result = await selectBusiness(id);
+            if (result.error) {
+              setSelectedBusinessId(previousBusinessId);
+              setBusinessError(result.error);
+            }
           });
         }}
       />
-    </div>
-  );
-}
-
-function PlaceholderPanel({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both]">
-      <p className="text-[14px] leading-6 text-secondary">{body}</p>
-      <div className="dopa-panel mt-8 flex flex-col items-center justify-center py-16">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/4">
-          <svg className="h-6 w-6 text-white/30" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
-            <path d="M8 3v10M3 8h10" />
-          </svg>
-        </div>
-        <p className="mt-4 text-[15px] font-medium text-white">No {title.toLowerCase()} yet</p>
-        <p className="mt-1.5 max-w-75 text-center text-[13px] leading-5 text-secondary">
-          This feature will be available soon.
-        </p>
-      </div>
     </div>
   );
 }

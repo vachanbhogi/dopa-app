@@ -42,7 +42,7 @@ export function ProductsTab({
   }, [businessId]);
 
   useEffect(() => {
-    loadProducts();
+    queueMicrotask(() => void loadProducts());
   }, [loadProducts]);
 
   const openCreate = () => {
@@ -227,7 +227,7 @@ function ProductCard({
         </div>
       ) : null}
 
-      <div className="mt-4 flex items-center gap-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+      <div className="mt-4 flex items-center gap-2 opacity-100 transition-opacity duration-150 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
         <button
           type="button"
           onClick={onEdit}
@@ -290,12 +290,19 @@ function ProductModal({
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm sm:items-center"
       onClick={onClose}
+      role="presentation"
     >
       <div
         className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-white/10 bg-[#111114] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="product-modal-title"
       >
-        <h2 className="text-[17px] font-medium text-white">
+        <h2
+          id="product-modal-title"
+          className="text-[17px] font-medium text-white"
+        >
           {product ? "Edit product" : "Add product"}
         </h2>
         <p className="mt-1 text-[13px] text-secondary">

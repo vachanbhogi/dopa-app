@@ -12,15 +12,15 @@ const pillars = [
     fig: "FIG 0.3",
   },
   {
-    title: "Agentic campaigns",
-    body: "Agents triage creatives, scrape competitors, and replace slow live A/B loops.",
+    title: "Campaign context",
+    body: "Keep products, AI-assisted competitor research, keyword ideas, and read-only Google Ads reporting in one workspace.",
     fig: "FIG 0.4",
   },
 ];
 
 export function Species() {
   return (
-    <section className="border-t border-white/6">
+    <section id="pipeline" className="scroll-mt-16 border-t border-white/6">
       <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-32">
         <h2 className="mx-auto max-w-205 text-center text-[28px] font-medium leading-[1.2] tracking-[-0.03em] text-foreground md:text-[40px]">
           A new species of campaign tool. Purpose-built for marketing teams with AI
@@ -87,15 +87,14 @@ function FeatureLinks({
   return (
     <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2">
       {items.map((item) => (
-        <a
+        <span
           key={item.id}
-          href={`#${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-          className="inline-flex items-center gap-1.5 text-[13px] text-secondary transition-colors hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-[13px] text-secondary"
         >
           <span className="font-mono text-[11px] text-tertiary">{item.id}</span>
           {item.label}
           <span className="text-tertiary">+</span>
-        </a>
+        </span>
       ))}
     </div>
   );
@@ -108,7 +107,7 @@ export function Intake() {
       count: 8,
       issues: [
         "Score UGC unbox vs studio walkthrough",
-        "Scrape Rival Labs summer hooks",
+        "Research Rival Labs summer hooks",
         "Compare predicted CTR before spend",
         "Review highest-scoring creatives",
       ],
@@ -131,8 +130,8 @@ export function Intake() {
       count: 3,
       issues: [
         { title: "Predict average CTR for founder cut", id: "AD-1881" },
-        { title: "Launch Summer Drop flight", tags: ["Campaign"], id: "MKT-1028" },
-        { title: "Replace live A/B with brain delta", tags: ["A/B"], id: "AD-2010" },
+        { title: "Review Summer Drop creative", tags: ["Campaign"], id: "MKT-1028" },
+        { title: "Compare pre-spend model estimates", tags: ["Review"], id: "AD-2010" },
       ],
     },
     {
@@ -145,7 +144,7 @@ export function Intake() {
           id: "AD-1755",
         },
         { title: "Compared unbox hook score", id: "AD-1942" },
-        { title: "Competitor scrape · 3 brands", id: "RES-012" },
+        { title: "Competitor research · 3 brands", id: "RES-012" },
         {
           title: "Published cortical response report",
           tags: ["Report"],
@@ -161,11 +160,11 @@ export function Intake() {
         <div className="max-w-160">
           <SectionLink index="1.0" label="Intake" />
           <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
-            Make campaign operations self-driving
+            Review creative before you spend
           </h2>
           <p className="mt-4 text-[16px] leading-7 text-secondary">
-            Turn creative uploads and competitor signals into scored actions that are
-            routed, labeled, and prioritized for your media team.
+            Upload short video ads, inspect a model-generated cortical response,
+            and use one predicted average CTR as an additional review signal.
           </p>
         </div>
 
@@ -219,8 +218,8 @@ export function Intake() {
               <Slack name="maya" text="Yea, we should run TRIBE v2 and compare predicted average CTR before spend..." />
               <Slack name="alex" text="Let’s review the CTR estimates beside the modeled cortical response." />
               <div className="rounded-md border border-dashed border-white/10 bg-white/2 px-3 py-2 text-secondary">
-                <span className="text-accent">@Dopa</span> score these cuts, pause weak ones, and
-                assign winners to me
+                <span className="text-accent">@Dopa</span> score this cut so we
+                can review it before the campaign launches
               </div>
             </div>
           </div>
@@ -229,9 +228,9 @@ export function Intake() {
         <FeatureLinks
           items={[
             { id: "1.1", label: "Dopa Agent" },
-            { id: "1.2", label: "Creative triage" },
-            { id: "1.3", label: "Competitor scrape" },
-            { id: "1.4", label: "A/B replace" },
+            { id: "1.2", label: "Creative scoring" },
+            { id: "1.3", label: "Competitor research" },
+            { id: "1.4", label: "Cortical playback" },
           ]}
         />
       </div>
@@ -269,9 +268,8 @@ export function Plan() {
             Define the campaign direction
           </h2>
           <p className="mt-4 text-[16px] leading-7 text-secondary">
-            Plan flights from creative idea to spend. Align your team on predicted
-            creative options, roadmaps, and clear briefs grounded in predicted
-            CTR and cortical-response evidence.
+            Keep business defaults, product profiles, competitor shortlists, and
+            keyword ideas organized around the creative you are reviewing.
           </p>
         </div>
 
@@ -283,8 +281,8 @@ export function Plan() {
           </div>
           <div className="relative min-w-180 space-y-3">
             <RoadBar label="Summer Drop" from={1} span={3} tone="brand" sub="Unbox · UGC · CTA tests" />
-            <RoadBar label="Competitor watch" from={3} span={3} tone="green" sub="Scrape · Score · Alert" />
-            <RoadBar label="A/B replacement" from={5} span={3} tone="amber" sub="Brain delta · Ship" />
+            <RoadBar label="Competitor research" from={3} span={3} tone="green" sub="Suggest · Verify · Compare" />
+            <RoadBar label="Creative review" from={5} span={3} tone="amber" sub="Score · Inspect · Decide" />
           </div>
           <div className="mt-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {initiatives.map((i) => (
@@ -352,11 +350,12 @@ export function Build() {
         <div className="max-w-160">
           <SectionLink index="3.0" label="Build" />
           <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
-            Move campaigns forward across teams and agents
+            Run the scoring pipeline in one place
           </h2>
           <p className="mt-4 text-[16px] leading-7 text-secondary">
-            Deploy agents that score creatives with TRIBE v2, predict average
-            CTR, and manage flights end-to-end — or work alongside your team.
+            Dopa sends an uploaded video through the configured TRIBE v2 scoring
+            service, predicts average CTR, and loads the returned cortical model
+            for interactive inspection.
           </p>
         </div>
 
@@ -438,9 +437,9 @@ export function Diffs() {
             Review creatives and agent output
           </h2>
           <p className="mt-4 text-[16px] leading-7 text-secondary">
-            Compare live CTR with Dopa’s predicted average CTR at a glance.
-            Review the modeled cortical response, discuss, and decide — all
-            within Dopa.
+            Treat Dopa’s predicted average CTR as a model estimate—not a live
+            result or performance guarantee. Review it beside the modeled
+            cortical response before making a campaign decision.
           </p>
         </div>
 
@@ -474,8 +473,8 @@ export function Monitor() {
             Understand performance at scale
           </h2>
           <p className="mt-4 text-[16px] leading-7 text-secondary">
-            Put predicted average CTR beside flight updates and dashboards that
-            surface what needs your attention.
+            Connect an authorized Google Ads account to review read-only campaign
+            actuals, while keeping pre-spend model estimates clearly labeled.
           </p>
         </div>
 
@@ -518,8 +517,8 @@ export function Monitor() {
               statusTone="success"
               by="alex · 3 hours ago"
               bullets={[
-                "Rival Labs UGC predicted CTR is 1.1% vs your 2.8%",
-                "Research agent queued nightly scrape for 3 brands",
+                "Rival Labs remains an AI-suggested competitor to verify",
+                "Planning scenarios are hypotheses, not detected events",
               ]}
             />
           </div>

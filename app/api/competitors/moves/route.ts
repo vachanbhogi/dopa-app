@@ -1,4 +1,11 @@
 import { NextResponse } from "next/server";
+import {
+  errorMessage,
+  isJsonObject,
+  parseGroqJson,
+  stringValue,
+} from "@/lib/validation";
+import { getAuthenticatedUser } from "@/utils/api-auth";
 
 export interface CompetitorMove {
   move_type: "ad_launched" | "price_change" | "positioning_pivot" | "hook_change";
@@ -9,9 +16,88 @@ export interface CompetitorMove {
   timeAgo: string;
 }
 
+function normalizedMoveType(
+  value: string | undefined,
+): CompetitorMove["move_type"] {
+  switch (value) {
+    case "ad_launched":
+    case "price_change":
+    case "positioning_pivot":
+    case "hook_change":
+      return value;
+    default:
+      return "positioning_pivot";
+  }
+}
+
+function normalizedRiskLevel(
+  value: string | undefined,
+): CompetitorMove["risk_level"] {
+  switch (value) {
+    case "low":
+    case "medium":
+    case "high":
+      return value;
+    default:
+      return "medium";
+  }
+}
+
+function normalizeMoves(value: unknown): CompetitorMove[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item) => {
+    if (!isJsonObject(item)) return [];
+    const title = stringValue(item.title, 200);
+    const description = stringValue(item.description, 1_000);
+    if (!title || !description) return [];
+
+    const moveType = stringValue(item.move_type, 80);
+    const riskLevel = stringValue(item.risk_level, 40);
+    const rawCtr =
+      typeof item.predicted_ctr === "number"
+        ? item.predicted_ctr
+        : Number(item.predicted_ctr);
+
+    return [
+      {
+        move_type: normalizedMoveType(moveType),
+        title,
+        description,
+        risk_level: normalizedRiskLevel(riskLevel),
+        predicted_ctr: Number.isFinite(rawCtr)
+          ? Math.min(100, Math.max(0, rawCtr))
+          : 0,
+        timeAgo: "AI scenario",
+      },
+    ];
+  }).slice(0, 4);
+}
+
 export async function POST(req: Request) {
   try {
-    const { competitorName, primaryAngle } = await req.json();
+    if (!(await getAuthenticatedUser())) {
+      return NextResponse.json(
+        { error: "Sign in before generating competitor scenarios." },
+        { status: 401 },
+      );
+    }
+
+    const body: unknown = await req.json();
+    if (!isJsonObject(body)) {
+      return NextResponse.json(
+        { error: "A competitor is required." },
+        { status: 400 },
+      );
+    }
+    const competitorName = stringValue(body.competitorName, 160);
+    const primaryAngle = stringValue(body.primaryAngle, 1_000);
+    if (!competitorName) {
+      return NextResponse.json(
+        { error: "Competitor name is required." },
+        { status: 400 },
+      );
+    }
 
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
@@ -21,9 +107,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const prompt = `Generate recent advertising moves, new campaign launches, and strategy pivots for competitor: ${competitorName} (Strategy: ${primaryAngle || "Direct competitor"}).
+    const prompt = `Generate four plausible advertising scenarios to watch for competitor: ${competitorName} (Known strategy: ${primaryAngle || "Direct competitor"}).
 
-Return a structured JSON object containing an array "moves" of exactly 4 recent campaign moves matching this schema:
+Do not claim these events happened. They are planning hypotheses, not observed news or live market data. Return a structured JSON object containing an array "moves" matching this schema:
 {
   "moves": [
     {
@@ -32,12 +118,12 @@ Return a structured JSON object containing an array "moves" of exactly 4 recent 
       "description": "Explanation of the ad campaign shift or offer move",
       "risk_level": "high",
       "predicted_ctr": 1.65,
-      "timeAgo": "2 hours ago"
+      "timeAgo": "AI scenario"
     }
   ]
 }`;
 
-    const systemPrompt = `You are an Autonomous Ad Radar & Competitor Intelligence Agent.
+    const systemPrompt = `You are a competitive planning assistant.
 Return ONLY valid JSON. Ensure risk_level is one of ['low', 'medium', 'high'] and move_type is one of ['ad_launched', 'price_change', 'positioning_pivot', 'hook_change'].`;
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -55,26 +141,31 @@ Return ONLY valid JSON. Ensure risk_level is one of ['low', 'medium', 'high'] an
         ],
         temperature: 0.7,
       }),
+      signal: AbortSignal.timeout(20_000),
     });
 
     if (!groqRes.ok) {
-      const errText = await groqRes.text();
       return NextResponse.json(
-        { error: `Groq Error: ${errText}` },
-        { status: groqRes.status }
+        { error: "Competitor scenarios are temporarily unavailable." },
+        { status: 502 },
       );
     }
 
-    const groqData = await groqRes.json();
-    const parsed = JSON.parse(groqData.choices?.[0]?.message?.content || "{}");
+    const groqData: unknown = await groqRes.json();
+    const parsed = parseGroqJson(groqData);
 
     return NextResponse.json({
-      moves: parsed.moves || [],
+      moves: normalizeMoves(parsed.moves),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error.message || "Failed to analyze competitor moves." },
-      { status: 500 }
+      {
+        error: errorMessage(
+          error,
+          "Failed to generate competitor scenarios.",
+        ),
+      },
+      { status: 500 },
     );
   }
 }

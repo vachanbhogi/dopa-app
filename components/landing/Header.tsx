@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { AuthLinks } from "@/components/auth/AuthLinks";
-import { ChevronDown, DopaMark } from "./icons";
+import { DopaMark } from "./icons";
 
 const nav = [
-  { label: "Pricing", href: "#pricing" },
+  { label: "Features", href: "#pipeline" },
   { label: "Demo", href: "/demo" },
-  { label: "Contact", href: "#contact" },
+  { label: "Privacy", href: "/privacy" },
 ];
 
 export async function Header() {
@@ -30,9 +30,6 @@ export async function Header() {
                 className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[13px] text-[#b4bcd0] transition-colors hover:text-white"
               >
                 {item.label}
-                {"hasMenu" in item && item.hasMenu ? (
-                  <ChevronDown className="h-3 w-3 opacity-50" />
-                ) : null}
               </a>
             ))}
           </nav>

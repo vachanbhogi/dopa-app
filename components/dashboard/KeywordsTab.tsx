@@ -5,6 +5,35 @@ import type { Business } from "@/lib/business-types";
 import type { Product } from "@/lib/product-types";
 import { listProducts } from "@/app/dashboard/product-actions";
 import type { KeywordResult } from "@/app/api/keywords/generate/route";
+import { errorMessage, isJsonObject } from "@/lib/validation";
+
+const keywordCategories = new Set([
+  "commercial",
+  "problem",
+  "competitor",
+  "long_tail",
+]);
+
+function isKeywordResult(value: unknown): value is KeywordResult {
+  if (!isJsonObject(value)) return false;
+
+  return (
+    typeof value.keyword === "string" &&
+    typeof value.category === "string" &&
+    keywordCategories.has(value.category) &&
+    typeof value.intentDescription === "string" &&
+    typeof value.estimatedSearchVolume === "string" &&
+    typeof value.suggestedAdHeadline === "string" &&
+    (value.cpcFormatted === undefined ||
+      typeof value.cpcFormatted === "string") &&
+    (value.trendSignal === undefined || typeof value.trendSignal === "string") &&
+    (value.isSurging === undefined || typeof value.isSurging === "boolean") &&
+    Array.isArray(value.sources) &&
+    value.sources.every((source) => typeof source === "string") &&
+    (value.volumeSource === "Google Ads" ||
+      value.volumeSource === "AI estimate")
+  );
+}
 
 export function KeywordsTab({ business }: { business: Business }) {
   const [scope, setScope] = useState<"brand" | "product">("brand");
@@ -50,22 +79,34 @@ export function KeywordsTab({ business }: { business: Business }) {
         }),
       });
 
-      const data = await res.json();
+      const data: unknown = await res.json();
+      const responseError =
+        isJsonObject(data) && typeof data.error === "string"
+          ? data.error
+          : "Failed to generate keywords";
       if (!res.ok) {
-        throw new Error(data.error || "Failed to generate keywords");
+        throw new Error(responseError);
       }
-      setKeywords(data.keywords || []);
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred.");
+      setKeywords(
+        isJsonObject(data) && Array.isArray(data.keywords)
+          ? data.keywords.filter(isKeywordResult)
+          : [],
+      );
+    } catch (error: unknown) {
+      setError(errorMessage(error, "An unexpected error occurred."));
     } finally {
       setLoading(false);
     }
   }
 
-  function handleCopy(text: string) {
-    navigator.clipboard.writeText(text);
-    setCopiedKeyword(text);
-    setTimeout(() => setCopiedKeyword(null), 2000);
+  async function handleCopy(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKeyword(text);
+      window.setTimeout(() => setCopiedKeyword(null), 2000);
+    } catch {
+      setError("Your browser blocked clipboard access.");
+    }
   }
 
   return (
@@ -80,7 +121,8 @@ export function KeywordsTab({ business }: { business: Business }) {
             </span>
           </div>
           <p className="mt-1 text-[13px] text-secondary">
-            Enriched with Groq AI Intent Modeling, Google Trends Breakout Signals & Google Ads CPC estimates.
+            AI keyword ideas enriched with live Google Ads history and related
+            Google Trends topics when those sources are available.
           </p>
         </div>
 
@@ -144,9 +186,6 @@ export function KeywordsTab({ business }: { business: Business }) {
             ) : (
               <>
                 <span>Analyze Keywords</span>
-                <span className="rounded bg-white/20 px-1.5 py-0.5 font-mono text-[10px] uppercase">
-                  3 Signals
-                </span>
               </>
             )}
           </button>
@@ -193,9 +232,9 @@ export function KeywordsTab({ business }: { business: Business }) {
 
                 {/* Sources & Trends Tags */}
                 <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                  {item.isSurging && (
+                  {item.trendSignal && (
                     <span className="rounded-full bg-flame/15 px-2 py-0.5 font-mono text-[10px] font-semibold text-orange-400 border border-orange-500/20">
-                      🔥 {item.trendSignal || "+120% Breakout"}
+                      {item.trendSignal}
                     </span>
                   )}
                   {item.sources?.map((s) => (
@@ -211,8 +250,21 @@ export function KeywordsTab({ business }: { business: Business }) {
 
               <div className="mt-4 border-t border-white/6 pt-3">
                 <div className="flex items-center justify-between text-[11px] text-tertiary">
-                  <span>Est. Monthly Vol: <strong className="text-white/80">{item.estimatedSearchVolume}</strong></span>
-                  <span>Est. CPC: <strong className="text-emerald-400 font-mono">{item.cpcFormatted}</strong></span>
+                  <span>
+                    {item.volumeSource === "Google Ads"
+                      ? "Monthly volume"
+                      : "AI volume estimate"}
+                    :{" "}
+                    <strong className="text-white/80">
+                      {item.estimatedSearchVolume}
+                    </strong>
+                  </span>
+                  <span>
+                    CPC:{" "}
+                    <strong className="font-mono text-emerald-400">
+                      {item.cpcFormatted ?? "Unavailable"}
+                    </strong>
+                  </span>
                 </div>
 
                 <div className="mt-2 flex items-center justify-between rounded-md bg-white/3 px-2 py-1.5">
@@ -221,7 +273,7 @@ export function KeywordsTab({ business }: { business: Business }) {
                   </span>
                   <button
                     type="button"
-                    onClick={() => handleCopy(item.suggestedAdHeadline)}
+                    onClick={() => void handleCopy(item.suggestedAdHeadline)}
                     className="ml-2 text-[10px] text-secondary hover:text-white"
                   >
                     {copiedKeyword === item.suggestedAdHeadline ? "Copied!" : "Copy"}
@@ -247,7 +299,9 @@ export function KeywordsTab({ business }: { business: Business }) {
           </div>
           <h3 className="mt-4 text-[15px] font-medium text-white">Multi-Source Keywords Ready</h3>
           <p className="mt-1 max-w-80 text-[13px] text-secondary">
-            Select {scope === "brand" ? "Brand Level" : "a Product"} above and click &quot;Analyze Keywords&quot; to fetch Groq, Google Trends & Google Ads metrics.
+            Select {scope === "brand" ? "Brand Level" : "a Product"} above and
+            click &quot;Analyze Keywords&quot;. Live metrics appear only when the
+            corresponding source is connected and returns data.
           </p>
         </div>
       ) : null}

@@ -44,11 +44,21 @@ async function readVideoDuration(file: File): Promise<number | null> {
   try {
     return await new Promise((resolve) => {
       const video = document.createElement("video");
+      let settled = false;
+      const finish = (value: number | null) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeout);
+        video.removeAttribute("src");
+        video.load();
+        resolve(value);
+      };
+      const timeout = window.setTimeout(() => finish(null), 10_000);
       video.preload = "metadata";
       video.onloadedmetadata = () => {
-        resolve(Number.isFinite(video.duration) ? video.duration : null);
+        finish(Number.isFinite(video.duration) ? video.duration : null);
       };
-      video.onerror = () => resolve(null);
+      video.onerror = () => finish(null);
       video.src = source;
     });
   } finally {
@@ -140,7 +150,6 @@ export function BrainTab() {
       const next = accepted[0];
       if (!next) return;
 
-      resetResult();
       setPhase("validating");
       const nextDuration = await readVideoDuration(next);
       if (nextDuration !== null && nextDuration > MAX_VIDEO_SECONDS) {
@@ -148,6 +157,7 @@ export function BrainTab() {
         setPhase("idle");
         return;
       }
+      resetResult();
       setFile(next);
       replacePreviewUrl(URL.createObjectURL(next));
       setDuration(nextDuration);
@@ -303,6 +313,8 @@ export function BrainTab() {
 
   return (
     <div className="space-y-7">
+      <input {...getInputProps()} />
+
       <div className="animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both]">
         <p className="max-w-180 text-[14px] leading-6 text-secondary">
           Upload an ad to predict its average click-through rate and see the
@@ -313,13 +325,14 @@ export function BrainTab() {
       {!file ? (
         <div
           {...getRootProps()}
+          role="button"
+          aria-label="Choose an ad video"
           className={`group cursor-pointer overflow-hidden rounded-xl border border-dashed transition-[border-color,background-color] duration-200 ${
             isDragActive
               ? "border-brand bg-brand/6"
               : "border-white/8 bg-white/1.5 hover:border-white/15 hover:bg-white/2.5"
           }`}
         >
-          <input {...getInputProps()} />
           <div className="flex aspect-video flex-col items-center justify-center px-6 text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/8 bg-white/6">
               <UploadIcon />
@@ -361,7 +374,7 @@ export function BrainTab() {
             <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
-                onClick={busy ? undefined : open}
+                onClick={open}
                 disabled={busy}
                 className="rounded-md border border-white/10 px-3 py-1.5 text-[12px] text-secondary transition-colors hover:border-white/20 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-40"
               >

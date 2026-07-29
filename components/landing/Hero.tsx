@@ -9,9 +9,9 @@ export function Hero() {
       <div className="relative mx-auto max-w-300 px-5 md:px-8">
         <div className="max-w-205 pb-10 pt-16 md:pb-14 md:pt-22">
           <h1 className="animate-fade-up text-[40px] font-semibold leading-[1.05] tracking-[-0.04em] text-white sm:text-[52px] md:text-[64px]">
-            The agentic campaign
+            Pre-spend creative intelligence
             <br />
-            system for marketing teams
+            for marketing teams
           </h1>
 
           <div className="animate-fade-up-delay mt-6 flex flex-col gap-4 sm:mt-7 sm:flex-row sm:items-center sm:justify-between sm:gap-8">

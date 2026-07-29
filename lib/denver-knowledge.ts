@@ -28,7 +28,6 @@ const actionLinks = [
   ...staticRoutes,
   "/?modal=login",
   "/?modal=signup",
-  "/#contact",
   ...dashboardPaths,
 ];
 

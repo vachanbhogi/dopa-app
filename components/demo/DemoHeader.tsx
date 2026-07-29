@@ -4,9 +4,9 @@ import Link from "next/link";
 import { DopaMark } from "@/components/landing/icons";
 
 const nav = [
-  { label: "Pricing", href: "/#pricing" },
+  { label: "Features", href: "/#pipeline" },
   { label: "Demo", href: "/demo" },
-  { label: "Contact", href: "/#contact" },
+  { label: "Privacy", href: "/privacy" },
 ];
 
 export function DemoHeader() {

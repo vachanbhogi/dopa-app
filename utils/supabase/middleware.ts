@@ -36,7 +36,7 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.searchParams.set("modal", "login");
-    url.searchParams.set("redirectTo", path);
+    url.searchParams.set("redirectTo", `${path}${request.nextUrl.search}`);
     return NextResponse.redirect(url);
   }
 

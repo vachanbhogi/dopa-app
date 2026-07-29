@@ -25,9 +25,33 @@ async function requireUser() {
   return { supabase, user, error: null };
 }
 
+async function assertBusinessOwner(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  businessId: string,
+) {
+  const { data, error } = await supabase
+    .from("businesses")
+    .select("id")
+    .eq("id", businessId)
+    .eq("owner_id", userId)
+    .maybeSingle();
+
+  if (error) return { error: error.message };
+  if (!data) return { error: "Business not found" };
+  return { ok: true as const };
+}
+
 export async function listCompetitors(businessId: string) {
   const auth = await requireUser();
   if (auth.error || !auth.user) return { error: auth.error ?? "Not authenticated" };
+
+  const owned = await assertBusinessOwner(
+    auth.supabase,
+    auth.user.id,
+    businessId,
+  );
+  if ("error" in owned) return { error: owned.error };
 
   const { data, error } = await auth.supabase
     .from("competitors")
@@ -51,14 +75,24 @@ export async function addCompetitor(
   const auth = await requireUser();
   if (auth.error || !auth.user) return { error: auth.error ?? "Not authenticated" };
 
+  const name = input.name.trim();
+  if (!name) return { error: "Competitor name is required" };
+
+  const owned = await assertBusinessOwner(
+    auth.supabase,
+    auth.user.id,
+    businessId,
+  );
+  if ("error" in owned) return { error: owned.error };
+
   const { data, error } = await auth.supabase
     .from("competitors")
     .insert({
       business_id: businessId,
-      name: input.name.trim(),
+      name,
       website_url: input.website_url?.trim() || null,
       primary_angle: input.primary_angle?.trim() || null,
-      predicted_ctr: input.predicted_ctr ?? 1.25,
+      predicted_ctr: input.predicted_ctr ?? null,
       status: "tracking",
     })
     .select()
@@ -73,6 +107,22 @@ export async function addCompetitor(
 export async function deleteCompetitor(competitorId: string) {
   const auth = await requireUser();
   if (auth.error || !auth.user) return { error: auth.error ?? "Not authenticated" };
+
+  const { data: existing, error: fetchError } = await auth.supabase
+    .from("competitors")
+    .select("id, business_id")
+    .eq("id", competitorId)
+    .maybeSingle();
+
+  if (fetchError) return { error: fetchError.message };
+  if (!existing) return { error: "Competitor not found" };
+
+  const owned = await assertBusinessOwner(
+    auth.supabase,
+    auth.user.id,
+    existing.business_id,
+  );
+  if ("error" in owned) return { error: owned.error };
 
   const { error } = await auth.supabase
     .from("competitors")

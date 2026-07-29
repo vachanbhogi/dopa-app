@@ -1,3 +1,5 @@
+import { isJsonObject } from "@/lib/validation";
+
 const GOOGLE_ADS_API_VERSION = "v25";
 const GOOGLE_ADS_API_ORIGIN = "https://googleads.googleapis.com";
 const GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -77,24 +79,107 @@ type GoogleAdsStreamRow = {
   };
 };
 
-type GoogleAdsStreamBatch = {
-  results?: GoogleAdsStreamRow[];
-};
-
 function cleanCustomerId(customerId: string): string {
   return customerId.replaceAll("-", "").trim();
 }
 
 function errorMessage(body: string): string | undefined {
   try {
-    const parsed = JSON.parse(body) as
-      | { error?: { message?: string } }
-      | Array<{ error?: { message?: string } }>;
-    const error = Array.isArray(parsed) ? parsed[0]?.error : parsed.error;
-    return typeof error?.message === "string" ? error.message : undefined;
+    const parsed: unknown = JSON.parse(body);
+    const root = Array.isArray(parsed) ? parsed[0] : parsed;
+    if (!isJsonObject(root) || !isJsonObject(root.error)) return undefined;
+    return typeof root.error.message === "string"
+      ? root.error.message
+      : undefined;
   } catch {
     return undefined;
   }
+}
+
+function stringOrNumber(value: unknown): string | number | undefined {
+  return typeof value === "string" || typeof value === "number"
+    ? value
+    : undefined;
+}
+
+function finiteNumberOrZero(value: unknown): number {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function parseStreamRows(value: unknown): GoogleAdsStreamRow[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((batch) => {
+    if (!isJsonObject(batch) || !Array.isArray(batch.results)) return [];
+
+    return batch.results.flatMap((row) => {
+      if (!isJsonObject(row)) return [];
+      const campaignValue = isJsonObject(row.campaign) ? row.campaign : {};
+      const customerValue = isJsonObject(row.customer) ? row.customer : {};
+      const metricsValue = isJsonObject(row.metrics) ? row.metrics : {};
+
+      return [
+        {
+          campaign: {
+            id: stringOrNumber(campaignValue.id),
+            name:
+              typeof campaignValue.name === "string"
+                ? campaignValue.name
+                : undefined,
+            status:
+              typeof campaignValue.status === "string"
+                ? campaignValue.status
+                : undefined,
+            advertisingChannelType:
+              typeof campaignValue.advertisingChannelType === "string"
+                ? campaignValue.advertisingChannelType
+                : undefined,
+            advertising_channel_type:
+              typeof campaignValue.advertising_channel_type === "string"
+                ? campaignValue.advertising_channel_type
+                : undefined,
+          },
+          customer: {
+            descriptiveName:
+              typeof customerValue.descriptiveName === "string"
+                ? customerValue.descriptiveName
+                : undefined,
+            descriptive_name:
+              typeof customerValue.descriptive_name === "string"
+                ? customerValue.descriptive_name
+                : undefined,
+            currencyCode:
+              typeof customerValue.currencyCode === "string"
+                ? customerValue.currencyCode
+                : undefined,
+            currency_code:
+              typeof customerValue.currency_code === "string"
+                ? customerValue.currency_code
+                : undefined,
+            timeZone:
+              typeof customerValue.timeZone === "string"
+                ? customerValue.timeZone
+                : undefined,
+            time_zone:
+              typeof customerValue.time_zone === "string"
+                ? customerValue.time_zone
+                : undefined,
+          },
+          metrics: {
+            costMicros: stringOrNumber(metricsValue.costMicros),
+            cost_micros: stringOrNumber(metricsValue.cost_micros),
+            impressions: stringOrNumber(metricsValue.impressions),
+            clicks: stringOrNumber(metricsValue.clicks),
+            ctr: stringOrNumber(metricsValue.ctr),
+            conversions: stringOrNumber(metricsValue.conversions),
+            conversionsValue: stringOrNumber(metricsValue.conversionsValue),
+            conversions_value: stringOrNumber(metricsValue.conversions_value),
+          },
+        },
+      ];
+    });
+  });
 }
 
 export async function refreshGoogleAccessToken(
@@ -124,8 +209,12 @@ export async function refreshGoogleAccessToken(
     );
   }
 
-  const data = (await response.json()) as { access_token?: unknown };
-  if (typeof data.access_token !== "string" || !data.access_token) {
+  const data: unknown = await response.json();
+  if (
+    !isJsonObject(data) ||
+    typeof data.access_token !== "string" ||
+    !data.access_token
+  ) {
     throw new Error("Google OAuth token refresh returned no access token.");
   }
 
@@ -135,11 +224,13 @@ export async function refreshGoogleAccessToken(
 function campaignFromRow(row: GoogleAdsStreamRow): LiveCampaignData {
   const campaign = row.campaign ?? {};
   const metrics = row.metrics ?? {};
-  const costMicros = Number(metrics.costMicros ?? metrics.cost_micros ?? 0);
+  const costMicros = finiteNumberOrZero(
+    metrics.costMicros ?? metrics.cost_micros,
+  );
   const spend = Number((costMicros / 1_000_000).toFixed(2));
   const conversionsValue = Number(
-    Number(
-      metrics.conversionsValue ?? metrics.conversions_value ?? 0,
+    finiteNumberOrZero(
+      metrics.conversionsValue ?? metrics.conversions_value,
     ).toFixed(2),
   );
 
@@ -152,10 +243,10 @@ function campaignFromRow(row: GoogleAdsStreamRow): LiveCampaignData {
       campaign.advertising_channel_type ??
       "UNKNOWN",
     spend,
-    impressions: Number(metrics.impressions ?? 0),
-    clicks: Number(metrics.clicks ?? 0),
-    ctr: Number((Number(metrics.ctr ?? 0) * 100).toFixed(2)),
-    conversions: Number(Number(metrics.conversions ?? 0).toFixed(1)),
+    impressions: finiteNumberOrZero(metrics.impressions),
+    clicks: finiteNumberOrZero(metrics.clicks),
+    ctr: Number((finiteNumberOrZero(metrics.ctr) * 100).toFixed(2)),
+    conversions: Number(finiteNumberOrZero(metrics.conversions).toFixed(1)),
     conversionsValue,
     roas:
       spend > 0 ? Number((conversionsValue / spend).toFixed(2)) : 0,
@@ -289,12 +380,7 @@ export async function fetchLiveGoogleAdsData(
       };
     }
 
-    const stream = (await response.json()) as GoogleAdsStreamBatch[];
-    const rows = Array.isArray(stream)
-      ? stream.flatMap((batch) =>
-          Array.isArray(batch.results) ? batch.results : [],
-        )
-      : [];
+    const rows = parseStreamRows(await response.json());
     const customer = rows[0]?.customer;
 
     return {
@@ -362,34 +448,43 @@ export async function fetchKeywordMetrics(
       headers,
       body: JSON.stringify({
         keywords,
-        historicalMetricsOptions: {
-          yearMonthRange: {
-            start: { year: 2025, month: 1 },
-            end: { year: 2025, month: 12 },
-          },
-        },
+        keywordPlanNetwork: "GOOGLE_SEARCH",
+        language: "languageConstants/1000",
+        geoTargetConstants: ["geoTargetConstants/2840"],
       }),
       cache: "no-store",
     });
 
     if (!response.ok) return {};
 
-    const data = await response.json();
+    const data: unknown = await response.json();
     const results: Record<string, KeywordMetricsData> = {};
-    if (Array.isArray(data.results)) {
+    if (isJsonObject(data) && Array.isArray(data.results)) {
       for (const res of data.results) {
-        const text = res.text || res.searchQuery;
-        const metrics = res.keywordMetrics || {};
-        const searches = Number(metrics.avgMonthlySearches || 0);
-        const lowBid = Number(metrics.lowTopOfPageBidMicros || 0) / 1_000_000;
-        const highBid = Number(metrics.highTopOfPageBidMicros || 0) / 1_000_000;
-        const avgCpc = ((lowBid + highBid) / 2 || 1.25).toFixed(2);
+        if (!isJsonObject(res)) continue;
+        const text =
+          typeof res.text === "string"
+            ? res.text
+            : typeof res.searchQuery === "string"
+              ? res.searchQuery
+              : undefined;
+        const metrics = isJsonObject(res.keywordMetrics)
+          ? res.keywordMetrics
+          : {};
+        const searches = Number(metrics.avgMonthlySearches ?? 0);
+        const lowBid =
+          Number(metrics.lowTopOfPageBidMicros ?? 0) / 1_000_000;
+        const highBid =
+          Number(metrics.highTopOfPageBidMicros ?? 0) / 1_000_000;
+        const averageBid =
+          lowBid > 0 || highBid > 0 ? (lowBid + highBid) / 2 : null;
 
         if (text) {
           results[text.toLowerCase()] = {
             keyword: text,
-            avgMonthlySearches: searches,
-            cpcFormatted: `$${avgCpc}`,
+            avgMonthlySearches: Number.isFinite(searches) ? searches : 0,
+            cpcFormatted:
+              averageBid === null ? undefined : `$${averageBid.toFixed(2)}`,
           };
         }
       }
@@ -399,5 +494,3 @@ export async function fetchKeywordMetrics(
     return {};
   }
 }
-
-

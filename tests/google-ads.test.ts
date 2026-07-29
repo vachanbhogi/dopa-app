@@ -1,0 +1,242 @@
+import assert from "node:assert/strict";
+import {
+  fetchKeywordMetrics,
+  fetchLiveGoogleAdsData,
+  refreshGoogleAccessToken,
+} from "../utils/google-ads-client";
+import {
+  isGoogleAdsAccessTokenFresh,
+  openGoogleAdsToken,
+  sealGoogleAdsToken,
+} from "../utils/google-ads-token";
+import { safeNextPath, safeNextUrl } from "../utils/safe-next-url";
+
+const originalFetch = globalThis.fetch;
+
+async function test(name: string, run: () => Promise<void>) {
+  try {
+    await run();
+    console.log(`✓ ${name}`);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+await test("rejects missing Google Ads configuration without a request", async () => {
+  let requests = 0;
+  globalThis.fetch = (async () => {
+    requests += 1;
+    throw new Error("Unexpected request");
+  }) as typeof fetch;
+
+  const result = await fetchLiveGoogleAdsData({
+    customerId: "",
+    developerToken: "",
+  });
+
+  assert.equal(result.success, false);
+  assert.equal(result.code, "configuration_required");
+  assert.equal(requests, 0);
+});
+
+await test("uses v25 and maps live campaign fields", async () => {
+  let requestUrl = "";
+  let requestInit: RequestInit | undefined;
+  globalThis.fetch = (async (input, init) => {
+    requestUrl = String(input);
+    requestInit = init;
+    return new Response(
+      JSON.stringify([
+        {
+          results: [
+            {
+              customer: {
+                descriptiveName: "Dopa Test Account",
+                currencyCode: "USD",
+                timeZone: "America/Los_Angeles",
+              },
+              campaign: {
+                id: "42",
+                name: "Search Launch",
+                status: "ENABLED",
+                advertisingChannelType: "SEARCH",
+              },
+              metrics: {
+                costMicros: "125500000",
+                impressions: "10000",
+                clicks: "250",
+                ctr: 0.025,
+                conversions: 12,
+                conversionsValue: 500,
+              },
+            },
+          ],
+        },
+      ]),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "request-id": "request-42",
+        },
+      },
+    );
+  }) as typeof fetch;
+
+  const result = await fetchLiveGoogleAdsData({
+    customerId: "123-456-7890",
+    developerToken: "developer-token",
+    loginCustomerId: "987-654-3210",
+    accessToken: "access-token",
+  });
+  const headers = new Headers(requestInit?.headers);
+
+  assert.equal(result.success, true);
+  assert.equal(
+    requestUrl,
+    "https://googleads.googleapis.com/v25/customers/1234567890/googleAds:searchStream",
+  );
+  assert.equal(headers.get("Authorization"), "Bearer access-token");
+  assert.equal(headers.get("developer-token"), "developer-token");
+  assert.equal(headers.get("login-customer-id"), "9876543210");
+  assert.equal(result.requestId, "request-42");
+  assert.deepEqual(result.campaigns[0], {
+    id: "42",
+    name: "Search Launch",
+    status: "ENABLED",
+    channelType: "SEARCH",
+    spend: 125.5,
+    impressions: 10000,
+    clicks: 250,
+    ctr: 2.5,
+    conversions: 12,
+    conversionsValue: 500,
+    roas: 3.98,
+  });
+});
+
+await test("requests current 12-month keyword history without fabricated CPC", async () => {
+  let requestBody = "";
+  globalThis.fetch = (async (_input, init) => {
+    requestBody = String(init?.body);
+    return new Response(
+      JSON.stringify({
+        results: [
+          {
+            text: "running watch",
+            keywordMetrics: {
+              avgMonthlySearches: "3200",
+              lowTopOfPageBidMicros: "0",
+              highTopOfPageBidMicros: "0",
+            },
+          },
+        ],
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }) as typeof fetch;
+
+  const result = await fetchKeywordMetrics(
+    {
+      customerId: "1234567890",
+      developerToken: "developer-token",
+      accessToken: "access-token",
+    },
+    ["running watch"],
+  );
+  const parsedBody = JSON.parse(requestBody) as Record<string, unknown>;
+
+  assert.equal("historicalMetricsOptions" in parsedBody, false);
+  assert.equal(result["running watch"]?.avgMonthlySearches, 3200);
+  assert.equal(result["running watch"]?.cpcFormatted, undefined);
+});
+
+await test("refreshes a server-side OAuth token", async () => {
+  let body = "";
+  globalThis.fetch = (async (_input, init) => {
+    body = String(init?.body);
+    return new Response(
+      JSON.stringify({ access_token: "refreshed-access-token" }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }) as typeof fetch;
+
+  const token = await refreshGoogleAccessToken(
+    "client-id",
+    "client-secret",
+    "refresh-token",
+  );
+
+  assert.equal(token, "refreshed-access-token");
+  assert.match(body, /grant_type=refresh_token/);
+  assert.match(body, /refresh_token=refresh-token/);
+});
+
+await test("encrypts, binds, expires, and rejects tampered OAuth tokens", async () => {
+  const secret = Buffer.alloc(32, 7).toString("base64");
+  const now = 1_000_000;
+  const sealed = await sealGoogleAdsToken(
+    {
+      accessToken: "google-access-token",
+      refreshToken: "google-refresh-token",
+    },
+    secret,
+    "user-123",
+    now,
+  );
+
+  assert.equal(sealed.includes("google-access-token"), false);
+  const opened = await openGoogleAdsToken(
+    sealed,
+    secret,
+    "user-123",
+    now,
+  );
+  assert.deepEqual(opened, {
+    accessToken: "google-access-token",
+    refreshToken: "google-refresh-token",
+    accessTokenExpiresAt: now + 55 * 60 * 1000,
+  });
+  assert.ok(opened);
+  assert.equal(isGoogleAdsAccessTokenFresh(opened, now), true);
+  assert.equal(
+    await openGoogleAdsToken(sealed, secret, "different-user", now),
+    null,
+  );
+
+  const [version, iv, ciphertext] = sealed.split(".");
+  assert.ok(version && iv && ciphertext);
+  const tamperedCiphertext = `${
+    ciphertext.startsWith("a") ? "b" : "a"
+  }${ciphertext.slice(1)}`;
+  assert.equal(
+    await openGoogleAdsToken(
+      [version, iv, tamperedCiphertext].join("."),
+      secret,
+      "user-123",
+      now,
+    ),
+    null,
+  );
+});
+
+await test("keeps authentication redirects on the Dopa origin", async () => {
+  const origin = "https://dopa.example";
+
+  assert.equal(
+    safeNextUrl("/dashboard?tab=googleAds", origin).href,
+    "https://dopa.example/dashboard?tab=googleAds",
+  );
+  assert.equal(
+    safeNextPath("https://evil.example", origin),
+    "/dashboard",
+  );
+  assert.equal(safeNextPath("//evil.example", origin), "/dashboard");
+  assert.equal(safeNextPath("/\\evil.example", origin), "/dashboard");
+});

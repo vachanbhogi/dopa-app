@@ -5,7 +5,7 @@ import { AuthShell } from "@/components/auth/AuthShell";
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; redirectTo?: string }>;
 }) {
   const params = await searchParams;
 
@@ -14,7 +14,12 @@ export default async function SignupPage({
       title="Sign up for an account"
       subtitle=""
     >
-      <AuthForm mode="signup" action={signup} error={params.error} />
+      <AuthForm
+        mode="signup"
+        action={signup}
+        redirectTo={params.redirectTo ?? "/dashboard"}
+        error={params.error}
+      />
     </AuthShell>
   );
 }

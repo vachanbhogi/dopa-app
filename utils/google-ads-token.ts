@@ -1,3 +1,5 @@
+import { isJsonObject } from "@/lib/validation";
+
 const TOKEN_VERSION = "v1";
 const ACCESS_TOKEN_LIFETIME_MS = 55 * 60 * 1000;
 const COOKIE_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
@@ -122,11 +124,12 @@ export async function openGoogleAdsToken(
       key,
       toArrayBuffer(ciphertext),
     );
-    const payload = JSON.parse(
+    const payload: unknown = JSON.parse(
       new TextDecoder().decode(plaintext),
-    ) as Partial<StoredGoogleAdsToken>;
+    );
 
     if (
+      !isJsonObject(payload) ||
       typeof payload.accessToken !== "string" ||
       !payload.accessToken ||
       typeof payload.refreshToken !== "string" ||

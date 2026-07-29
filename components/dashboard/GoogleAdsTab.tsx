@@ -7,6 +7,7 @@ import type {
   GoogleAdsErrorCode,
   LiveCampaignData,
 } from "@/utils/google-ads-client";
+import { isJsonObject } from "@/lib/validation";
 
 type ConnectionState =
   | "loading"
@@ -67,6 +68,91 @@ function oauthNotice(result: string | undefined): string | null {
   return null;
 }
 
+function isGoogleAdsErrorCode(value: unknown): value is GoogleAdsErrorCode {
+  return (
+    value === "configuration_required" ||
+    value === "oauth_required" ||
+    value === "access_denied" ||
+    value === "google_ads_api_error" ||
+    value === "network_error"
+  );
+}
+
+function isLiveCampaignData(value: unknown): value is LiveCampaignData {
+  if (!isJsonObject(value)) return false;
+  return (
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    typeof value.status === "string" &&
+    typeof value.channelType === "string" &&
+    typeof value.spend === "number" &&
+    Number.isFinite(value.spend) &&
+    typeof value.impressions === "number" &&
+    Number.isFinite(value.impressions) &&
+    typeof value.clicks === "number" &&
+    Number.isFinite(value.clicks) &&
+    typeof value.ctr === "number" &&
+    Number.isFinite(value.ctr) &&
+    typeof value.conversions === "number" &&
+    Number.isFinite(value.conversions) &&
+    typeof value.conversionsValue === "number" &&
+    Number.isFinite(value.conversionsValue) &&
+    typeof value.roas === "number" &&
+    Number.isFinite(value.roas)
+  );
+}
+
+function parseGoogleAdsResponse(value: unknown): GoogleAdsApiResponse {
+  if (
+    !isJsonObject(value) ||
+    typeof value.success !== "boolean" ||
+    typeof value.configured !== "boolean" ||
+    (value.source !== "live_api" && value.source !== "unavailable") ||
+    !Array.isArray(value.campaigns)
+  ) {
+    throw new Error("Google Ads returned an invalid response.");
+  }
+
+  const campaigns = value.campaigns.filter(isLiveCampaignData);
+  if (campaigns.length !== value.campaigns.length) {
+    throw new Error("Google Ads returned invalid campaign data.");
+  }
+
+  const accountValue = isJsonObject(value.accountDetails)
+    ? value.accountDetails
+    : null;
+  const accountDetails =
+    accountValue && typeof accountValue.customerId === "string"
+      ? {
+          customerId: accountValue.customerId,
+          descriptiveName:
+            typeof accountValue.descriptiveName === "string"
+              ? accountValue.descriptiveName
+              : undefined,
+          currencyCode:
+            typeof accountValue.currencyCode === "string"
+              ? accountValue.currencyCode
+              : undefined,
+          timeZone:
+            typeof accountValue.timeZone === "string"
+              ? accountValue.timeZone
+              : undefined,
+        }
+      : undefined;
+
+  return {
+    success: value.success,
+    configured: value.configured,
+    source: value.source,
+    code: isGoogleAdsErrorCode(value.code) ? value.code : undefined,
+    error: typeof value.error === "string" ? value.error : undefined,
+    requestId:
+      typeof value.requestId === "string" ? value.requestId : undefined,
+    accountDetails,
+    campaigns,
+  };
+}
+
 export function GoogleAdsTab({
   dopaEmail,
   oauthResult,
@@ -92,7 +178,7 @@ export function GoogleAdsTab({
         cache: "no-store",
         signal,
       });
-      const data = (await response.json()) as GoogleAdsApiResponse;
+      const data = parseGoogleAdsResponse(await response.json());
 
       if (response.ok && data.success) {
         setCampaigns(data.campaigns);
@@ -217,7 +303,10 @@ export function GoogleAdsTab({
     totalSpend > 0 ? totalConversionValue / totalSpend : 0;
   const aggregateCtr =
     totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
-  const currency = account?.currencyCode ?? "USD";
+  const currency =
+    account?.currencyCode && /^[A-Z]{3}$/.test(account.currencyCode)
+      ? account.currencyCode
+      : "USD";
 
   return (
     <div className="space-y-8">

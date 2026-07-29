@@ -1,4 +1,11 @@
 import { NextResponse } from "next/server";
+import {
+  errorMessage,
+  isJsonObject,
+  parseGroqJson,
+  stringValue,
+} from "@/lib/validation";
+import { getAuthenticatedUser } from "@/utils/api-auth";
 
 export interface DiscoveredCompetitor {
   name: string;
@@ -8,9 +15,61 @@ export interface DiscoveredCompetitor {
   predicted_ctr: number;
 }
 
+function normalizeCompetitors(value: unknown): DiscoveredCompetitor[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item) => {
+    if (!isJsonObject(item)) return [];
+    const name = stringValue(item.name, 160);
+    if (!name) return [];
+
+    const rawCtr =
+      typeof item.predicted_ctr === "number"
+        ? item.predicted_ctr
+        : Number(item.predicted_ctr);
+    const predictedCtr = Number.isFinite(rawCtr)
+      ? Math.min(100, Math.max(0, rawCtr))
+      : 0;
+
+    return [
+      {
+        name,
+        website_url: stringValue(item.website_url, 2_048) ?? "",
+        primary_angle: stringValue(item.primary_angle, 1_000) ?? "",
+        overlap: stringValue(item.overlap, 120) ?? "Suggested rival",
+        predicted_ctr: predictedCtr,
+      },
+    ];
+  }).slice(0, 5);
+}
+
 export async function POST(req: Request) {
   try {
-    const { businessName, industry, targetAudience, website } = await req.json();
+    if (!(await getAuthenticatedUser())) {
+      return NextResponse.json(
+        { error: "Sign in before discovering competitors." },
+        { status: 401 },
+      );
+    }
+
+    const body: unknown = await req.json();
+    if (!isJsonObject(body)) {
+      return NextResponse.json(
+        { error: "A business profile is required." },
+        { status: 400 },
+      );
+    }
+
+    const businessName = stringValue(body.businessName, 160);
+    const industry = stringValue(body.industry, 120);
+    const targetAudience = stringValue(body.targetAudience, 1_000);
+    const website = stringValue(body.website, 2_048);
+    if (!businessName) {
+      return NextResponse.json(
+        { error: "Business name is required." },
+        { status: 400 },
+      );
+    }
 
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
@@ -20,13 +79,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const prompt = `Analyze competitors for the following brand:
+    const prompt = `Suggest likely competitors for the following brand:
 Brand Name: ${businessName}
 Industry: ${industry || "E-commerce / Technology"}
 Target Audience: ${targetAudience || "General Audience"}
 Website: ${website || "N/A"}
 
-Find 5 key industry competitors. Return a structured JSON response matching this schema:
+Suggest up to 5 likely industry competitors. These are hypotheses for the user to verify, not live market research. Return a structured JSON response matching this schema:
 {
   "competitors": [
     {
@@ -39,9 +98,9 @@ Find 5 key industry competitors. Return a structured JSON response matching this
   ]
 }`;
 
-    const systemPrompt = `You are a Competitive Intelligence Agent for ad campaigns. 
+    const systemPrompt = `You are a competitive research assistant for ad campaigns.
 Return ONLY a valid JSON object containing an array "competitors" of exactly 5 competitor objects.
-Each competitor MUST have a realistic predicted_ctr between 0.8% and 2.5%.`;
+The predicted_ctr field is only a clearly labeled AI estimate, not observed campaign data.`;
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -58,26 +117,26 @@ Each competitor MUST have a realistic predicted_ctr between 0.8% and 2.5%.`;
         ],
         temperature: 0.7,
       }),
+      signal: AbortSignal.timeout(20_000),
     });
 
     if (!groqRes.ok) {
-      const errText = await groqRes.text();
       return NextResponse.json(
-        { error: `Groq Error: ${errText}` },
-        { status: groqRes.status }
+        { error: "Competitor suggestions are temporarily unavailable." },
+        { status: 502 },
       );
     }
 
-    const groqData = await groqRes.json();
-    const parsed = JSON.parse(groqData.choices?.[0]?.message?.content || "{}");
+    const groqData: unknown = await groqRes.json();
+    const parsed = parseGroqJson(groqData);
 
     return NextResponse.json({
-      competitors: parsed.competitors || [],
+      competitors: normalizeCompetitors(parsed.competitors),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error.message || "Failed to discover competitors." },
-      { status: 500 }
+      { error: errorMessage(error, "Failed to discover competitors.") },
+      { status: 500 },
     );
   }
 }

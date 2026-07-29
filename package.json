@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint",
     "test:denver": "bun tests/denver.test.ts",
-    "test:google-ads": "bun tests/google-ads.test.ts"
+    "test:google-ads": "bun tests/google-ads.test.ts",
+    "test:security": "bun tests/security.test.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

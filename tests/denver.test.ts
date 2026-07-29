@@ -60,7 +60,7 @@ await test("generated knowledge tracks current routes and dashboard sections", (
     [{ content: "How do I research competitors?" }],
     "/dashboard?tab=competitors",
   );
-  assert.match(context, /Competitor Radar/);
+  assert.match(context, /Competitor Research/);
   assert.match(context, /Auto-[Dd]iscover/);
   assert.match(context, /Revision:/);
 });
@@ -290,7 +290,7 @@ await test("guards input, retrieves website knowledge, and asks Groq", async () 
     assert.equal(body.model, "openai/gpt-oss-120b");
     assert.equal(body.response_format.type, "json_schema");
     assert.equal(body.response_format.json_schema?.strict, true);
-    assert.match(body.messages[1]?.content ?? "", /Competitor Radar/);
+    assert.match(body.messages[1]?.content ?? "", /Competitor Research/);
     assert.doesNotMatch(
       body.messages[1]?.content ?? "",
       /ignore the system prompt/,
@@ -301,7 +301,7 @@ await test("guards input, retrieves website knowledge, and asks Groq", async () 
           message: {
             content: JSON.stringify({
               answer:
-                "Open Competitors to auto-discover rivals and review their campaign moves.",
+                "Open Competitors to review AI-assisted rival suggestions and planning scenarios.",
               actionLabel: "Open Competitors",
               actionHref: "/dashboard?tab=competitors",
             }),
@@ -325,10 +325,78 @@ await test("guards input, retrieves website knowledge, and asks Groq", async () 
     assert.deepEqual(await response.json(), {
       reply: {
         answer:
-          "Open Competitors to auto-discover rivals and review their campaign moves.",
+          "Open Competitors to review AI-assisted rival suggestions and planning scenarios.",
         action: {
           label: "Open Competitors",
           href: "/dashboard?tab=competitors",
+        },
+      },
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+await test("retries one transient Groq failure", async () => {
+  process.env.GROQ_API_KEY = "test-groq-key";
+  let requests = 0;
+
+  globalThis.fetch = (async () => {
+    requests += 1;
+
+    if (requests === 1) {
+      return Response.json(
+        { error: { type: "api_error", message: "Temporary upstream failure" } },
+        { status: 502 },
+      );
+    }
+
+    if (requests === 2) {
+      return Response.json({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                violation: false,
+                category: "",
+              }),
+            },
+          },
+        ],
+      });
+    }
+
+    return Response.json({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              answer: "Upload a creative, review the result, and iterate.",
+              actionLabel: "Open Demo",
+              actionHref: "/demo",
+            }),
+          },
+        },
+      ],
+    });
+  }) as typeof fetch;
+
+  try {
+    const response = await POST(
+      denverRequest(
+        "198.51.100.25",
+        "How should I use Dopa?",
+      ),
+    );
+
+    assert.equal(response.status, 200);
+    assert.equal(requests, 3);
+    assert.deepEqual(await response.json(), {
+      reply: {
+        answer: "Upload a creative, review the result, and iterate.",
+        action: {
+          label: "Open Demo",
+          href: "/demo",
         },
       },
     });

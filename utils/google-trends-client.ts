@@ -1,7 +1,5 @@
 export interface GoogleTrendSignal {
   query: string;
-  trendGrowth?: string;
-  isSurging?: boolean;
 }
 
 export async function fetchGoogleTrendsData(
@@ -23,14 +21,29 @@ export async function fetchGoogleTrendsData(
 
     const text = await response.text();
     const cleaned = text.replace(/^\)\}\]'[^\n]*\n/, "").trim();
-    const data = JSON.parse(cleaned);
+    const data: unknown = JSON.parse(cleaned);
+    if (
+      typeof data !== "object" ||
+      data === null ||
+      !("default" in data) ||
+      typeof data.default !== "object" ||
+      data.default === null ||
+      !("topics" in data.default) ||
+      !Array.isArray(data.default.topics)
+    ) {
+      return [];
+    }
 
-    const topics = data?.default?.topics || [];
-    return topics.map((t: any) => ({
-      query: t.title || t.mid,
-      trendGrowth: "+85% Growth",
-      isSurging: true,
-    }));
+    return data.default.topics.flatMap((topic) => {
+      if (typeof topic !== "object" || topic === null) return [];
+      const query =
+        "title" in topic && typeof topic.title === "string"
+          ? topic.title
+          : "mid" in topic && typeof topic.mid === "string"
+            ? topic.mid
+            : null;
+      return query ? [{ query }] : [];
+    });
   } catch {
     return [];
   }

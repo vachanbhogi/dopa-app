@@ -22,6 +22,8 @@ const MAX_REQUEST_BYTES = 24_000;
 const MAX_RATE_LIMIT_ENTRIES = 10_000;
 const MINUTE_MS = 60_000;
 const DAY_MS = 86_400_000;
+const GROQ_MAX_ATTEMPTS = 2;
+const GROQ_RETRYABLE_STATUSES = new Set([408, 498, 500, 502, 503, 504]);
 const NO_STORE_HEADERS = {
   "Cache-Control": "private, no-store, max-age=0",
   Vary: "Origin",
@@ -191,6 +193,40 @@ function responseSchema() {
   };
 }
 
+async function fetchGroq(
+  apiKey: string,
+  body: Record<string, unknown>,
+  timeoutMs: number,
+) {
+  for (let attempt = 1; attempt <= GROQ_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+
+      if (
+        response.ok ||
+        !GROQ_RETRYABLE_STATUSES.has(response.status) ||
+        attempt === GROQ_MAX_ATTEMPTS
+      ) {
+        return response;
+      }
+
+      await response.arrayBuffer();
+    } catch (error) {
+      if (attempt === GROQ_MAX_ATTEMPTS) throw error;
+    }
+  }
+
+  throw new Error("Groq retry attempts were exhausted.");
+}
+
 async function completionContent(response: Response) {
   let completion: GroqChatCompletion;
   try {
@@ -202,7 +238,15 @@ async function completionContent(response: Response) {
   return typeof content === "string" ? content : null;
 }
 
-function groqError(response: Response) {
+function groqError(response: Response, stage: "guard" | "answer") {
+  console.error("Denver Groq request failed.", {
+    stage,
+    status: response.status,
+    requestId:
+      response.headers.get("x-request-id") ??
+      response.headers.get("x-groq-request-id"),
+  });
+
   return json(
     {
       error:
@@ -315,13 +359,9 @@ export async function POST(request: Request) {
 
   let guardResponse: Response;
   try {
-    guardResponse = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    guardResponse = await fetchGroq(
+      apiKey,
+      {
         model:
           process.env.GROQ_DENVER_GUARD_MODEL ??
           DEFAULT_DENVER_GUARD_MODEL,
@@ -332,9 +372,9 @@ export async function POST(request: Request) {
         response_format: { type: "json_object" },
         reasoning_effort: "low",
         max_completion_tokens: 300,
-      }),
-      signal: AbortSignal.timeout(8_000),
-    });
+      },
+      8_000,
+    );
   } catch {
     return json(
       { error: "Denver's safety check could not run. Try again." },
@@ -342,7 +382,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!guardResponse.ok) return groqError(guardResponse);
+  if (!guardResponse.ok) return groqError(guardResponse, "guard");
   const guardContent = await completionContent(guardResponse);
   if (!guardContent) {
     return json({ error: "Denver's safety check returned no answer." }, 502);
@@ -377,13 +417,9 @@ export async function POST(request: Request) {
 
   let groqResponse: Response;
   try {
-    groqResponse = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    groqResponse = await fetchGroq(
+      apiKey,
+      {
         model: process.env.GROQ_DENVER_MODEL ?? DEFAULT_DENVER_MODEL,
         messages: [
           { role: "system", content: DENVER_SYSTEM_PROMPT },
@@ -396,9 +432,9 @@ export async function POST(request: Request) {
         response_format: responseSchema(),
         reasoning_effort: "medium",
         max_completion_tokens: 700,
-      }),
-      signal: AbortSignal.timeout(18_000),
-    });
+      },
+      18_000,
+    );
   } catch {
     return json(
       { error: "Denver could not reach the AI service. Try again." },
@@ -406,7 +442,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!groqResponse.ok) return groqError(groqResponse);
+  if (!groqResponse.ok) return groqError(groqResponse, "answer");
   const content = await completionContent(groqResponse);
   if (!content) {
     return json({ error: "Denver returned an empty response." }, 502);

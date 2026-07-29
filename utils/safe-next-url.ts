@@ -15,3 +15,12 @@ export function safeNextUrl(
     return fallback;
   }
 }
+
+export function safeNextPath(
+  value: string | null,
+  origin: string,
+  fallbackPath = "/dashboard",
+): string {
+  const url = safeNextUrl(value, origin, fallbackPath);
+  return `${url.pathname}${url.search}${url.hash}`;
+}

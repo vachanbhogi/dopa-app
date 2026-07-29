@@ -17,7 +17,7 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dopa – The agentic campaign system for marketing teams",
+  title: "Dopa – Pre-spend creative intelligence",
   description:
     "Upload an ad to predict average click-through rate and inspect its modeled cortical response with TRIBE v2.",
   icons: {

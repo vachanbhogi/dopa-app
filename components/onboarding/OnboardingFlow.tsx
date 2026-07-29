@@ -16,6 +16,7 @@ import {
   PRICE_RANGES,
   type BusinessInput,
 } from "@/lib/business-types";
+import { errorMessage, isJsonObject, stringValue } from "@/lib/validation";
 
 type Step = "import" | "review" | "launch";
 
@@ -37,7 +38,7 @@ const emptyFirstProduct = (): FirstProductDraft => ({
 
 const easeOut = [0.23, 1, 0.32, 1] as const;
 
-export function OnboardingFlow({ firstName: _firstName }: { firstName: string }) {
+export function OnboardingFlow({ firstName }: { firstName: string }) {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("import");
@@ -69,38 +70,64 @@ export function OnboardingFlow({ firstName: _firstName }: { firstName: string })
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ websiteUrl: form.website }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to scan website");
-
-      if (data.profile) {
+      const data: unknown = await res.json();
+      if (!res.ok) {
+        const message =
+          isJsonObject(data) && typeof data.error === "string"
+            ? data.error
+            : "Failed to scan website";
+        throw new Error(message);
+      }
+      if (isJsonObject(data) && isJsonObject(data.profile)) {
         const p = data.profile;
         setForm((prev) => ({
           ...prev,
-          website: data.websiteUrl || prev.website,
-          name: p.name || prev.name,
-          industry: p.industry || prev.industry,
-          target_audience: p.target_audience || prev.target_audience,
-          brand_voice: p.brand_voice || prev.brand_voice,
-          value_proposition: p.value_proposition || prev.value_proposition,
-          price_range: p.price_range || prev.price_range,
-          campaign_goal: p.campaign_goal || prev.campaign_goal,
+          website: stringValue(data.websiteUrl, 2_048) ?? prev.website,
+          name: stringValue(p.name, 160) ?? prev.name,
+          industry: stringValue(p.industry, 120) ?? prev.industry,
+          target_audience:
+            stringValue(p.target_audience, 1_000) ?? prev.target_audience,
+          brand_voice:
+            stringValue(p.brand_voice, 120) ?? prev.brand_voice,
+          value_proposition:
+            stringValue(p.value_proposition, 1_000) ??
+            prev.value_proposition,
+          price_range:
+            stringValue(p.price_range, 120) ?? prev.price_range,
+          campaign_goal:
+            stringValue(p.campaign_goal, 120) ?? prev.campaign_goal,
         }));
+
         if (Array.isArray(p.competitors)) {
-          setCompetitorsInput(p.competitors.join(", "));
+          setCompetitorsInput(
+            p.competitors
+              .map((competitor) => stringValue(competitor, 120))
+              .filter((competitor): competitor is string =>
+                Boolean(competitor),
+              )
+              .join(", "),
+          );
         }
-        if (p.first_product) {
+
+        if (isJsonObject(p.first_product)) {
+          const fp = p.first_product;
           setFirstProduct({
-            product_name: p.first_product.product_name || "",
-            value_prop: p.first_product.value_prop || "",
-            price: p.first_product.price || "",
-            creative_hook: p.first_product.creative_hook || "",
+            product_name: stringValue(fp.product_name, 160) ?? "",
+            value_prop: stringValue(fp.value_prop, 1_000) ?? "",
+            price: stringValue(fp.price, 60) ?? "",
+            creative_hook: stringValue(fp.creative_hook, 500) ?? "",
           });
         }
         setScanned(true);
       }
       setStep("review");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Scan failed. Try entering details manually.");
+    } catch (error: unknown) {
+      setError(
+        errorMessage(
+          error,
+          "Failed to scan website. You can enter details manually.",
+        ),
+      );
     } finally {
       setScanning(false);
     }
@@ -124,7 +151,11 @@ export function OnboardingFlow({ firstName: _firstName }: { firstName: string })
       if (result.business) {
         if (competitorsInput.trim()) {
           for (const name of competitorsInput.split(",").map((s) => s.trim()).filter(Boolean)) {
-            await addCompetitor(result.business.id, { name, predicted_ctr: 1.35 });
+            const competitorResult = await addCompetitor(result.business.id, { name });
+            if (competitorResult.error) {
+              setError(competitorResult.error);
+              return;
+            }
           }
         }
         if (firstProduct.product_name.trim()) {
@@ -154,7 +185,10 @@ export function OnboardingFlow({ firstName: _firstName }: { firstName: string })
       };
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-[#08090a] text-white">
+    <div
+      className="relative flex min-h-screen flex-col bg-[#08090a] text-white"
+      aria-label={`Onboarding for ${firstName}`}
+    >
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_42%,rgba(88,92,140,0.2),transparent_55%)]"
         aria-hidden
@@ -184,7 +218,7 @@ export function OnboardingFlow({ firstName: _firstName }: { firstName: string })
                     Import your brand
                   </h1>
                   <p className="mx-auto mt-4 max-w-xs text-[15px] leading-6 text-[#8a8f98]">
-                    Paste your website URL and we&apos;ll optiimze for your profile.
+                    Paste your website URL and we&apos;ll build a draft profile for review.
                   </p>
                 </div>
 

@@ -4,6 +4,18 @@ import {
   fetchKeywordMetrics,
   type GoogleAdsCredentials,
 } from "@/utils/google-ads-client";
+import {
+  errorMessage,
+  isJsonObject,
+  parseGroqJson,
+  stringValue,
+} from "@/lib/validation";
+import { getApiAuth } from "@/utils/api-auth";
+import { getGoogleAdsSession } from "@/utils/google-ads-session";
+import {
+  GOOGLE_ADS_TOKEN_COOKIE,
+  GOOGLE_ADS_TOKEN_MAX_AGE_SECONDS,
+} from "@/utils/google-ads-token";
 
 export interface KeywordResult {
   keyword: string;
@@ -15,19 +27,95 @@ export interface KeywordResult {
   trendSignal?: string;
   isSurging?: boolean;
   sources: string[];
+  volumeSource: "Google Ads" | "AI estimate";
+}
+
+type GeneratedKeyword = Omit<
+  KeywordResult,
+  "cpcFormatted" | "trendSignal" | "isSurging" | "sources" | "volumeSource"
+>;
+
+function keywordCategory(
+  value: string | undefined,
+): KeywordResult["category"] | null {
+  switch (value) {
+    case "commercial":
+    case "problem":
+    case "competitor":
+    case "long_tail":
+      return value;
+    default:
+      return null;
+  }
+}
+
+function normalizeGeneratedKeywords(value: unknown): GeneratedKeyword[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item) => {
+    if (!isJsonObject(item)) return [];
+    const keyword = stringValue(item.keyword, 120);
+    const intentDescription = stringValue(item.intentDescription, 500);
+    const estimatedSearchVolume = stringValue(
+      item.estimatedSearchVolume,
+      80,
+    );
+    const suggestedAdHeadline = stringValue(item.suggestedAdHeadline, 30);
+    const category = keywordCategory(stringValue(item.category, 40));
+    if (
+      !keyword ||
+      !intentDescription ||
+      !estimatedSearchVolume ||
+      !suggestedAdHeadline ||
+      !category
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        keyword,
+        category,
+        intentDescription,
+        estimatedSearchVolume,
+        suggestedAdHeadline,
+      },
+    ];
+  }).slice(0, 12);
 }
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const {
-      scope,
-      businessName,
-      targetDemographic,
-      productName,
-      valueProp,
-      price,
-    } = body;
+    const auth = await getApiAuth();
+    if (!auth) {
+      return NextResponse.json(
+        { error: "Sign in before generating keywords." },
+        { status: 401 },
+      );
+    }
+
+    const body: unknown = await req.json();
+    if (!isJsonObject(body)) {
+      return NextResponse.json(
+        { error: "A business profile is required." },
+        { status: 400 },
+      );
+    }
+    const scope = body.scope === "product" ? "product" : "brand";
+    const businessName = stringValue(body.businessName, 160);
+    const targetDemographic = stringValue(body.targetDemographic, 1_000);
+    const productName = stringValue(body.productName, 160);
+    const valueProp = stringValue(body.valueProp, 1_000);
+    const price =
+      typeof body.price === "number" && Number.isFinite(body.price)
+        ? String(body.price)
+        : stringValue(body.price, 60);
+    if (!businessName) {
+      return NextResponse.json(
+        { error: "Business name is required." },
+        { status: 400 },
+      );
+    }
 
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
@@ -37,7 +125,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const isProductScope = scope === "product" && productName;
+    const isProductScope = scope === "product" && Boolean(productName);
 
     const prompt = isProductScope
       ? `Generate a targeted campaign keyword strategy for the following product:
@@ -89,73 +177,96 @@ Response format MUST be strict JSON matching this schema:
           ],
           temperature: 0.7,
         }),
-      }
+        signal: AbortSignal.timeout(20_000),
+      },
     );
 
     if (!response.ok) {
-      const errText = await response.text();
       return NextResponse.json(
-        { error: `Groq API Error: ${errText}` },
-        { status: response.status }
+        { error: "Keyword suggestions are temporarily unavailable." },
+        { status: 502 },
       );
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    const parsed = JSON.parse(content || "{}");
-    const rawKeywords = parsed.keywords || [];
+    const data: unknown = await response.json();
+    const parsed = parseGroqJson(data);
+    const rawKeywords = normalizeGeneratedKeywords(parsed.keywords);
+    if (rawKeywords.length === 0) {
+      throw new Error("The AI service returned no usable keyword suggestions.");
+    }
 
-    // ── Layer 2: Google Trends Signals ──
-    const seed = isProductScope ? productName : businessName;
+    const seed = isProductScope && productName ? productName : businessName;
     const trendsSignals = await fetchGoogleTrendsData(seed);
+    const trendTopics = trendsSignals.map(({ query }) => query.toLowerCase());
 
-    // ── Layer 3: Google Ads API Historical Metrics ──
+    const googleAdsSession = await getGoogleAdsSession(
+      auth.cookieStore,
+      auth.user.id,
+    );
     const adsCredentials: GoogleAdsCredentials = {
       customerId: process.env.GOOGLE_ADS_CUSTOMER_ID ?? "",
       developerToken: process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? "",
       loginCustomerId: process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID,
+      accessToken: googleAdsSession.accessToken,
     };
 
-    const kwList = rawKeywords.map((k: any) => k.keyword);
+    const kwList = rawKeywords.map((keyword) => keyword.keyword);
     const googleAdsMetrics = await fetchKeywordMetrics(adsCredentials, kwList);
 
-    // Merge multi-source data
     const enrichedKeywords: KeywordResult[] = rawKeywords.map(
-      (item: any, idx: number) => {
-        const lowerKw = (item.keyword || "").toLowerCase();
+      (item) => {
+        const lowerKw = item.keyword.toLowerCase();
         const adsMetric = googleAdsMetrics[lowerKw];
-        const sources = ["Groq AI"];
-
-        if (trendsSignals.length > 0) {
-          sources.push("Google Trends");
-        }
+        const hasRelatedTrendTopic = trendTopics.some(
+          (topic) => topic.includes(lowerKw) || lowerKw.includes(topic),
+        );
+        const sources = ["AI suggestion"];
         if (adsMetric) {
           sources.push("Google Ads API");
         }
-
-        const isSurging = idx % 3 === 0 || trendsSignals.length > 0;
+        if (hasRelatedTrendTopic) sources.push("Google Trends topic");
 
         return {
-          ...item,
-          cpcFormatted: adsMetric?.cpcFormatted || "$1.45",
+          keyword: item.keyword,
+          category: item.category,
+          intentDescription: item.intentDescription,
+          suggestedAdHeadline: item.suggestedAdHeadline,
+          cpcFormatted: adsMetric?.cpcFormatted,
           estimatedSearchVolume: adsMetric
             ? `${adsMetric.avgMonthlySearches.toLocaleString()} monthly`
             : item.estimatedSearchVolume,
-          trendSignal: isSurging ? "+120% Breakout" : undefined,
-          isSurging,
+          trendSignal: hasRelatedTrendTopic ? "Related topic" : undefined,
+          isSurging: false,
           sources,
+          volumeSource: adsMetric ? "Google Ads" : "AI estimate",
         };
-      }
+      },
     );
 
-    return NextResponse.json({
+    const nextResponse = NextResponse.json({
       keywords: enrichedKeywords,
       scopeUsed: isProductScope ? "product" : "brand",
     });
-  } catch (error: any) {
+    if (googleAdsSession.clearCookie) {
+      nextResponse.cookies.delete(GOOGLE_ADS_TOKEN_COOKIE);
+    } else if (googleAdsSession.refreshedCookie) {
+      nextResponse.cookies.set(
+        GOOGLE_ADS_TOKEN_COOKIE,
+        googleAdsSession.refreshedCookie,
+        {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: GOOGLE_ADS_TOKEN_MAX_AGE_SECONDS,
+        },
+      );
+    }
+    return nextResponse;
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error.message || "Failed to generate keywords." },
-      { status: 500 }
+      { error: errorMessage(error, "Failed to generate keywords.") },
+      { status: 500 },
     );
   }
 }

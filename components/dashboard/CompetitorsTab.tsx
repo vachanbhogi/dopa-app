@@ -10,6 +10,46 @@ import {
 } from "@/app/dashboard/competitor-actions";
 import type { DiscoveredCompetitor } from "@/app/api/competitors/discover/route";
 import type { CompetitorMove } from "@/app/api/competitors/moves/route";
+import { errorMessage, isJsonObject } from "@/lib/validation";
+
+const moveTypes = new Set([
+  "ad_launched",
+  "price_change",
+  "positioning_pivot",
+  "hook_change",
+]);
+const riskLevels = new Set(["low", "medium", "high"]);
+
+function isDiscoveredCompetitor(
+  value: unknown,
+): value is DiscoveredCompetitor {
+  if (!isJsonObject(value)) return false;
+
+  return (
+    typeof value.name === "string" &&
+    typeof value.website_url === "string" &&
+    typeof value.primary_angle === "string" &&
+    typeof value.overlap === "string" &&
+    typeof value.predicted_ctr === "number" &&
+    Number.isFinite(value.predicted_ctr)
+  );
+}
+
+function isCompetitorMove(value: unknown): value is CompetitorMove {
+  if (!isJsonObject(value)) return false;
+
+  return (
+    typeof value.move_type === "string" &&
+    moveTypes.has(value.move_type) &&
+    typeof value.title === "string" &&
+    typeof value.description === "string" &&
+    typeof value.risk_level === "string" &&
+    riskLevels.has(value.risk_level) &&
+    typeof value.predicted_ctr === "number" &&
+    Number.isFinite(value.predicted_ctr) &&
+    typeof value.timeAgo === "string"
+  );
+}
 
 export function CompetitorsTab({ business }: { business: Business }) {
   const [competitors, setCompetitors] = useState<CompetitorItem[]>([]);
@@ -31,6 +71,7 @@ export function CompetitorsTab({ business }: { business: Business }) {
   const [selectedCompetitor, setSelectedCompetitor] = useState<CompetitorItem | null>(null);
   const [moves, setMoves] = useState<CompetitorMove[]>([]);
   const [loadingMoves, setLoadingMoves] = useState(false);
+  const [movesError, setMovesError] = useState<string | null>(null);
 
   const loadCompetitors = useCallback(async () => {
     setLoading(true);
@@ -43,38 +84,58 @@ export function CompetitorsTab({ business }: { business: Business }) {
     }
     const list = res.competitors ?? [];
     setCompetitors(list);
-    if (list.length > 0 && !selectedCompetitor) {
-      setSelectedCompetitor(list[0]);
-    }
-  }, [business.id, selectedCompetitor]);
+    setSelectedCompetitor((current) => {
+      if (!current) return list[0] ?? null;
+      return list.find((competitor) => competitor.id === current.id) ?? list[0] ?? null;
+    });
+  }, [business.id]);
 
   useEffect(() => {
-    loadCompetitors();
+    queueMicrotask(() => void loadCompetitors());
   }, [loadCompetitors]);
 
-  // Load Moves when selected competitor changes
   useEffect(() => {
-    if (!selectedCompetitor) return;
+    const controller = new AbortController();
     async function loadMoves() {
+      if (!selectedCompetitor) return;
       setLoadingMoves(true);
+      setMoves([]);
+      setMovesError(null);
       try {
         const res = await fetch("/api/competitors/moves", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({
-            competitorName: selectedCompetitor?.name,
-            primaryAngle: selectedCompetitor?.primary_angle,
+            competitorName: selectedCompetitor.name,
+            primaryAngle: selectedCompetitor.primary_angle,
           }),
         });
-        const data = await res.json();
-        setMoves(data.moves || []);
-      } catch {
+        const data: unknown = await res.json();
+        if (!res.ok) {
+          const message =
+            isJsonObject(data) && typeof data.error === "string"
+              ? data.error
+              : "Could not generate competitor scenarios.";
+          throw new Error(message);
+        }
+        setMoves(
+          isJsonObject(data) && Array.isArray(data.moves)
+            ? data.moves.filter(isCompetitorMove)
+            : [],
+        );
+      } catch (error: unknown) {
+        if (controller.signal.aborted) return;
         setMoves([]);
+        setMovesError(
+          errorMessage(error, "Could not generate competitor scenarios."),
+        );
       } finally {
-        setLoadingMoves(false);
+        if (!controller.signal.aborted) setLoadingMoves(false);
       }
     }
-    loadMoves();
+    void loadMoves();
+    return () => controller.abort();
   }, [selectedCompetitor]);
 
   async function handleAutoDiscover() {
@@ -91,11 +152,21 @@ export function CompetitorsTab({ business }: { business: Business }) {
           website: business.website,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to discover competitors");
-      setDiscoveredList(data.competitors || []);
-    } catch (err: any) {
-      setError(err.message || "Auto-discovery failed.");
+      const data: unknown = await res.json();
+      if (!res.ok) {
+        const message =
+          isJsonObject(data) && typeof data.error === "string"
+            ? data.error
+            : "Failed to discover competitors";
+        throw new Error(message);
+      }
+      setDiscoveredList(
+        isJsonObject(data) && Array.isArray(data.competitors)
+          ? data.competitors.filter(isDiscoveredCompetitor)
+          : [],
+      );
+    } catch (error: unknown) {
+      setError(errorMessage(error, "Auto-discovery failed."));
     } finally {
       setDiscovering(false);
     }
@@ -111,6 +182,8 @@ export function CompetitorsTab({ business }: { business: Business }) {
     if (!res.error) {
       setDiscoveredList((prev) => prev.filter((item) => item.name !== c.name));
       await loadCompetitors();
+    } else {
+      setError(res.error);
     }
   }
 
@@ -121,7 +194,6 @@ export function CompetitorsTab({ business }: { business: Business }) {
         name: manualName,
         website_url: manualWebsite,
         primary_angle: manualAngle,
-        predicted_ctr: 1.35,
       });
       if (res.error) {
         setError(res.error);
@@ -141,13 +213,14 @@ export function CompetitorsTab({ business }: { business: Business }) {
       <div className="flex flex-col gap-4 dopa-panel p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-[17px] font-medium text-white">Competitor Radar & Move Detector</h2>
+            <h2 className="text-[17px] font-medium text-white">Competitor Research</h2>
             <span className="rounded bg-brand/20 px-2 py-0.5 text-[10px] font-semibold text-brand">
-              Live Tracker
+              AI-assisted
             </span>
           </div>
           <p className="mt-1 text-[13px] text-secondary">
-            Auto-discover rivals, track campaign moves, and compare predicted CTR pre-spend with TRIBE v2.
+            Build a shortlist of likely rivals and explore planning scenarios.
+            Verify AI suggestions before using them in campaign decisions.
           </p>
         </div>
 
@@ -197,7 +270,8 @@ export function CompetitorsTab({ business }: { business: Business }) {
         <div className="rounded-xl border border-brand/30 bg-brand/10 p-5">
           <h3 className="text-[14px] font-medium text-white">Discovered Industry Competitors</h3>
           <p className="mt-1 text-[12px] text-secondary">
-            Groq AI identified these direct rivals for {business.name}. Click to add them to your live radar.
+            AI suggested these possible rivals for {business.name}. Review each
+            suggestion before adding it.
           </p>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -218,7 +292,7 @@ export function CompetitorsTab({ business }: { business: Business }) {
 
                 <div className="mt-3 flex items-center justify-between border-t border-white/6 pt-2.5">
                   <span className="font-mono text-[11px] text-emerald-400">
-                    Est. CTR: {c.predicted_ctr}%
+                    AI CTR estimate: {c.predicted_ctr}%
                   </span>
                   <button
                     type="button"
@@ -234,7 +308,7 @@ export function CompetitorsTab({ business }: { business: Business }) {
         </div>
       )}
 
-      {/* ── Tracked Competitors List & Live Radar ── */}
+      {/* ── Tracked competitors and planning scenarios ── */}
       {loading ? (
         <div className="h-40 animate-pulse rounded-xl border border-white/6 bg-white/2" />
       ) : competitors.length === 0 ? (
@@ -247,7 +321,8 @@ export function CompetitorsTab({ business }: { business: Business }) {
           </div>
           <h3 className="mt-4 text-[15px] font-medium text-white">No Competitors Tracked Yet</h3>
           <p className="mt-1.5 max-w-sm text-center text-[13px] leading-5 text-secondary">
-            Click &quot;Auto-Discover Rivals&quot; or manually add competitors to track their ads and strategy moves.
+            Click &quot;Auto-Discover Rivals&quot; or manually add competitors
+            to build a research shortlist and explore planning scenarios.
           </p>
         </div>
       ) : (
@@ -260,35 +335,46 @@ export function CompetitorsTab({ business }: { business: Business }) {
               return (
                 <div
                   key={comp.id}
-                  onClick={() => setSelectedCompetitor(comp)}
-                  className={`cursor-pointer rounded-xl border p-4 transition-all ${
+                  className={`rounded-xl border p-4 transition-all ${
                     isSelected
                       ? "border-brand bg-brand/10 shadow-[0_0_20px_rgba(94,106,210,0.15)]"
                       : "border-white/6 bg-[#0c0d0e] hover:border-white/12"
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-white">{comp.name}</h4>
-                    <span className="font-mono text-[12px] font-semibold text-emerald-400">
-                      Predicted CTR {comp.predicted_ctr || 1.25}%
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCompetitor(comp)}
+                    aria-pressed={isSelected}
+                    className="block w-full text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
+                  >
+                    <span className="flex items-center justify-between gap-3">
+                      <span className="font-medium text-white">{comp.name}</span>
+                      <span className="font-mono text-[12px] font-semibold text-emerald-400">
+                        {comp.predicted_ctr == null
+                          ? "No ad score"
+                          : `AI CTR estimate ${comp.predicted_ctr}%`}
+                      </span>
                     </span>
-                  </div>
 
-                  {comp.primary_angle && (
-                    <p className="mt-1.5 text-[12px] leading-4 text-secondary line-clamp-2">
-                      {comp.primary_angle}
-                    </p>
-                  )}
+                    {comp.primary_angle ? (
+                      <span className="mt-1.5 block line-clamp-2 text-[12px] leading-4 text-secondary">
+                        {comp.primary_angle}
+                      </span>
+                    ) : null}
+                  </button>
 
                   <div className="mt-3 flex items-center justify-between border-t border-white/6 pt-2 text-[11px] text-tertiary">
                     <span>{comp.website_url || "No website"}</span>
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (confirm(`Delete ${comp.name}?`)) {
-                          deleteCompetitor(comp.id).then(loadCompetitors);
+                      onClick={async () => {
+                        if (!window.confirm(`Delete ${comp.name}?`)) return;
+                        const result = await deleteCompetitor(comp.id);
+                        if (result.error) {
+                          setError(result.error);
+                          return;
                         }
+                        await loadCompetitors();
                       }}
                       className="text-red-400 hover:text-red-300"
                     >
@@ -300,19 +386,21 @@ export function CompetitorsTab({ business }: { business: Business }) {
             })}
           </div>
 
-          {/* Moves Timeline for Selected Competitor */}
+          {/* Planning scenarios for selected competitor */}
           <div className="dopa-panel p-5">
             <div className="flex items-center justify-between border-b border-white/6 pb-3">
               <div>
                 <h3 className="text-[15px] font-medium text-white">
-                  {selectedCompetitor ? `${selectedCompetitor.name} Move Radar` : "Select a Competitor"}
+                  {selectedCompetitor
+                    ? `${selectedCompetitor.name} Planning Scenarios`
+                    : "Select a Competitor"}
                 </h3>
                 <p className="text-[12px] text-secondary">
-                  Real-time detected ad launches, positioning pivots & offer changes.
+                  AI-generated possibilities to investigate, not detected events.
                 </p>
               </div>
-              <span className="rounded bg-emerald-500/15 px-2 py-0.5 font-mono text-[10px] font-semibold text-emerald-400">
-                Live Feed
+              <span className="rounded bg-brand/15 px-2 py-0.5 font-mono text-[10px] font-semibold text-brand">
+                Scenarios
               </span>
             </div>
 
@@ -326,7 +414,7 @@ export function CompetitorsTab({ business }: { business: Business }) {
               <div className="mt-4 space-y-3">
                 {moves.map((move, idx) => (
                   <div
-                    key={idx}
+                    key={`${move.move_type}-${move.title}-${idx}`}
                     className="rounded-lg border border-white/6 bg-[#090a0b] p-3.5 transition-colors hover:border-white/10"
                   >
                     <div className="flex items-center justify-between">
@@ -352,15 +440,19 @@ export function CompetitorsTab({ business }: { business: Business }) {
                     <div className="mt-2.5 flex items-center justify-between border-t border-white/6 pt-2 text-[11px]">
                       <span className="text-tertiary">Type: {move.move_type.replace("_", " ")}</span>
                       <span className="font-mono text-emerald-400">
-                        Ad CTR: {move.predicted_ctr}%
+                        AI CTR estimate: {move.predicted_ctr}%
                       </span>
                     </div>
                   </div>
                 ))}
               </div>
+            ) : movesError ? (
+              <div className="py-12 text-center text-[13px] text-red-300">
+                {movesError}
+              </div>
             ) : (
               <div className="py-12 text-center text-[13px] text-secondary">
-                No recent moves recorded for this competitor yet.
+                No planning scenarios are available for this competitor yet.
               </div>
             )}
           </div>
@@ -372,12 +464,21 @@ export function CompetitorsTab({ business }: { business: Business }) {
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm sm:items-center"
           onClick={() => setModalOpen(false)}
+          role="presentation"
         >
           <div
             className="w-full max-w-md rounded-xl border border-white/10 bg-[#111114] p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-competitor-title"
           >
-            <h3 className="text-[17px] font-medium text-white">Add Competitor</h3>
+            <h3
+              id="add-competitor-title"
+              className="text-[17px] font-medium text-white"
+            >
+              Add Competitor
+            </h3>
             <p className="mt-1 text-[13px] text-secondary">
               Track a specific rival&apos;s ad strategy and moves.
             </p>

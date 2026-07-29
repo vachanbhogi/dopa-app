@@ -26,6 +26,9 @@ export function AuthForm({
   message,
 }: AuthFormProps) {
   const isLogin = mode === "login";
+  const redirectQuery = redirectTo
+    ? `&redirectTo=${encodeURIComponent(redirectTo)}`
+    : "";
 
   return (
     <div className="space-y-5">
@@ -43,6 +46,24 @@ export function AuthForm({
       <form action={action} className="space-y-4">
         {redirectTo ? (
           <input type="hidden" name="redirectTo" value={redirectTo} />
+        ) : null}
+        {!isLogin ? (
+          <div>
+            <label
+              htmlFor="fullName"
+              className="mb-1.5 block text-[12px] font-medium text-secondary"
+            >
+              Full name
+            </label>
+            <input
+              id="fullName"
+              name="fullName"
+              type="text"
+              autoComplete="name"
+              className={inputClass}
+              placeholder="Your name"
+            />
+          </div>
         ) : null}
         <div>
           <label htmlFor="email" className="mb-1.5 block text-[12px] font-medium text-secondary">
@@ -85,14 +106,20 @@ export function AuthForm({
         {isLogin ? (
           <>
             Don&apos;t have an account?{" "}
-            <Link href="/?modal=signup" className="text-white transition-opacity hover:opacity-80">
+            <Link
+              href={`/?modal=signup${redirectQuery}`}
+              className="text-white transition-opacity hover:opacity-80"
+            >
               Sign up
             </Link>
           </>
         ) : (
           <>
             Already have an account?{" "}
-            <Link href="/?modal=login" className="text-white transition-opacity hover:opacity-80">
+            <Link
+              href={`/?modal=login${redirectQuery}`}
+              className="text-white transition-opacity hover:opacity-80"
+            >
               Sign in
             </Link>
           </>
@@ -118,13 +145,19 @@ export function AuthForm({
       {!isLogin ? (
         <p className="text-center text-[11px] leading-4 text-tertiary">
           By signing up, you agree to our{" "}
-          <a href="#terms" className="text-secondary underline underline-offset-2 decoration-white/30">
-            Terms
-          </a>{" "}
+          <Link
+            href="/terms"
+            className="text-secondary underline decoration-white/30 underline-offset-2"
+          >
+            Terms of Service
+          </Link>{" "}
           and{" "}
-          <a href="#privacy" className="text-secondary underline underline-offset-2 decoration-white/30">
+          <Link
+            href="/privacy"
+            className="text-secondary underline decoration-white/30 underline-offset-2"
+          >
             Privacy Policy
-          </a>
+          </Link>
           .
         </p>
       ) : null}
