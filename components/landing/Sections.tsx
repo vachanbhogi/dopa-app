@@ -2,21 +2,108 @@ import { ArrowRight } from "./icons";
 
 const pillars = [
   {
+    id: "tribe",
     title: "TRIBE v2 brain",
     body: "Meta’s neural encoder predicts an average-subject cortical response to your ad’s video frames.",
     fig: "FIG 0.2",
   },
   {
+    id: "metric",
     title: "Metric prediction",
     body: "dopa-model maps those cortical features to one predicted average click-through rate.",
     fig: "FIG 0.3",
   },
   {
+    id: "context",
     title: "Campaign context",
-    body: "Keep products, AI-assisted competitor research, keyword ideas, and read-only Google Ads reporting in one workspace.",
+    body: "Keep products, AI-assisted competitor research, keyword ideas, and Google Ads ops in one workspace.",
     fig: "FIG 0.4",
   },
-];
+] as const;
+
+function PillarFig({ id }: { id: (typeof pillars)[number]["id"] }) {
+  if (id === "tribe") {
+    return (
+      <div className="absolute inset-6 flex flex-col rounded-lg border border-white/8 bg-[#0f1011]/90 p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[10px] text-tertiary">Cortical response</span>
+          <span className="font-mono text-[10px] text-accent">7.2s peak</span>
+        </div>
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-md border border-white/6 bg-[#0b0c0d]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_55%_40%,rgba(113,112,255,0.45),transparent_55%)]" />
+          <div className="absolute inset-0 opacity-30 dopa-grain" />
+          <div className="absolute bottom-2 left-2 right-2 flex h-8 items-end gap-0.5">
+            {[28, 44, 38, 62, 88, 54, 36].map((h, i) => (
+              <div
+                key={i}
+                className="flex-1 rounded-sm bg-brand/55"
+                style={{ height: `${h}%` }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (id === "metric") {
+    return (
+      <div className="absolute inset-6 flex flex-col justify-between rounded-lg border border-white/8 bg-[#0f1011]/90 p-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-tertiary">dopa-model</span>
+          <span className="rounded-full border border-brand/35 bg-brand/15 px-2 py-0.5 font-mono text-[10px] text-accent">
+            CTR
+          </span>
+        </div>
+        <div>
+          <div className="font-mono text-[28px] font-medium leading-none tracking-[-0.04em] text-foreground">
+            2.84%
+          </div>
+          <div className="mt-1 text-[11px] text-secondary">
+            Predicted average click-through
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5">
+          {[
+            { l: "Hook", v: "↑" },
+            { l: "Product", v: "↑" },
+            { l: "CTA", v: "→" },
+          ].map((m) => (
+            <div
+              key={m.l}
+              className="rounded border border-white/6 bg-white/3 px-1.5 py-1 text-center"
+            >
+              <div className="text-[9px] text-tertiary">{m.l}</div>
+              <div className="font-mono text-[11px] text-foreground">{m.v}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="absolute inset-6 flex flex-col rounded-lg border border-white/8 bg-[#0f1011]/90 p-3">
+      <div className="mb-2 text-[10px] text-tertiary">Workspace</div>
+      <div className="space-y-1.5">
+        {[
+          { label: "Business", meta: "Imported" },
+          { label: "Competitors", meta: "3 tracked" },
+          { label: "Keywords", meta: "Intent" },
+          { label: "Google Ads", meta: "Live" },
+        ].map((row) => (
+          <div
+            key={row.label}
+            className="flex items-center justify-between rounded-md border border-white/6 bg-white/3 px-2 py-1.5"
+          >
+            <span className="text-[11px] text-foreground">{row.label}</span>
+            <span className="font-mono text-[10px] text-tertiary">{row.meta}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function Species() {
   return (
@@ -30,25 +117,14 @@ export function Species() {
 
         <div className="mt-16 grid gap-10 md:mt-24 md:grid-cols-3 md:gap-8">
           {pillars.map((p) => (
-            <div key={p.title} className="group">
+            <div key={p.id} className="group">
               <div className="dopa-panel relative mb-5 aspect-4/3 overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(94,106,210,0.18),transparent_55%)]" />
                 <div className="absolute inset-0 opacity-40 dopa-grain" />
-                <div className="absolute bottom-3 left-3 rounded bg-black/40 px-2 py-1 font-mono text-[10px] text-tertiary">
+                <div className="absolute bottom-3 left-3 z-10 rounded bg-black/40 px-2 py-1 font-mono text-[10px] text-tertiary">
                   {p.fig}
                 </div>
-                <div className="absolute inset-6 rounded-lg border border-white/8 bg-[#0f1011]/80 p-3">
-                  <div className="mb-2 h-2 w-16 rounded bg-white/10" />
-                  <div className="space-y-1.5">
-                    <div className="h-2 w-full rounded bg-white/6" />
-                    <div className="h-2 w-[85%] rounded bg-white/6" />
-                    <div className="h-2 w-[70%] rounded bg-white/6" />
-                  </div>
-                  <div className="mt-4 flex gap-2">
-                    <div className="h-6 flex-1 rounded bg-brand/30" />
-                    <div className="h-6 w-10 rounded bg-white/6" />
-                  </div>
-                </div>
+                <PillarFig id={p.id} />
               </div>
               <h3 className="text-[17px] font-medium tracking-[-0.01em]">{p.title}</h3>
               <p className="mt-2 text-[14px] leading-6 text-secondary">{p.body}</p>
@@ -100,137 +176,223 @@ function FeatureLinks({
   );
 }
 
-export function Intake() {
-  const columns = [
+function Chip({ label, active }: { label: string; active?: boolean }) {
+  return (
+    <span
+      className={
+        active
+          ? "rounded-md border border-brand/40 bg-brand/15 px-2.5 py-1 text-[11px] font-medium text-accent"
+          : "rounded-md border border-white/8 bg-white/3 px-2.5 py-1 text-[11px] text-secondary"
+      }
+    >
+      {label}
+    </span>
+  );
+}
+
+export function Business() {
+  return (
+    <section id="business" className="border-t border-white/6">
+      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
+        <div className="max-w-160">
+          <SectionLink index="1.0" label="Business" />
+          <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
+            Extract brand intent and audience personas in 30 seconds
+          </h2>
+          <p className="mt-4 text-[16px] leading-7 text-secondary">
+            Paste your website — Dopa auto-imports brand highlights, target
+            audience, voice, and price positioning so every score starts from
+            the right brief.
+          </p>
+        </div>
+
+        <div className="dopa-panel mt-12 overflow-hidden p-4 md:p-6">
+          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-white/6 bg-white/2 px-3 py-2.5">
+            <span className="text-[11px] text-tertiary">Import from</span>
+            <span className="font-mono text-[12px] text-foreground">
+              https://northstar.example
+            </span>
+            <span className="ml-auto rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
+              Auto-imported
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 border-b border-white/6 pb-4">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-[13px] font-bold text-white">
+              N
+            </span>
+            <div className="min-w-0">
+              <div className="text-[14px] font-medium text-foreground">
+                Northstar Apparel
+              </div>
+              <div className="text-[12px] text-tertiary">
+                northstar.example · DTC apparel
+              </div>
+            </div>
+            <span className="ml-auto rounded-md border border-brand/30 bg-brand/10 px-2 py-0.5 text-[11px] text-accent">
+              From website
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-6 md:grid-cols-3">
+            <div>
+              <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.12em] text-tertiary">
+                Target audience
+              </div>
+              <p className="text-[13px] leading-5 text-secondary">
+                25–40 urban professionals who buy elevated basics and respond to
+                founder-led UGC.
+              </p>
+            </div>
+            <div>
+              <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.12em] text-tertiary">
+                Brand voice
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <Chip label="Confident" active />
+                <Chip label="Warm" />
+                <Chip label="Minimal" active />
+                <Chip label="Playful" />
+              </div>
+            </div>
+            <div>
+              <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.12em] text-tertiary">
+                Price positioning
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <Chip label="Value" />
+                <Chip label="Mid-market" active />
+                <Chip label="Premium" />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-lg border border-white/6 bg-white/2 p-4">
+            <div className="mb-3 text-[11px] text-tertiary">Brand defaults</div>
+            <div className="flex flex-wrap gap-1.5">
+              <Chip label="Industry · Apparel" active />
+              <Chip label="Goal · Prospecting" active />
+              <Chip label="Tone · Confident" active />
+              <Chip label="Range · $48–$120" />
+            </div>
+          </div>
+        </div>
+
+        <FeatureLinks
+          items={[
+            { id: "1.1", label: "Website import" },
+            { id: "1.2", label: "Audience personas" },
+            { id: "1.3", label: "Voice chips" },
+            { id: "1.4", label: "Price positioning" },
+          ]}
+        />
+      </div>
+    </section>
+  );
+}
+
+export function Competitors() {
+  const cards = [
     {
-      title: "Backlog",
-      count: 8,
-      issues: [
-        "Score UGC unbox vs studio walkthrough",
-        "Research Rival Labs summer hooks",
-        "Compare predicted CTR before spend",
-        "Review highest-scoring creatives",
-      ],
+      name: "Rival Labs",
+      domain: "rivallabs.com",
+      threat: 86,
+      hook: "Price-slash montage · soft CTA",
+      counter: "Lead with fabric proof, not discount",
+      confidence: "92%",
+      horizon: "Now",
     },
     {
-      title: "Todo",
-      count: 71,
-      issues: [
-        { title: "Kill soft-CTA variant", tags: ["A/B", "Pause"] },
-        { title: "TRIBE encode batch · 12 cuts", tags: ["Brain"] },
-        { title: "Competitor price-slash montage", tags: ["Research"] },
-        {
-          title: "Strongest cortical response at 7s",
-          tags: ["Response"],
-        },
-      ],
+      name: "Atlas Wear",
+      domain: "atlaswear.co",
+      threat: 71,
+      hook: "Founder unbox · 6s punch-in",
+      counter: "Match pace; own the tactile close-up",
+      confidence: "78%",
+      horizon: "6 mo",
     },
     {
-      title: "In Progress",
-      count: 3,
-      issues: [
-        { title: "Predict average CTR for founder cut", id: "AD-1881" },
-        { title: "Review Summer Drop creative", tags: ["Campaign"], id: "MKT-1028" },
-        { title: "Compare pre-spend model estimates", tags: ["Review"], id: "AD-2010" },
-      ],
-    },
-    {
-      title: "Done",
-      count: 53,
-      issues: [
-        {
-          title: "Reviewed Studio walkthrough score",
-          tags: ["Review"],
-          id: "AD-1755",
-        },
-        { title: "Compared unbox hook score", id: "AD-1942" },
-        { title: "Competitor research · 3 brands", id: "RES-012" },
-        {
-          title: "Published cortical response report",
-          tags: ["Report"],
-          id: "AD-1660",
-        },
-      ],
+      name: "Cove Supply",
+      domain: "covesupply.com",
+      threat: 58,
+      hook: "Lifestyle montage · muted VO",
+      counter: "Counter with sharper product focus",
+      confidence: "64%",
+      horizon: "12 mo",
     },
   ];
 
   return (
-    <section id="intake" className="border-t border-white/6">
+    <section id="competitors" className="border-t border-white/6">
       <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
         <div className="max-w-160">
-          <SectionLink index="1.0" label="Intake" />
+          <SectionLink index="2.0" label="Competitors" />
           <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
-            Review creative before you spend
+            Monitor competitor ad angles and creative hooks
           </h2>
           <p className="mt-4 text-[16px] leading-7 text-secondary">
-            Upload short video ads, inspect a model-generated cortical response,
-            and use one predicted average CTR as an additional review signal.
+            Watchlist cards with hook teardowns, threat scores, and
+            counter-positioning angles — evidence before you react.
           </p>
         </div>
 
-        <div className="dopa-panel mt-12 overflow-hidden p-3 md:p-4">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {columns.map((col) => (
-              <div key={col.title} className="rounded-lg bg-white/2 p-3">
-                <div className="mb-3 flex items-center justify-between text-[12px]">
-                  <span className="font-medium text-foreground">{col.title}</span>
-                  <span className="text-tertiary">{col.count}</span>
+        <div className="mt-12 grid gap-4 md:grid-cols-3">
+          {cards.map((c) => (
+            <article key={c.name} className="dopa-panel flex flex-col p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="truncate text-[15px] font-medium text-white">
+                    {c.name}
+                  </h3>
+                  <p className="mt-0.5 text-[11px] text-tertiary">{c.domain}</p>
                 </div>
-                <div className="space-y-2">
-                  {col.issues.map((issue) => {
-                    const title = typeof issue === "string" ? issue : issue.title;
-                    const tags = typeof issue === "string" ? [] : issue.tags ?? [];
-                    const id = typeof issue === "string" ? undefined : "id" in issue ? issue.id : undefined;
-                    return (
-                      <div
-                        key={title}
-                        className="rounded-md border border-white/6 bg-[#0f1011] px-2.5 py-2"
-                      >
-                        <div className="text-[12px] leading-4 text-foreground">{title}</div>
-                        {(tags.length > 0 || id) && (
-                          <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                            {id ? (
-                              <span className="font-mono text-[10px] text-tertiary">{id}</span>
-                            ) : null}
-                            {tags.map((t) => (
-                              <span
-                                key={t}
-                                className="rounded bg-white/6 px-1 py-0.5 text-[10px] text-secondary"
-                              >
-                                {t}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                <div className="text-right">
+                  <p className="font-mono text-[22px] font-medium leading-none text-foreground">
+                    {c.threat}
+                  </p>
+                  <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-tertiary">
+                    threat
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
 
-          <div className="mt-4 rounded-lg border border-white/6 bg-[#0b0c0d] p-4">
-            <div className="mb-3 text-[11px] text-tertiary">Thread in #feedback</div>
-            <div className="space-y-3 text-[13px] leading-5">
-              <Slack name="maya" text="Has anyone scored the new unbox cut against Rival Labs?" />
-              <Slack name="lena" text="Live A/B is burning budget on the soft CTA — can we pretest?" />
-              <Slack name="maya" text="Yea, we should run TRIBE v2 and compare predicted average CTR before spend..." />
-              <Slack name="alex" text="Let’s review the CTR estimates beside the modeled cortical response." />
-              <div className="rounded-md border border-dashed border-white/10 bg-white/2 px-3 py-2 text-secondary">
-                <span className="text-accent">@Dopa</span> score this cut so we
-                can review it before the campaign launches
+              <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg border border-white/6 bg-black/15 p-3">
+                <div>
+                  <p className="text-[10px] text-tertiary">Confidence</p>
+                  <p className="mt-0.5 font-mono text-[13px] text-foreground">
+                    {c.confidence}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-tertiary">Horizon</p>
+                  <p className="mt-0.5 text-[13px] text-foreground">{c.horizon}</p>
+                </div>
               </div>
-            </div>
-          </div>
+
+              <div className="mt-4 space-y-3 text-[12px] leading-5">
+                <div>
+                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-tertiary">
+                    Ad hook
+                  </p>
+                  <p className="mt-1 text-secondary">{c.hook}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-tertiary">
+                    Counter-angle
+                  </p>
+                  <p className="mt-1 text-secondary">{c.counter}</p>
+                </div>
+              </div>
+            </article>
+          ))}
         </div>
 
         <FeatureLinks
           items={[
-            { id: "1.1", label: "Dopa Agent" },
-            { id: "1.2", label: "Creative scoring" },
-            { id: "1.3", label: "Competitor research" },
-            { id: "1.4", label: "Cortical playback" },
+            { id: "2.1", label: "Watchlist" },
+            { id: "2.2", label: "Hook teardown" },
+            { id: "2.3", label: "Threat scores" },
+            { id: "2.4", label: "Counter-angles" },
           ]}
         />
       </div>
@@ -238,297 +400,89 @@ export function Intake() {
   );
 }
 
-function Slack({ name, text }: { name: string; text: string }) {
-  return (
-    <div>
-      <span className="font-medium text-foreground">{name}</span>{" "}
-      <span className="text-secondary">{text}</span>
-    </div>
-  );
-}
-
-export function Plan() {
-  const months = ["FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP"];
-  const initiatives = [
-    { name: "Always-on prospecting", count: 99 },
-    { name: "Retargeting", count: 28 },
-    { name: "UGC pipeline", count: 16 },
-    { name: "Brand films", count: 8 },
-    { name: "APAC flights", count: 21 },
-    { name: "Launch week", count: 12 },
-    { name: "Competitor responses", count: 9 },
+export function Products() {
+  const products = [
+    {
+      name: "Summit Tee",
+      price: "$58",
+      category: "Apparel",
+      value: "Heavyweight cotton · boxy fit",
+      hooks: ["Fabric close-up", "Fit flip", "Street cutaway"],
+    },
+    {
+      name: "Trail Overshirt",
+      price: "$128",
+      category: "Outerwear",
+      value: "Waxed canvas · seasonless layer",
+      hooks: ["Weather test", "Layer stack", "Detail macro"],
+    },
+    {
+      name: "Core Sock 3-Pack",
+      price: "$32",
+      category: "Accessories",
+      value: "Merino blend · everyday rotation",
+      hooks: ["Unpack ASMR", "Color grid", "Wear day 7"],
+    },
   ];
 
   return (
-    <section id="plan" className="border-t border-white/6">
+    <section id="products" className="border-t border-white/6">
       <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
         <div className="max-w-160">
-          <SectionLink index="2.0" label="Plan" />
+          <SectionLink index="3.0" label="Products" />
           <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
-            Define the campaign direction
+            Organize product offers and visual creative hooks
           </h2>
           <p className="mt-4 text-[16px] leading-7 text-secondary">
-            Keep business defaults, product profiles, competitor shortlists, and
-            keyword ideas organized around the creative you are reviewing.
-          </p>
-        </div>
-
-        <div className="dopa-panel mt-12 overflow-x-auto p-4 md:p-6">
-          <div className="mb-4 grid min-w-180 grid-cols-8 gap-2 text-center text-[11px] text-tertiary">
-            {months.map((m) => (
-              <div key={m}>{m}</div>
-            ))}
-          </div>
-          <div className="relative min-w-180 space-y-3">
-            <RoadBar label="Summer Drop" from={1} span={3} tone="brand" sub="Unbox · UGC · CTA tests" />
-            <RoadBar label="Competitor research" from={3} span={3} tone="green" sub="Suggest · Verify · Compare" />
-            <RoadBar label="Creative review" from={5} span={3} tone="amber" sub="Score · Inspect · Decide" />
-          </div>
-          <div className="mt-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {initiatives.map((i) => (
-              <div
-                key={i.name}
-                className="flex items-center justify-between rounded-md border border-white/6 px-3 py-2 text-[13px]"
-              >
-                <span>{i.name}</span>
-                <span className="text-tertiary">{i.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <FeatureLinks
-          items={[
-            { id: "2.1", label: "Flights" },
-            { id: "2.2", label: "Briefs" },
-            { id: "2.3", label: "Campaigns" },
-            { id: "2.4", label: "Scoreboards" },
-          ]}
-        />
-      </div>
-    </section>
-  );
-}
-
-function RoadBar({
-  label,
-  from,
-  span,
-  tone,
-  sub,
-}: {
-  label: string;
-  from: number;
-  span: number;
-  tone: "brand" | "green" | "amber";
-  sub: string;
-}) {
-  const colors = {
-    brand: "bg-brand/35 border-brand/40",
-    green: "bg-emerald-500/25 border-emerald-500/35",
-    amber: "bg-amber-400/25 border-amber-400/35",
-  };
-  return (
-    <div className="grid grid-cols-8 gap-2">
-      <div
-        className={`rounded-md border px-3 py-2 ${colors[tone]}`}
-        style={{ gridColumn: `${from} / span ${span}` }}
-      >
-        <div className="text-[12px] font-medium text-foreground">{label}</div>
-        <div className="text-[11px] text-secondary">{sub}</div>
-      </div>
-    </div>
-  );
-}
-
-export function Build() {
-  const agents = ["Dopa", "Triage", "Research", "TRIBE encode", "Metric head", "Maya"];
-
-  return (
-    <section id="build" className="border-t border-white/6">
-      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
-        <div className="max-w-160">
-          <SectionLink index="3.0" label="Build" />
-          <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
-            Run the scoring pipeline in one place
-          </h2>
-          <p className="mt-4 text-[16px] leading-7 text-secondary">
-            Dopa sends an uploaded video through the configured TRIBE v2 scoring
-            service, predicts average CTR, and loads the returned cortical model
-            for interactive inspection.
-          </p>
-        </div>
-
-        <div className="mt-12 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="dopa-panel overflow-hidden">
-            <div className="border-b border-white/6 px-4 py-3 text-[12px] text-secondary">
-              Dopa · Agent
-            </div>
-            <div className="space-y-3 p-4 font-mono text-[12px] leading-5 text-secondary">
-              <p className="text-foreground">On it! I&apos;ve received your request.</p>
-              <p>Kicked off TRIBE v2 encode on summer-drop/unbox.mp4</p>
-              <p>Extracting brain_video cortical response</p>
-              <p className="text-tertiary">
-                dopa-model$ predict --target mean_ctr
-              </p>
-              <p className="text-emerald-400">
-                Predicted average CTR 2.84%
-              </p>
-              <p>Ranking the five most responsive cortical parcels</p>
-              <p className="text-tertiary">Thought for 5s</p>
-            </div>
-          </div>
-          <div className="dopa-panel p-4">
-            <div className="mb-3 text-[12px] text-secondary">Agents Command Menu</div>
-            <div className="mb-4 rounded-md border border-white/8 bg-black/30 px-3 py-2 text-[13px] text-tertiary">
-              No results found.
-            </div>
-            <div className="space-y-1">
-              {agents.map((a, i) => (
-                <div
-                  key={a}
-                  className={`flex items-center justify-between rounded-md px-2 py-2 text-[13px] ${
-                    i === 0 ? "bg-white/5" : "hover:bg-white/3"
-                  }`}
-                >
-                  <span>{a}</span>
-                  {["Dopa", "TRIBE encode", "Metric head"].includes(a) ? (
-                    <span className="rounded bg-brand/25 px-1.5 py-0.5 text-[10px] text-accent">
-                      Agent
-                    </span>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <FeatureLinks
-          items={[
-            { id: "3.1", label: "Creatives" },
-            { id: "3.2", label: "Agents" },
-            { id: "3.3", label: "TRIBE v2" },
-            { id: "3.4", label: "CTR model" },
-            { id: "3.5", label: "Flights" },
-          ]}
-        />
-      </div>
-    </section>
-  );
-}
-
-const beforeCode = `// live A/B — wait weeks for spend signal
-shipVariant("soft_cta")
-await splitTest({ budget: 5000 })
-// live CTR arrives after spend`;
-
-const afterCode = `// Dopa — one pre-spend model estimate
-const result = await dopa.analyze(ad)
-review(result.predictedAverageCtr)
-inspect(result.corticalResponse)`;
-
-export function Diffs() {
-  return (
-    <section id="diffs" className="border-t border-white/6">
-      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
-        <div className="max-w-160">
-          <SectionLink index="4.0" label="Diffs" />
-          <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
-            Review creatives and agent output
-          </h2>
-          <p className="mt-4 text-[16px] leading-7 text-secondary">
-            Treat Dopa’s predicted average CTR as a model estimate—not a live
-            result or performance guarantee. Review it beside the modeled
-            cortical response before making a campaign decision.
+            Active offer cards that link value props, price points, and visual
+            storyboard hooks in one catalog.
           </p>
         </div>
 
         <div className="dopa-panel mt-12 overflow-hidden">
-          <div className="flex flex-wrap items-center gap-3 border-b border-white/6 px-4 py-3 text-[12px] text-secondary">
-            <span className="text-foreground">Dopa</span>
-            <span className="text-tertiary">·</span>
-            <span className="font-mono">campaigns/summer-drop/unbox.mp4</span>
+          <div className="grid grid-cols-[1fr_72px_100px] gap-3 border-b border-white/6 px-4 py-2.5 text-[11px] text-tertiary md:grid-cols-[1.2fr_80px_120px_1fr]">
+            <span>Product</span>
+            <span>Price</span>
+            <span className="hidden md:inline">Category</span>
+            <span className="text-right md:text-left">Hooks</span>
           </div>
-          <div className="grid md:grid-cols-2">
-            <pre className="overflow-x-auto border-b border-white/6 p-4 font-mono text-[11px] leading-5 text-red-300/80 md:border-b-0 md:border-r">
-              {beforeCode}
-            </pre>
-            <pre className="overflow-x-auto p-4 font-mono text-[11px] leading-5 text-emerald-300/90">
-              {afterCode}
-            </pre>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-export function Monitor() {
-  return (
-    <section id="monitor" className="border-t border-white/6">
-      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
-        <div className="max-w-160">
-          <SectionLink index="5.0" label="Monitor" />
-          <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
-            Understand performance at scale
-          </h2>
-          <p className="mt-4 text-[16px] leading-7 text-secondary">
-            Connect an authorized Google Ads account to review read-only campaign
-            actuals, while keeping pre-spend model estimates clearly labeled.
-          </p>
-        </div>
-
-        <div className="mt-12 grid gap-4 lg:grid-cols-2">
-          <div className="dopa-panel p-5">
-            <div className="mb-4 text-[13px] text-secondary">Creatives scored by week</div>
-            <div className="flex h-40 items-end gap-1.5">
-              {[6, 8, 7, 10, 12, 9, 14, 11, 16, 13, 15, 18, 12, 10, 14, 17, 15, 11].map(
-                (h, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 rounded-sm bg-brand/50"
-                    style={{ height: `${h * 5}%` }}
-                  />
-                ),
-              )}
+          {products.map((p) => (
+            <div
+              key={p.name}
+              className="grid grid-cols-[1fr_72px_100px] gap-3 border-b border-white/6 px-4 py-3.5 last:border-0 md:grid-cols-[1.2fr_80px_120px_1fr]"
+            >
+              <div className="min-w-0">
+                <div className="text-[13px] font-medium text-foreground">
+                  {p.name}
+                </div>
+                <div className="mt-0.5 truncate text-[12px] text-secondary">
+                  {p.value}
+                </div>
+              </div>
+              <div className="font-mono text-[13px] text-foreground">{p.price}</div>
+              <div className="hidden text-[12px] text-secondary md:block">
+                {p.category}
+              </div>
+              <div className="col-span-3 flex flex-wrap justify-end gap-1 md:col-span-1 md:justify-start">
+                {p.hooks.map((h) => (
+                  <span
+                    key={h}
+                    className="rounded bg-white/6 px-1.5 py-0.5 text-[10px] text-secondary"
+                  >
+                    {h}
+                  </span>
+                ))}
+              </div>
             </div>
-            <div className="mt-3 flex justify-between text-[11px] text-tertiary">
-              <span>Feb 2025</span>
-              <span>May 2025</span>
-              <span>Aug 2025</span>
-              <span>Nov 2025</span>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <Update
-              title="Summer Drop"
-              status="At risk"
-              statusTone="warning"
-              by="maya · 1 day ago"
-              bullets={[
-                "Unbox hook has the higher predicted average CTR",
-                "Risk of wasted spend if weak cuts stay in the flight",
-              ]}
-            />
-            <Update
-              title="Competitor watch"
-              status="On track"
-              statusTone="success"
-              by="alex · 3 hours ago"
-              bullets={[
-                "Rival Labs remains an AI-suggested competitor to verify",
-                "Planning scenarios are hypotheses, not detected events",
-              ]}
-            />
-          </div>
+          ))}
         </div>
 
         <FeatureLinks
           items={[
-            { id: "5.1", label: "Pulse" },
-            { id: "5.2", label: "Insights" },
-            { id: "5.3", label: "Dashboards" },
+            { id: "3.1", label: "Offer catalog" },
+            { id: "3.2", label: "Value props" },
+            { id: "3.3", label: "Price points" },
+            { id: "3.4", label: "Storyboard hooks" },
           ]}
         />
       </div>
@@ -536,38 +490,278 @@ export function Monitor() {
   );
 }
 
-function Update({
-  title,
-  status,
-  statusTone,
-  by,
-  bullets,
-}: {
-  title: string;
-  status: string;
-  statusTone: "warning" | "success";
-  by: string;
-  bullets: string[];
-}) {
-  const tone =
-    statusTone === "warning"
-      ? "bg-amber-400/15 text-amber-300"
-      : "bg-emerald-400/15 text-emerald-300";
+export function Keywords() {
+  const rows = [
+    { q: "heavyweight tee men", vol: "14.8k", cpc: "$1.40", ctr: "3.1%" },
+    { q: "boxy fit t-shirt", vol: "9.2k", cpc: "$1.15", ctr: "2.8%" },
+    { q: "organic cotton basics", vol: "6.4k", cpc: "$0.95", ctr: "2.4%" },
+    { q: "premium everyday tee", vol: "4.1k", cpc: "$1.70", ctr: "3.4%" },
+    { q: "founder brand apparel", vol: "2.7k", cpc: "$1.25", ctr: "2.9%" },
+  ];
+
   return (
-    <div className="dopa-panel p-4">
-      <div className="mb-1 flex items-center gap-2">
-        <span className="text-[14px] font-medium">{title}</span>
-        <span className={`rounded px-1.5 py-0.5 text-[11px] ${tone}`}>{status}</span>
+    <section id="keywords" className="border-t border-white/6">
+      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
+        <div className="max-w-160">
+          <SectionLink index="4.0" label="Keywords" />
+          <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
+            Align visual creatives with high-intent audience queries
+          </h2>
+          <p className="mt-4 text-[16px] leading-7 text-secondary">
+            A search intent matrix that matches buyer queries with predicted ad
+            CTR — so hooks and headlines share the same language.
+          </p>
+        </div>
+
+        <div className="dopa-panel mt-12 overflow-hidden">
+          <div className="flex flex-wrap items-center gap-2 border-b border-white/6 px-4 py-3">
+            <Chip label="Brand" />
+            <Chip label="Product" active />
+            <span className="ml-auto text-[11px] text-tertiary">
+              Scope · Summit Tee
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-140 text-left text-[13px]">
+              <thead>
+                <tr className="border-b border-white/6 text-[11px] text-tertiary">
+                  <th className="px-4 py-2.5 font-medium">Query</th>
+                  <th className="px-4 py-2.5 font-medium">Volume</th>
+                  <th className="px-4 py-2.5 font-medium">CPC</th>
+                  <th className="px-4 py-2.5 font-medium">Pred. CTR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.q} className="border-b border-white/6 last:border-0">
+                    <td className="px-4 py-3 text-foreground">{r.q}</td>
+                    <td className="px-4 py-3 font-mono text-secondary">{r.vol}</td>
+                    <td className="px-4 py-3 font-mono text-secondary">{r.cpc}</td>
+                    <td className="px-4 py-3 font-mono text-accent">{r.ctr}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <FeatureLinks
+          items={[
+            { id: "4.1", label: "Intent matrix" },
+            { id: "4.2", label: "Buyer queries" },
+            { id: "4.3", label: "Predicted CTR" },
+            { id: "4.4", label: "Headline align" },
+          ]}
+        />
       </div>
-      <div className="mb-3 text-[12px] text-tertiary">By {by}</div>
-      <ul className="space-y-1.5 text-[13px] leading-5 text-secondary">
-        {bullets.map((b) => (
-          <li key={b} className="flex gap-2">
-            <span className="text-tertiary">•</span>
-            <span>{b}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    </section>
+  );
+}
+
+export function Brain() {
+  const peaks = [
+    { t: "2.1s", label: "Hook", h: 42 },
+    { t: "4.8s", label: "Product", h: 68 },
+    { t: "7.2s", label: "Peak", h: 92 },
+    { t: "9.5s", label: "CTA", h: 55 },
+    { t: "11.0s", label: "End", h: 38 },
+  ];
+  const rois = [
+    { name: "V1 early visual", pct: 86 },
+    { name: "FFA face / form", pct: 72 },
+    { name: "MT motion", pct: 64 },
+    { name: "PPA place", pct: 41 },
+  ];
+
+  return (
+    <section id="brain" className="border-t border-white/6">
+      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
+        <div className="max-w-160">
+          <SectionLink index="5.0" label="Brain" />
+          <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
+            Predict CTR from human fMRI cortical visual response
+          </h2>
+          <p className="mt-4 text-[16px] leading-7 text-secondary">
+            Frame-by-frame cortical heatmap timeline, parcel activation preview,
+            and dopa-model CTR scorecard — the core review surface.
+          </p>
+        </div>
+
+        <div className="dopa-panel mt-12 overflow-hidden p-4 md:p-5">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-brand/35 bg-brand/15 px-2.5 py-1 font-mono text-[12px] text-accent">
+              CTR 2.84%
+            </span>
+            <Chip label="Region · Peak ROI" active />
+            <Chip label="Clip · unbox.mp4" />
+            <span className="ml-auto text-[11px] text-tertiary">
+              Upload · Inference · 3D
+            </span>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[1.35fr_0.85fr]">
+            <div className="space-y-4">
+              <div className="relative aspect-video overflow-hidden rounded-lg border border-white/8 bg-[#0b0c0d]">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_40%_35%,rgba(94,106,210,0.28),transparent_55%)]" />
+                <div className="absolute inset-0 opacity-30 dopa-grain" />
+                <div className="absolute bottom-3 left-3 right-3 flex items-end gap-1">
+                  {peaks.map((p) => (
+                    <div key={p.t} className="flex flex-1 flex-col items-center gap-1">
+                      <div
+                        className="w-full rounded-sm bg-brand/55"
+                        style={{ height: `${p.h * 0.45}px` }}
+                      />
+                      <span className="font-mono text-[9px] text-tertiary">
+                        {p.t}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="absolute left-3 top-3 rounded bg-black/50 px-2 py-1 text-[11px] text-secondary">
+                  Peak response · 7.2s
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: "Pred. CTR", value: "2.84%" },
+                  { label: "Analysis", value: "18s" },
+                  { label: "Hem. lag", value: "4.2s" },
+                ].map((m) => (
+                  <div
+                    key={m.label}
+                    className="rounded-lg border border-white/6 bg-white/2 px-3 py-2.5"
+                  >
+                    <div className="text-[10px] text-tertiary">{m.label}</div>
+                    <div className="mt-0.5 font-mono text-[16px] text-foreground">
+                      {m.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg border border-white/8 bg-[#0b0c0d]">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(113,112,255,0.35),transparent_58%)]" />
+                <div className="absolute inset-0 opacity-25 dopa-grain" />
+                <div className="relative h-28 w-28 rounded-full border border-brand/40 bg-brand/10 shadow-[0_0_40px_rgba(94,106,210,0.35)]" />
+                <div className="absolute bottom-3 left-3 text-[10px] uppercase tracking-[0.12em] text-tertiary">
+                  Cortical preview
+                </div>
+              </div>
+              <div className="space-y-2 rounded-lg border border-white/6 bg-white/2 p-3">
+                <div className="text-[11px] text-tertiary">Dominant parcels</div>
+                {rois.map((r) => (
+                  <div key={r.name}>
+                    <div className="mb-1 flex justify-between text-[11px]">
+                      <span className="text-secondary">{r.name}</span>
+                      <span className="font-mono text-foreground">{r.pct}%</span>
+                    </div>
+                    <div className="h-1 overflow-hidden rounded-full bg-white/6">
+                      <div
+                        className="h-full rounded-full bg-brand/70"
+                        style={{ width: `${r.pct}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <FeatureLinks
+          items={[
+            { id: "5.1", label: "TRIBE v2" },
+            { id: "5.2", label: "Heatmap timeline" },
+            { id: "5.3", label: "Parcel ROI" },
+            { id: "5.4", label: "CTR scorecard" },
+          ]}
+        />
+      </div>
+    </section>
+  );
+}
+
+export function GoogleAds() {
+  const metrics = [
+    { label: "Spend", value: "$12.4k" },
+    { label: "Conversions", value: "384" },
+    { label: "ROAS", value: "3.2x" },
+    { label: "Live CTR", value: "2.61%" },
+  ];
+
+  return (
+    <section id="google-ads" className="border-t border-white/6">
+      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
+        <div className="max-w-160">
+          <SectionLink index="6.0" label="Google Ads" />
+          <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
+            Automate campaign deployment and closed-loop auto-pause
+          </h2>
+          <p className="mt-4 text-[16px] leading-7 text-secondary">
+            Live Ads sync, predicted vs live CTR comparison, and auto-pause rule
+            alerts — close the loop after you ship.
+          </p>
+        </div>
+
+        <div className="mt-12 space-y-4">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/8 px-4 py-2.5 text-[12px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            <span className="font-medium text-emerald-300">Connected</span>
+            <span className="text-secondary">
+              Google Ads · Northstar · last sync 2m ago
+            </span>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {metrics.map((m) => (
+              <div key={m.label} className="dopa-panel px-4 py-3.5">
+                <div className="text-[11px] text-tertiary">{m.label}</div>
+                <div className="mt-1 font-mono text-[20px] text-foreground">
+                  {m.value}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="dopa-panel overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/6 px-4 py-3">
+              <span className="text-[13px] font-medium text-foreground">
+                Summer Drop · Prospecting
+              </span>
+              <div className="flex items-center gap-3 text-[12px]">
+                <span className="text-secondary">
+                  Pred. <span className="font-mono text-accent">2.84%</span>
+                </span>
+                <span className="text-tertiary">vs</span>
+                <span className="text-secondary">
+                  Live <span className="font-mono text-foreground">2.61%</span>
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-start gap-3 px-4 py-4">
+              <span className="rounded-md border border-amber-400/25 bg-amber-400/10 px-2 py-1 text-[11px] text-amber-300">
+                Auto-pause rule
+              </span>
+              <p className="max-w-140 text-[13px] leading-5 text-secondary">
+                Soft-CTA variant trails predicted CTR by &gt;15% over 48h —
+                queued for pause review.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <FeatureLinks
+          items={[
+            { id: "6.1", label: "Ads sync" },
+            { id: "6.2", label: "Pred vs live" },
+            { id: "6.3", label: "Auto-pause" },
+            { id: "6.4", label: "ROAS board" },
+          ]}
+        />
+      </div>
+    </section>
   );
 }

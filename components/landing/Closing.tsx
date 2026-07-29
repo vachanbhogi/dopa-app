@@ -1,24 +1,6 @@
 import Link from "next/link";
 import { DopaMark } from "./icons";
 
-const changelog = [
-  {
-    title: "Interactive TRIBE v2 cortical playback",
-    body: "Upload a short ad, receive its predicted average CTR, and inspect the modeled cortical response frame by frame.",
-    date: "Jul 29, 2026",
-  },
-  {
-    title: "Read-only Google Ads reporting",
-    body: "Connect an authorized account to review live campaign spend, CTR, conversions, and ROAS from one dashboard.",
-    date: "Jul 29, 2026",
-  },
-  {
-    title: "Business and product workspaces",
-    body: "Save brand defaults, product profiles, competitor shortlists, and keyword ideas for each business.",
-    date: "Jul 29, 2026",
-  },
-];
-
 const useCases = [
   {
     title: "Pre-spend review",
@@ -29,38 +11,10 @@ const useCases = [
     body: "Keep business profiles, products, keyword ideas, and competitor research organized by workspace.",
   },
   {
-    title: "Read-only reporting",
-    body: "Connect Google Ads to review live account metrics without giving Dopa permission to spend or edit campaigns.",
+    title: "Closed-loop ops",
+    body: "Compare predicted vs live CTR and review auto-pause alerts without leaving the same workspace.",
   },
 ];
-
-export function Changelog() {
-  return (
-    <section id="changelog" className="border-t border-white/6">
-      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
-        <h2 className="text-[28px] font-medium tracking-[-0.02em] md:text-[32px]">
-          Changelog
-        </h2>
-        <div className="mt-10 space-y-8">
-          {changelog.map((item) => (
-            <article
-              key={item.title}
-              className="grid gap-2 border-b border-white/6 pb-8 last:border-0 md:grid-cols-[1fr_140px]"
-            >
-              <div>
-                <h3 className="text-[16px] font-medium tracking-[-0.01em]">{item.title}</h3>
-                <p className="mt-2 max-w-160 text-[14px] leading-6 text-secondary">
-                  {item.body}
-                </p>
-              </div>
-              <time className="text-[13px] text-tertiary md:text-right">{item.date}</time>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
 
 export function Testimonials() {
   return (
@@ -103,19 +57,19 @@ export function FinalCta() {
         <div className="relative mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/?modal=signup"
-            className="inline-flex h-10 items-center rounded-lg bg-white px-4 text-[14px] font-medium text-[#08090a] hover:opacity-90"
+            className="inline-flex h-10 items-center rounded-lg bg-white px-4 text-[14px] font-medium text-[#08090a] transition-[transform,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:opacity-90 active:scale-[0.97]"
           >
             Get started
           </Link>
           <Link
             href="/demo"
-            className="inline-flex h-10 items-center rounded-lg border border-white/10 px-4 text-[14px] text-foreground hover:bg-white/4"
+            className="inline-flex h-10 items-center rounded-lg border border-white/10 px-4 text-[14px] text-foreground transition-[transform,background-color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-white/4 active:scale-[0.97]"
           >
             Try the demo
           </Link>
           <Link
             href="/dashboard"
-            className="inline-flex h-10 items-center rounded-lg border border-white/10 px-4 text-[14px] text-foreground hover:bg-white/4"
+            className="inline-flex h-10 items-center rounded-lg border border-white/10 px-4 text-[14px] text-foreground transition-[transform,background-color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-white/4 active:scale-[0.97]"
           >
             Open dashboard
           </Link>

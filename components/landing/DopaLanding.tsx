@@ -1,14 +1,15 @@
 import { Header } from "./Header";
 import { Hero } from "./Hero";
 import {
-  Build,
-  Diffs,
-  Intake,
-  Monitor,
-  Plan,
+  Brain,
+  Business,
+  Competitors,
+  GoogleAds,
+  Keywords,
+  Products,
   Species,
 } from "./Sections";
-import { Changelog, FinalCta, Footer, Testimonials } from "./Closing";
+import { FinalCta, Footer, Testimonials } from "./Closing";
 
 export async function DopaLanding() {
   return (
@@ -23,12 +24,12 @@ export async function DopaLanding() {
       <main id="main">
         <Hero />
         <Species />
-        <Intake />
-        <Plan />
-        <Build />
-        <Diffs />
-        <Monitor />
-        <Changelog />
+        <Business />
+        <Competitors />
+        <Products />
+        <Keywords />
+        <Brain />
+        <GoogleAds />
         <Testimonials />
         <FinalCta />
       </main>
