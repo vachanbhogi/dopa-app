@@ -75,6 +75,7 @@ export type FcServerConfig = {
   };
   demoCreativeUrl: string | null;
   hibernationMode: "deep" | "light";
+  failureMode: "none" | "resume_checkpoint_mismatch";
 };
 
 export function getFcServerConfig(): FcServerConfig {
@@ -117,6 +118,10 @@ export function getFcServerConfig(): FcServerConfig {
     (siteUrl ? `${siteUrl}/demo/dopa-proof-creative.mp4` : null);
   const hibernationMode =
     process.env.AGENTRUN_HIBERNATION_MODE === "light" ? "light" : "deep";
+  const failureMode =
+    process.env.FC_DEMO_FAILURE_MODE === "resume_checkpoint_mismatch"
+      ? "resume_checkpoint_mismatch"
+      : "none";
   const requestedLive = process.env.FC_SANDBOX_PROVIDER === "agentrun";
   const directReady = Boolean(apiKey && apiUrl && domain && templateName);
   const gatewayReady = Boolean(
@@ -157,6 +162,7 @@ export function getFcServerConfig(): FcServerConfig {
     scoringIdentity,
     demoCreativeUrl,
     hibernationMode,
+    failureMode,
   };
 }
 
@@ -166,6 +172,7 @@ export function getFcReadiness(): FcReadiness {
   if (!config.supabaseSecretKey) missing.push("SUPABASE_SECRET_KEY");
   if (!config.tokenSecret) missing.push("FC_DEMO_TOKEN_SECRET");
   if (!config.webhookSecret) missing.push("FC_DEMO_WEBHOOK_SECRET");
+  if (!strongSecret(process.env.CRON_SECRET)) missing.push("CRON_SECRET");
   const directReady = Boolean(
     config.agentRun.apiKey &&
       config.agentRun.apiUrl &&
@@ -176,6 +183,12 @@ export function getFcReadiness(): FcReadiness {
       config.agentRun.gatewayToken &&
       config.agentRun.accountId,
   );
+  if (
+    gatewayReady &&
+    !strongSecret(process.env.AGENTRUN_EVIDENCE_SIGNING_SECRET)
+  ) {
+    missing.push("AGENTRUN_EVIDENCE_SIGNING_SECRET");
+  }
   if (!directReady && !gatewayReady) {
     if (!config.agentRun.apiKey) missing.push("E2B_API_KEY");
     if (!config.agentRun.apiUrl) missing.push("E2B_API_URL");

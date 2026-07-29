@@ -11,11 +11,24 @@ import {
 
 export const runtime = "nodejs";
 
+const ALLOWED_METADATA_KEYS = new Set([
+  "traceId",
+  "stage",
+  "outcome",
+  "errorCode",
+  "providerRequestId",
+  "slsProject",
+  "slsLogstore",
+  "alertRuleId",
+  "metricName",
+]);
+
 function safeMetadata(value: unknown) {
   if (!isJsonObject(value)) return {};
   const result: Record<string, string | number | boolean | null> = {};
   for (const [key, item] of Object.entries(value).slice(0, 20)) {
     if (
+      ALLOWED_METADATA_KEYS.has(key) &&
       key.length <= 50 &&
       (item === null ||
         typeof item === "string" ||

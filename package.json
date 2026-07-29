@@ -12,6 +12,8 @@
     "test:google-ads": "bun tests/google-ads.test.ts",
     "test:security": "bun tests/security.test.ts",
     "test:fc-sandbox": "bun tests/fc-sandbox.test.ts",
+    "test": "bun run test:denver && bun run test:google-ads && bun run test:security && bun run test:fc-sandbox",
+    "verify:submission": "bun run test && bun run lint && bun run build",
     "verify:fc-sandbox": "bun scripts/verify-fc-sandbox.ts"
   },
   "dependencies": {

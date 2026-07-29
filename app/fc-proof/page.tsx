@@ -44,6 +44,59 @@ const implementationMap = [
   },
 ];
 
+const rubricMap = [
+  {
+    dimension: "Scenario",
+    repository: "Creative validation → approval wait → TRIBE score",
+    gate: "Real score + buyer explanation",
+  },
+  {
+    dimension: "UX",
+    repository: "Anonymous one-screen lifecycle with visible pause",
+    gate: "Public browser walkthrough",
+  },
+  {
+    dimension: "FC stability",
+    repository: "Durable claims, bounded retries, exact cleanup",
+    gate: "Timeout and failed-resume drills",
+  },
+  {
+    dimension: "Observability",
+    repository: "Trace propagation, JSON telemetry, signed callbacks",
+    gate: "SLS query + fired alert + recovery",
+  },
+  {
+    dimension: "Extensibility",
+    repository: "Provider boundary and pinned gateway contract",
+    gate: "Live tool/model swap",
+  },
+  {
+    dimension: "Core validation",
+    repository: "Strict validators for handbook items 6.1–6.6",
+    gate: "Provider evidence for pending rows",
+  },
+  {
+    dimension: "Security",
+    repository: "No-egress compute, renewable identity, RLS, one-time approval",
+    gate: "RAM review + credential rotation",
+  },
+  {
+    dimension: "Delivery",
+    repository: "Demo, migration, harness, rollback, three-minute script",
+    gate: "Deploy and record",
+  },
+  {
+    dimension: "Cost",
+    repository: "Measured timing and bill-backed savings validator",
+    gate: "Settled bill export",
+  },
+  {
+    dimension: "Continuity",
+    repository: "Checkpoint, session, snapshot, pre/post mount digest",
+    gate: "Long live resume",
+  },
+];
+
 export default async function FcProofPage() {
   await connection();
   const proof = await getFcProof();
@@ -72,6 +125,36 @@ export default async function FcProofPage() {
 
         <section className="mt-12">
           <FcProofLedger proof={proof} expanded />
+        </section>
+
+        <section className="mt-14 border-t border-white/10 pt-10">
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#747b89]">
+            Ten-dimension closure
+          </p>
+          <h2 className="mt-3 text-2xl tracking-[-0.03em]">
+            Repository coverage and the remaining proof gate
+          </h2>
+          <div className="mt-7 grid overflow-hidden rounded-2xl border border-white/9 bg-[#0c0d10]/80 lg:grid-cols-2">
+            {rubricMap.map((item, index) => (
+              <article
+                key={item.dimension}
+                className="border-b border-white/7 p-5 lg:border-r lg:even:border-r-0 lg:nth-last-[-n+2]:border-b-0"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-[9px] text-[#5f6570]">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <h3 className="text-sm text-white">{item.dimension}</h3>
+                </div>
+                <p className="mt-3 text-[12px] leading-5 text-[#a8adb7]">
+                  {item.repository}
+                </p>
+                <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.1em] text-[#7771c8]">
+                  Live gate · {item.gate}
+                </p>
+              </article>
+            ))}
+          </div>
         </section>
 
         <section className="mt-14 border-t border-white/10 pt-10">

@@ -554,7 +554,7 @@ values
     'docs/fc-sandbox/LIVE_EVIDENCE_2026-07-29.md#strong-isolation-probe',
     '840791bb970104c4052095002e1674553d980218a90d7f00a8614f2f09fe276b',
     '2026-07-29T14:52:00Z'::timestamptz,
-    '{"region":"cn-hangzhou","computeDenied":true,"networkDenied":true,"storageDenied":true,"networkError":"TimeoutError","cleanupVerified":true}'::jsonb,
+    '{"region":"cn-hangzhou","isolationLevel":"virtual_machine","computeDenied":true,"networkDenied":true,"storageDenied":true,"separateSessionIds":true,"networkError":"TimeoutError","cleanupVerified":true}'::jsonb,
     'Two live FC sandboxes denied compute, network, and storage sentinel access.'
   ),
   (

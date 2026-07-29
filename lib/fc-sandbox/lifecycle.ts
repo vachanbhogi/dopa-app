@@ -47,6 +47,10 @@ export function maskSandboxReference(value: string | null): string | null {
   return `${value.slice(0, 8)}…${value.slice(-4)}`;
 }
 
+export function evidenceReferenceDigest(value: string) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
 export function makeEvent(input: {
   sequence: number;
   eventType: string;

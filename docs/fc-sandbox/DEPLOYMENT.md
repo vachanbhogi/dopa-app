@@ -36,6 +36,7 @@ E2B_API_URL=https://api.cn-hangzhou.e2b.fc.aliyuncs.com
 E2B_DOMAIN=cn-hangzhou.e2b.fc.aliyuncs.com
 AGENTRUN_TEMPLATE_NAME=code-interpreter-v1
 AGENTRUN_HIBERNATION_MODE=deep
+FC_DEMO_FAILURE_MODE=none
 ```
 
 The key stays in server-only environment variables. The adapter creates a
@@ -62,6 +63,11 @@ Live requirements:
   active.
 - Sandbox key and demo-identity password rotated after proof.
 
+`vercel.json` schedules the authenticated expired-run reaper once daily, which
+is compatible with the Hobby cron floor. The sandbox itself still has a bounded
+one-hour timeout; the reaper is defense in depth for durable state and exact-ID
+cleanup. Set an independent 32-byte `CRON_SECRET`.
+
 ## 4. Configure the web app
 
 Use `.env.example` as the key list. Generate independent 32-byte-or-longer
@@ -77,6 +83,14 @@ only after the database and gateway health checks pass. `NEXT_PUBLIC_*` values
 are build-time values; rebuild after changing them.
 
 ## 5. Verify without recording
+
+Verify the complete checkout first:
+
+```bash
+bun run verify:submission
+```
+
+Then run the live lifecycle without writing evidence:
 
 ```bash
 FC_DEMO_BASE_URL=https://your-deployment.example \
@@ -96,6 +110,11 @@ bun run verify:fc-sandbox --record
 
 Reopen `/fc-proof` and confirm each green row has a source, digest, and observed
 time. Cost remains configured until reconciled with a real bill export.
+
+The ordinary command never runs the paid peak-elasticity probe. That probe needs
+`--stress`, the exact 100,000 target, the charge acknowledgement, and an
+approved positive `FC_STRESS_MAX_SPEND_CNY`; the gateway must enforce the same
+cap.
 
 ## Rollback
 

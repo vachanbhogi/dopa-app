@@ -412,6 +412,7 @@ export function DashboardShell({
             ) : null}
             {active === "business" && (
               <BusinessTab
+                key={selectedBusinessId}
                 businesses={businesses}
                 selectedBusinessId={selectedBusinessId}
                 onSelectBusiness={(id) => {

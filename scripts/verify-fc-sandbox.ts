@@ -1,5 +1,18 @@
-import { createHash } from "node:crypto";
+import {
+  createHash,
+} from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import {
+  proveCompatibility,
+  proveCostEfficiency,
+  proveElasticity,
+  proveIsolation,
+  proveObservability,
+  parseProbeResult,
+  validateStressAuthorization,
+  type FcProbeResult,
+} from "../lib/fc-sandbox/evidence";
+import { verifyEvidenceSignature } from "../lib/fc-sandbox/evidence-signature";
 import type {
   FcCapabilityStatus,
   FcPublicRun,
@@ -14,13 +27,6 @@ type EvidenceRecord = {
   observedAt: string;
   metrics: Record<string, string | number | boolean | null>;
   notes: string;
-};
-
-type ProbeResult = {
-  passed: boolean;
-  metrics: Record<string, string | number | boolean | null>;
-  evidence?: Record<string, string | number | boolean | null>;
-  note: string;
 };
 
 function requiredEnv(name: string) {
@@ -52,6 +58,51 @@ async function json<T>(response: Response): Promise<T> {
   return body as T;
 }
 
+async function boundedText(response: Response, maximumBytes: number) {
+  const declaredLength = Number(response.headers.get("content-length"));
+  if (
+    Number.isFinite(declaredLength) &&
+    declaredLength > maximumBytes
+  ) {
+    await response.body?.cancel();
+    throw new Error("Evidence response exceeded the safe size limit.");
+  }
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let result = "";
+  while (true) {
+    const chunk = await reader.read();
+    if (chunk.done) break;
+    bytes += chunk.value.byteLength;
+    if (bytes > maximumBytes) {
+      await reader.cancel();
+      throw new Error("Evidence response exceeded the safe size limit.");
+    }
+    result += decoder.decode(chunk.value, { stream: true });
+  }
+  return result + decoder.decode();
+}
+
+function requireValidEvidenceSignature(
+  body: string,
+  timestamp: string | null,
+  signature: string | null,
+) {
+  const secret = requiredEnv("AGENTRUN_EVIDENCE_SIGNING_SECRET");
+  if (
+    !verifyEvidenceSignature({
+      body,
+      timestamp,
+      signature,
+      secret,
+    })
+  ) {
+    throw new Error("Evidence gateway signature is invalid or expired.");
+  }
+}
+
 function digest(value: unknown) {
   return createHash("sha256")
     .update(JSON.stringify(value))
@@ -72,7 +123,18 @@ function event(run: FcPublicRun, name: string) {
 async function gatewayProbe(
   gatewayUrl: string,
   gatewayToken: string,
-  name: string,
+  name:
+    | "isolation"
+    | "elasticity"
+    | "e2b-compatibility"
+    | "observability"
+    | "cost",
+  options?: {
+    targetCreates?: number;
+    maximumSpendCny?: number;
+    runId?: string;
+    traceId?: string;
+  },
 ) {
   const response = await fetch(`${gatewayUrl}/v1/evidence/${name}`, {
     method: "POST",
@@ -83,66 +145,46 @@ async function gatewayProbe(
     body: JSON.stringify({
       probeId: crypto.randomUUID(),
       requestedAt: new Date().toISOString(),
+      ...(options?.runId ? { runId: options.runId } : {}),
+      ...(options?.traceId ? { traceId: options.traceId } : {}),
       ...(name === "elasticity"
         ? {
-            targetCreates: Number(process.env.FC_ELASTICITY_TARGET ?? "100"),
-            stressAcknowledged:
-              process.env.FC_STRESS_ACK ===
-              "I_ACCEPT_ALIBABA_CLOUD_CHARGES",
+            targetCreates: options?.targetCreates,
+            stressAcknowledged: true,
+            maxSpendCny: options?.maximumSpendCny,
           }
         : {}),
     }),
     signal: AbortSignal.timeout(180_000),
+    redirect: "error",
   });
-  return json<ProbeResult>(response);
+  const rawBody = await boundedText(response, 256 * 1_024);
+  if (!response.ok) {
+    throw new Error(`Evidence gateway returned ${response.status}.`);
+  }
+  requireValidEvidenceSignature(
+    rawBody,
+    response.headers.get("x-dopa-evidence-timestamp"),
+    response.headers.get("x-dopa-evidence-signature"),
+  );
+  return parseProbeResult(JSON.parse(rawBody) as unknown);
 }
 
-function proveIsolation(result: ProbeResult) {
-  const evidence = result.evidence ?? {};
-  return (
-    result.passed &&
-    evidence.computeDenied === true &&
-    evidence.networkDenied === true &&
-    evidence.storageDenied === true
-  );
-}
-
-function proveElasticity(result: ProbeResult) {
-  const target = Number(process.env.FC_ELASTICITY_TARGET ?? "100");
-  const creationRate = result.metrics.creationRatePerMinute;
-  const peak = result.metrics.peakPerSecond;
-  const successRate = result.metrics.successRatePercent;
-  return (
-    result.passed &&
-    target >= 80_000 &&
-    typeof creationRate === "number" &&
-    creationRate >= target * 0.8 &&
-    typeof peak === "number" &&
-    peak >= 4_000 &&
-    typeof successRate === "number" &&
-    successRate >= 99
-  );
-}
-
-function proveCompatibility(result: ProbeResult) {
-  const evidence = result.evidence ?? {};
-  return (
-    result.passed &&
-    typeof evidence.sourceDigest === "string" &&
-    evidence.sourceDigest.length === 64 &&
-    typeof evidence.agentRunOutputDigest === "string" &&
-    evidence.agentRunOutputDigest === evidence.e2bOutputDigest
-  );
-}
-
-function hasObservabilityProof(run: FcPublicRun) {
-  return run.events.some(
-    (event) =>
-      event.eventType === "provider.trace" &&
-      typeof event.metadata.slsLogstore === "string" &&
-      typeof event.metadata.alertRuleId === "string" &&
-      event.metadata.traceId === run.traceId,
-  );
+async function safeGatewayProbe(
+  gatewayUrl: string,
+  gatewayToken: string,
+  name: Parameters<typeof gatewayProbe>[2],
+  options?: Parameters<typeof gatewayProbe>[3],
+) {
+  try {
+    return await gatewayProbe(gatewayUrl, gatewayToken, name, options);
+  } catch {
+    return {
+      passed: false,
+      metrics: {},
+      note: `${name} probe did not return valid gateway evidence.`,
+    } satisfies FcProbeResult;
+  }
 }
 
 async function recordEvidence(records: EvidenceRecord[]) {
@@ -192,8 +234,47 @@ async function recordEvidence(records: EvidenceRecord[]) {
   if (error) throw new Error(`Evidence recording failed: ${error.code}`);
 }
 
+function boundedIntegerEnv(
+  name: string,
+  fallback: number,
+  minimum: number,
+  maximum: number,
+) {
+  const value = Number(process.env[name] ?? fallback);
+  if (
+    !Number.isSafeInteger(value) ||
+    value < minimum ||
+    value > maximum
+  ) {
+    throw new Error(`${name} must be an integer from ${minimum} to ${maximum}.`);
+  }
+  return value;
+}
+
 const baseUrl = parseBaseUrl(requiredEnv("FC_DEMO_BASE_URL"));
 const origin = baseUrl;
+const hibernationProofMs = boundedIntegerEnv(
+  "FC_HIBERNATION_PROOF_MS",
+  60_000,
+  1_000,
+  24 * 60 * 60 * 1_000,
+);
+const elasticityTarget = boundedIntegerEnv(
+  "FC_ELASTICITY_TARGET",
+  100_000,
+  2,
+  100_000,
+);
+const maximumSpendCny = Number(process.env.FC_STRESS_MAX_SPEND_CNY ?? "0");
+const stressAuthorization = validateStressAuthorization({
+  requested: process.argv.includes("--stress"),
+  targetCreates: elasticityTarget,
+  acknowledgement: process.env.FC_STRESS_ACK,
+  maximumSpendCny,
+});
+if (process.argv.includes("--stress") && !stressAuthorization.authorized) {
+  throw new Error(stressAuthorization.reason);
+}
 const started = await json<FcRunAccess>(
   await fetch(`${baseUrl}/api/fc-demo/runs`, {
     method: "POST",
@@ -227,6 +308,7 @@ if (prepared.status !== "hibernated") {
   throw new Error(`Expected hibernated, received ${prepared.status}.`);
 }
 const checkpointBefore = prepared.checkpoint.digest;
+await new Promise((resolve) => setTimeout(resolve, hibernationProofMs));
 const completed = await json<FcPublicRun>(
   await fetch(
     `${baseUrl}/api/fc-demo/runs/${encodeURIComponent(started.run.id)}/approve`,
@@ -254,17 +336,26 @@ if (
     "sandbox.paused",
     "sandbox.resumed",
     "score.completed",
+    "sandbox.stopped",
   ])
 ) {
   throw new Error("The lifecycle trace is incomplete.");
 }
 const createdEvent = event(completed, "sandbox.created");
+const validatedEvent = event(completed, "creative.validated");
 const pausedEvent = event(completed, "sandbox.paused");
 const resumedEvent = event(completed, "sandbox.resumed");
-if (
+const hibernationInvalid =
   pausedEvent.metadata.state !== "PAUSED" ||
-  resumedEvent.metadata.continuityVerified !== true
-) {
+  (pausedEvent.metadata.hibernationMode !== "deep" &&
+    pausedEvent.metadata.hibernationMode !== "light") ||
+  resumedEvent.metadata.continuityVerified !== true ||
+  (resumedEvent.metadata.state !== "READY" &&
+    resumedEvent.metadata.state !== "RUNNING") ||
+  typeof completed.metrics.wakeLatencyMs !== "number" ||
+  completed.metrics.wakeLatencyMs < 0 ||
+  completed.metrics.hibernatedMs < hibernationProofMs;
+if (hibernationInvalid) {
   throw new Error(
     "The authoritative pause or resume evidence is incomplete.",
   );
@@ -275,31 +366,90 @@ const gatewayUrl = process.env.AGENTRUN_LIFECYCLE_GATEWAY_URL?.trim().replace(
   "",
 );
 const gatewayToken = process.env.AGENTRUN_LIFECYCLE_GATEWAY_TOKEN?.trim();
-const unavailableProbe = (name: string): ProbeResult => ({
+const unavailableProbe = (note: string): FcProbeResult => ({
   passed: false,
   metrics: {},
-  note: `${name} requires the optional evidence gateway and approved live prerequisites.`,
+  note,
 });
-const [isolation, elasticity, compatibility] =
+const commonProbeOptions = {
+  runId: completed.id,
+  traceId: completed.traceId,
+};
+const [isolation, compatibility, observability, cost] =
   gatewayUrl && gatewayToken
     ? await Promise.all([
-        gatewayProbe(gatewayUrl, gatewayToken, "isolation"),
-        gatewayProbe(gatewayUrl, gatewayToken, "elasticity"),
-        gatewayProbe(gatewayUrl, gatewayToken, "e2b-compatibility"),
+        safeGatewayProbe(
+          gatewayUrl,
+          gatewayToken,
+          "isolation",
+          commonProbeOptions,
+        ),
+        safeGatewayProbe(
+          gatewayUrl,
+          gatewayToken,
+          "e2b-compatibility",
+          commonProbeOptions,
+        ),
+        safeGatewayProbe(
+          gatewayUrl,
+          gatewayToken,
+          "observability",
+          commonProbeOptions,
+        ),
+        safeGatewayProbe(
+          gatewayUrl,
+          gatewayToken,
+          "cost",
+          commonProbeOptions,
+        ),
       ])
     : [
-        unavailableProbe("Strong isolation"),
-        unavailableProbe("Extreme elasticity"),
-        unavailableProbe("E2B compatibility"),
+        unavailableProbe(
+          "Strong isolation requires the evidence gateway.",
+        ),
+        unavailableProbe(
+          "E2B compatibility requires the evidence gateway and an independent E2B credential.",
+        ),
+        unavailableProbe(
+          "Observability requires SLS, an alert, and a controlled failure drill.",
+        ),
+        unavailableProbe(
+          "Cost efficiency requires a settled Alibaba bill export.",
+        ),
       ];
+const elasticity =
+  gatewayUrl && gatewayToken && stressAuthorization.authorized
+    ? await safeGatewayProbe(
+        gatewayUrl,
+        gatewayToken,
+        "elasticity",
+        {
+          ...commonProbeOptions,
+          targetCreates: elasticityTarget,
+          maximumSpendCny,
+        },
+      )
+    : unavailableProbe(stressAuthorization.reason);
 const observedAt = new Date().toISOString();
 const lifecycleSource = `dopa-run:${completed.id}`;
 const lifecycleDigest = digest(completed);
+const mountDigestBefore =
+  typeof validatedEvent.metadata.dynamicMountDigestBefore === "string"
+    ? validatedEvent.metadata.dynamicMountDigestBefore
+    : null;
+const mountDigestAfter =
+  typeof resumedEvent.metadata.dynamicMountDigest === "string"
+    ? resumedEvent.metadata.dynamicMountDigest
+    : null;
 const statefulVerified =
-  typeof createdEvent.metadata.sessionId === "string" &&
-  typeof createdEvent.metadata.dynamicMountId === "string" &&
-  typeof pausedEvent.metadata.snapshotId === "string" &&
-  typeof resumedEvent.metadata.dynamicMountDigest === "string";
+  typeof createdEvent.metadata.sessionIdDigest === "string" &&
+  typeof createdEvent.metadata.dynamicMountIdDigest === "string" &&
+  typeof pausedEvent.metadata.snapshotIdDigest === "string" &&
+  mountDigestBefore !== null &&
+  mountDigestBefore === mountDigestAfter &&
+  completed.metrics.hibernatedMs >= hibernationProofMs;
+const observabilityVerified = proveObservability(observability);
+const costVerified = proveCostEfficiency(cost);
 const records: EvidenceRecord[] = [
   {
     capability: "sandbox_lifecycle",
@@ -316,8 +466,13 @@ const records: EvidenceRecord[] = [
     source: lifecycleSource,
     sourceDigest: lifecycleDigest,
     observedAt,
-    metrics: { hibernatedMs: completed.metrics.hibernatedMs },
-    notes: "The provider confirmed PAUSED before approval and resumed afterward.",
+    metrics: {
+      hibernatedMs: completed.metrics.hibernatedMs,
+      wakeLatencyMs: completed.metrics.wakeLatencyMs,
+      hibernationMode: String(pausedEvent.metadata.hibernationMode),
+    },
+    notes:
+      "The provider confirmed PAUSED, retained it for the proof interval, and measured wake latency.",
   },
   {
     capability: "stateful_sessions",
@@ -328,49 +483,51 @@ const records: EvidenceRecord[] = [
     metrics: {
       checkpointMatch: true,
       sessionIdObserved:
-        typeof createdEvent.metadata.sessionId === "string",
+        typeof createdEvent.metadata.sessionIdDigest === "string",
       dynamicMountObserved:
-        typeof createdEvent.metadata.dynamicMountId === "string",
+        typeof createdEvent.metadata.dynamicMountIdDigest === "string",
       snapshotObserved:
-        typeof pausedEvent.metadata.snapshotId === "string",
+        typeof pausedEvent.metadata.snapshotIdDigest === "string",
       mountDigestObserved:
-        typeof resumedEvent.metadata.dynamicMountDigest === "string",
+        mountDigestBefore !== null && mountDigestAfter !== null,
+      mountDigestMatch:
+        mountDigestBefore !== null && mountDigestBefore === mountDigestAfter,
+      proofIntervalMs: completed.metrics.hibernatedMs,
     },
     notes: statefulVerified
-      ? "Session affinity, dynamic mount, snapshot, and post-resume digests were present."
-      : "Checkpoint continuity passed; dynamic-mount and snapshot evidence remains required.",
+      ? "Session affinity, snapshot, and matching pre/post dynamic-mount digests survived the proof interval."
+      : "Checkpoint continuity passed; matching pre/post dynamic-mount and snapshot evidence remains required.",
   },
   {
     capability: "observability",
-    status: hasObservabilityProof(completed) ? "verified" : "configured",
-    source: lifecycleSource,
-    sourceDigest: lifecycleDigest,
+    status: observabilityVerified ? "verified" : "configured",
+    source: "agentrun-gateway:observability",
+    sourceDigest: digest(observability),
     observedAt,
-    metrics: {
-      eventCount: completed.events.length,
-      traceId: completed.traceId,
-    },
-    notes: hasObservabilityProof(completed)
-      ? "SLS, trace, metrics, and an alert rule are correlated to this run."
-      : "Trace events exist, but SLS logstore and alert evidence are still required.",
+    metrics: observability.metrics,
+    notes: observabilityVerified
+      ? "SLS query, cross-service trace, metric, alert, root cause, and recovery were verified."
+      : observability.note,
   },
   {
     capability: "cost_efficiency",
-    status: "configured",
-    source: lifecycleSource,
-    sourceDigest: lifecycleDigest,
+    status: costVerified ? "verified" : "configured",
+    source: "agentrun-gateway:cost",
+    sourceDigest: digest(cost),
     observedAt,
-    metrics: {
-      activeMs: completed.metrics.activeMs,
-      hibernatedMs: completed.metrics.hibernatedMs,
-    },
-    notes:
-      "Timing is recorded, but verified billing evidence must come from the Alibaba bill export.",
+    metrics: cost.metrics,
+    notes: costVerified
+      ? "Measured wait time reconciled with current rates and a settled bill export."
+      : cost.note,
   },
   ...(
     [
       ["strong_isolation", isolation, proveIsolation(isolation)],
-      ["extreme_elasticity", elasticity, proveElasticity(elasticity)],
+      [
+        "extreme_elasticity",
+        elasticity,
+        proveElasticity(elasticity, elasticityTarget),
+      ],
       [
         "e2b_compatibility",
         compatibility,

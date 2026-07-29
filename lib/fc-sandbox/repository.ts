@@ -48,6 +48,8 @@ const memoryState =
     events: new Map<string, FcRunEvent[]>(),
   });
 
+const GLOBAL_RUNS_PER_HOUR = 40;
+
 const CAPABILITY_DEFINITIONS = [
   {
     capability: "sandbox_lifecycle",
@@ -81,17 +83,20 @@ const CAPABILITY_DEFINITIONS = [
   {
     capability: "e2b_compatibility",
     label: "E2B compatibility",
-    requirement: "Run the compatibility probe against the live AgentRun adapter.",
+    requirement:
+      "Run one pinned payload on independent E2B and AgentRun endpoints with identical normalized output.",
   },
   {
     capability: "observability",
     label: "Traceability",
-    requirement: "Correlate app, gateway, sandbox, and scoring events with one trace ID.",
+    requirement:
+      "Correlate app, gateway, sandbox, and scoring in SLS, then prove one alerted failure and recovery.",
   },
   {
     capability: "cost_efficiency",
     label: "Cost efficiency",
-    requirement: "Measure billed active time and the hibernated no-compute interval.",
+    requirement:
+      "Reconcile active and hibernated timing with current rates and a settled Alibaba bill export.",
   },
 ] as const;
 
@@ -320,6 +325,30 @@ export async function getRun(runId: string) {
   return data ? parseRun(data) : null;
 }
 
+export async function getExpiredRuns(now: string, limit = 25) {
+  const client = adminClient();
+  if (!client) {
+    return [...memoryState.runs.values()]
+      .filter(
+        (run) =>
+          run.status !== "completed" &&
+          run.status !== "failed" &&
+          Date.parse(run.expiresAt) <= Date.parse(now),
+      )
+      .sort((a, b) => Date.parse(a.expiresAt) - Date.parse(b.expiresAt))
+      .slice(0, limit);
+  }
+  const { data, error } = await client
+    .from("fc_demo_runs")
+    .select("*")
+    .lt("expires_at", now)
+    .not("status", "in", "(completed,failed)")
+    .order("expires_at", { ascending: true })
+    .limit(limit);
+  if (error) throw new Error(`FC expired-run lookup failed: ${error.code}`);
+  return (data ?? []).map(parseRun);
+}
+
 export async function getEvents(runId: string) {
   const client = adminClient();
   if (!client) return [...(memoryState.events.get(runId) ?? [])];
@@ -360,10 +389,19 @@ export async function consumeRunQuota(
 ) {
   const client = adminClient();
   if (!client) {
-    const recent = await countRecentRuns(fingerprintHash, since);
+    const cutoff = Date.parse(since);
+    const recentRuns = [...memoryState.runs.values()].filter(
+      (run) => Date.parse(run.createdAt) >= cutoff,
+    );
+    const recent = recentRuns.filter(
+      (run) => run.requestFingerprintHash === fingerprintHash,
+    ).length;
+    const globalRecent = recentRuns.length;
+    const allowed =
+      recent < limit && globalRecent < GLOBAL_RUNS_PER_HOUR;
     return {
-      allowed: recent < limit,
-      retryAfterSeconds: recent < limit ? 0 : 3_600,
+      allowed,
+      retryAfterSeconds: allowed ? 0 : 3_600,
     };
   }
 

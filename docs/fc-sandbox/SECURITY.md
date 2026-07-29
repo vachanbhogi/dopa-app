@@ -21,12 +21,14 @@
 
 Only the pinned `retail_launch` sample is accepted. Anonymous callers cannot
 upload arbitrary code, URLs, tool arguments, or files. Mutation routes require
-same-origin JSON with byte limits. Runs are rate-limited by a keyed network
-fingerprint and expire after one hour.
+same-origin JSON with byte limits. Runs are atomically rate-limited by a keyed
+network fingerprint and by a global hourly cost guard, then expire after one
+hour.
 
 Run access uses `Authorization: Bearer` on reads and a bounded JSON body on
 approval, avoiding tokens in URLs, analytics, and referrer logs. Public DTOs
-mask sandbox IDs and omit raw provider errors and secrets.
+mask sandbox IDs, hash session/mount/snapshot identifiers before they enter
+public-safe events, and omit raw provider errors and secrets.
 
 ## Database
 

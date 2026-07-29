@@ -109,6 +109,16 @@ export function FcProofLedger({
           </p>
         </div>
       ) : null}
+      {expanded && proof.readiness.missing.length > 0 ? (
+        <div className="border-t border-white/8 px-5 py-4 md:px-6">
+          <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-[#666d78]">
+            Live readiness blockers
+          </p>
+          <p className="mt-2 text-[11px] leading-5 text-[#8e95a1]">
+            {proof.readiness.missing.join(" · ")}
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }

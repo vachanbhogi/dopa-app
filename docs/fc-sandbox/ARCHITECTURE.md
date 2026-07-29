@@ -39,8 +39,8 @@ Before pause, the app creates a versioned digest bound to run ID, trace ID,
 checkpoint version, and stage. The sandbox stores that checkpoint, the pinned
 creative bytes, their digest, and a live process sentinel. Deep mode verifies
 filesystem and checkpoint continuity after a cold boot; light mode additionally
-verifies the process. Dynamic-mount consistency remains a separate proof gate
-when that FC extension is enabled.
+verifies the process. When the gateway enables dynamic mounts, the evidence
+harness requires the pre-pause mount digest to match the post-resume digest.
 
 After resume, the trusted server signs a dedicated no-membership Supabase
 identity in for a short-lived JWT and sends the restored creative to the
@@ -64,8 +64,10 @@ Passing one layer does not mark the capability verified.
 `fc_demo_runs` is the current durable state. `fc_demo_run_events` is the
 append-only public-safe trace. `fc_capability_evidence` is the proof ledger.
 All three use RLS, grant no browser role access, and are accessed only with the
-server secret. Public runs expire after one hour. A scheduled cleanup should
-delete expired rows after the submission retention window.
+server secret. Public runs expire after one hour. An authenticated scheduled
+reaper claims abandoned runs, stops exact sandbox IDs, and records cleanup
+failures for operator follow-up. Row deletion remains a separate audited
+retention action after the submission window.
 
 The local provider uses process memory and an explicitly labeled fixture. It is
 only for UI rehearsal and cannot record a verified capability.
@@ -78,4 +80,8 @@ only for UI rehearsal and cannot record a verified capability.
 - A checkpoint mismatch fails the run before scoring.
 - Provider response schemas are bounded before entering the durable record.
 - Cleanup failure is logged without changing a committed score.
+- Every lifecycle transition emits one bounded JSON telemetry record with the
+  run ID, trace ID, stage, provider, duration, outcome, and safe error code.
+- `FC_DEMO_FAILURE_MODE=resume_checkpoint_mismatch` provides an operator-only
+  drill that fails before scoring and is restored to `none` for the golden path.
 - The failure drills in `EVIDENCE_RUNBOOK.md` prove a run remains locatable.

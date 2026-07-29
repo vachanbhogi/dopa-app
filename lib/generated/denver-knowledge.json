@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "sourceHash": "f46c09d31a028546",
+  "sourceHash": "777effc1eb6de9c4",
   "routes": [
     "/",
     "/dashboard",
@@ -60,6 +60,9 @@
         "Evidence ledger / FC Sandbox",
         "Claims are cheap. This page separates implementation from proof.",
         "A capability becomes verified only after a signed live harness run stores its source digest and observation time. Configuration alone never receives a green badge.",
+        "Ten-dimension closure",
+        "Repository coverage and the remaining proof gate",
+        "Live gate ·",
         "Implementation map",
         "From browser intent to isolated compute",
         "Run the golden path →"
@@ -252,6 +255,7 @@
         "Email address",
         "you@company.com",
         "Password",
+        "Use at least 12 characters.",
         "Don't have an account?",
         "Sign up",
         "Already have an account?",
@@ -603,7 +607,8 @@
         "verified ·",
         "configured ·",
         "pending",
-        "Live badges are intentionally withheld. AgentRun credentials and a signed evidence run are required before any provider claim is marked verified."
+        "Live badges are intentionally withheld. AgentRun credentials and a signed evidence run are required before any provider claim is marked verified.",
+        "Live readiness blockers"
       ]
     },
     {

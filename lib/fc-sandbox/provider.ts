@@ -35,6 +35,13 @@ type ResumeResult = SandboxReference & {
   wakeLatencyMs: number;
 };
 
+type ValidationResult = {
+  durationMs: number;
+  checkpointHash: string;
+  creativeDigest: string;
+  dynamicMountDigest?: string;
+};
+
 const CHECKPOINT_PATH = "/tmp/dopa/checkpoint.json";
 const CREATIVE_PATH = "/tmp/dopa/creative.mp4";
 const PROCESS_PID_PATH = "/tmp/dopa/continuity.pid";
@@ -50,7 +57,7 @@ export interface FcSandboxProvider {
   validate(
     context: ProviderContext,
     sandboxId: string,
-  ): Promise<{ durationMs: number }>;
+  ): Promise<ValidationResult>;
   pause(
     context: ProviderContext,
     sandboxId: string,
@@ -196,8 +203,12 @@ class LocalDemonstrationProvider implements FcSandboxProvider {
     };
   }
 
-  async validate(): Promise<{ durationMs: number }> {
-    return { durationMs: 0 };
+  async validate(context: ProviderContext): Promise<ValidationResult> {
+    return {
+      durationMs: 0,
+      checkpointHash: context.checkpointHash,
+      creativeDigest: sha256("local-demonstration-creative"),
+    };
   }
 
   async pause(): Promise<SandboxReference> {
@@ -288,29 +299,34 @@ class FcE2BProvider implements FcSandboxProvider {
 
   async create(context: ProviderContext): Promise<SandboxReference> {
     const started = Date.now();
-    const sandbox = await Sandbox.create(this.template(), {
-      ...this.connection(),
-      timeoutMs: 60 * 60 * 1_000,
-      secure: true,
-      allowInternetAccess: false,
-      metadata: {
-        application: "dopa",
-        runId: context.runId,
-        traceId: context.traceId,
-      },
-    });
-    const info = await sandbox.getInfo();
-    if (info.state !== "running") {
-      await sandbox.kill().catch(() => undefined);
-      throw new Error(`FC Sandbox entered unexpected state ${info.state}.`);
+    let sandbox: Sandbox | null = null;
+    try {
+      sandbox = await Sandbox.create(this.template(), {
+        ...this.connection(),
+        timeoutMs: 60 * 60 * 1_000,
+        secure: true,
+        allowInternetAccess: false,
+        metadata: {
+          application: "dopa",
+          runId: context.runId,
+          traceId: context.traceId,
+        },
+      });
+      const info = await sandbox.getInfo();
+      if (info.state !== "running") {
+        throw new Error(`FC Sandbox entered unexpected state ${info.state}.`);
+      }
+      return {
+        sandboxId: sandbox.sandboxId,
+        state: "RUNNING",
+        durationMs: Date.now() - started,
+        sessionId: sessionIdFromInfo(info),
+        dynamicMountId: info.volumeMounts?.at(0)?.name,
+      };
+    } catch (error) {
+      await sandbox?.kill().catch(() => undefined);
+      throw error;
     }
-    return {
-      sandboxId: sandbox.sandboxId,
-      state: "RUNNING",
-      durationMs: Date.now() - started,
-      sessionId: sessionIdFromInfo(info),
-      dynamicMountId: info.volumeMounts?.at(0)?.name,
-    };
   }
 
   async validate(context: ProviderContext, sandboxId: string) {
@@ -347,7 +363,11 @@ class FcE2BProvider implements FcSandboxProvider {
     if (process.exitCode !== 0) {
       throw new Error("FC Sandbox validation process did not start.");
     }
-    return { durationMs: Date.now() - started };
+    return {
+      durationMs: Date.now() - started,
+      checkpointHash: context.checkpointHash,
+      creativeDigest: creativeHash,
+    };
   }
 
   async pause(
@@ -453,7 +473,11 @@ class FcE2BProvider implements FcSandboxProvider {
     const bearerToken = await scoringBearerToken();
     const response = await fetch(scoreUrl, {
       method: "POST",
-      headers: { Authorization: `Bearer ${bearerToken}` },
+      headers: {
+        Authorization: `Bearer ${bearerToken}`,
+        "X-Dopa-Run-Id": context.runId,
+        "X-Dopa-Trace-Id": context.traceId,
+      },
       body: form,
       cache: "no-store",
       redirect: "error",
@@ -521,38 +545,43 @@ class AgentRunGatewayProvider implements FcSandboxProvider {
     }
     const retryable = new Set([408, 429, 500, 502, 503, 504]);
     for (let attempt = 1; attempt <= 2; attempt += 1) {
+      let response: Response;
       try {
-        const response = await fetch(`${gatewayUrl}${path}`, {
+        response = await fetch(`${gatewayUrl}${path}`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${gatewayToken}`,
             "Content-Type": "application/json",
             "X-Acs-Parent-Id": accountId,
             "X-Dopa-Idempotency-Key": `${String(body.runId)}:${path}`,
+            "X-Dopa-Run-Id": String(body.runId),
+            "X-Dopa-Trace-Id": String(body.traceId),
           },
           body: JSON.stringify({ ...body, templateName }),
           cache: "no-store",
           signal: AbortSignal.timeout(timeoutMs),
         });
-        if (response.ok) {
-          return parseObject(
-            JSON.parse(
-              await readBoundedResponseText(
-                response,
-                MAX_GATEWAY_RESPONSE_BYTES,
-                "AgentRun gateway response exceeded the safe size limit.",
-              ),
-            ),
-          );
-        }
-        await response.body?.cancel();
-        if (!retryable.has(response.status) || attempt === 2) {
-          throw new Error(
-            `AgentRun lifecycle request failed with ${response.status}.`,
-          );
-        }
       } catch (error) {
         if (attempt === 2) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        continue;
+      }
+      if (response.ok) {
+        return parseObject(
+          JSON.parse(
+            await readBoundedResponseText(
+              response,
+              MAX_GATEWAY_RESPONSE_BYTES,
+              "AgentRun gateway response exceeded the safe size limit.",
+            ),
+          ),
+        );
+      }
+      await response.body?.cancel();
+      if (!retryable.has(response.status) || attempt === 2) {
+        throw new Error(
+          `AgentRun lifecycle request failed with ${response.status}.`,
+        );
       }
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
@@ -585,12 +614,29 @@ class AgentRunGatewayProvider implements FcSandboxProvider {
 
   async validate(context: ProviderContext, sandboxId: string) {
     const started = Date.now();
-    await this.request(`/v1/sandboxes/${encodeURIComponent(sandboxId)}/validate`, {
-      runId: context.runId,
-      traceId: context.traceId,
-      scenario: "retail_launch",
-    });
-    return { durationMs: Date.now() - started };
+    const data = await this.request(
+      `/v1/sandboxes/${encodeURIComponent(sandboxId)}/validate`,
+      {
+        runId: context.runId,
+        traceId: context.traceId,
+        scenario: "retail_launch",
+      },
+    );
+    return {
+      durationMs: Date.now() - started,
+      checkpointHash: requiredString(
+        data.checkpointHash,
+        "checkpointHash",
+        128,
+      ),
+      creativeDigest: requiredString(
+        data.creativeDigest,
+        "creativeDigest",
+        128,
+      ),
+      dynamicMountDigest:
+        optionalString(data.dynamicMountDigest, 128) ?? undefined,
+    };
   }
 
   async pause(
@@ -615,6 +661,10 @@ class AgentRunGatewayProvider implements FcSandboxProvider {
       state,
       durationMs: Date.now() - started,
       snapshotId: requiredString(data.snapshotId, "snapshotId", 200),
+      hibernationMode:
+        data.hibernationMode === "deep" || data.hibernationMode === "light"
+          ? data.hibernationMode
+          : undefined,
     };
   }
 

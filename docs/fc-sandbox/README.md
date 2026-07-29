@@ -37,6 +37,7 @@ handbook requires provider evidence, not configuration claims.
 - `ARCHITECTURE.md` - trust boundaries and state transitions.
 - `DEPLOYMENT.md` - migration, gateway, Vercel, and rollback order.
 - `EVIDENCE_RUNBOOK.md` - live capability probes and failure drills.
+- `RUBRIC_MATRIX.md` - code-complete versus live-only closure for every item.
 - `DEMO_SCRIPT.md` - three-minute judge script.
 - `SECURITY.md` - credentials, anonymous access, isolation, and retention.
 - `LIVE_EVIDENCE_2026-07-29.md` - first real FC run and allowlist blocker.
@@ -47,6 +48,7 @@ handbook requires provider evidence, not configuration claims.
 
 - [AgentRun AIO Sandbox API](https://help.aliyun.com/en/functioncompute/aio-sandbox)
 - [AgentRun 2025-09-10 API overview](https://help.aliyun.com/en/functioncompute/api-agentrun-2025-09-10-overview)
+- [FC virtual-machine-level isolation](https://help.aliyun.com/en/functioncompute/fc/how-is-security-guaranteed)
 - [FC deep hibernation](https://help.aliyun.com/en/functioncompute/fc/sandbox-deep-hibernation-pause-and-resume-session)
 - [FC Agent Sandbox billing](https://help.aliyun.com/en/functioncompute/pay-as-you-go-of-fc-agent-sandbox)
 

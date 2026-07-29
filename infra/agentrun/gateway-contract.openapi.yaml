@@ -48,7 +48,20 @@ paths:
         $ref: "#/components/requestBodies/LifecycleRequest"
       responses:
         "200":
-          $ref: "#/components/responses/Accepted"
+          description: Checkpoint and creative digests were calculated in the sandbox.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [checkpointHash, creativeDigest]
+                properties:
+                  checkpointHash:
+                    $ref: "#/components/schemas/Digest"
+                  creativeDigest:
+                    $ref: "#/components/schemas/Digest"
+                  dynamicMountDigest:
+                    $ref: "#/components/schemas/Digest"
   /v1/sandboxes/{sandboxId}/pause:
     post:
       operationId: pauseSandbox
@@ -70,7 +83,7 @@ paths:
               schema:
                 type: object
                 additionalProperties: false
-                required: [state, snapshotId]
+                required: [state, snapshotId, hibernationMode]
                 properties:
                   state:
                     const: PAUSED
@@ -78,6 +91,8 @@ paths:
                     type: string
                     minLength: 1
                     maxLength: 200
+                  hibernationMode:
+                    enum: [deep, light]
   /v1/sandboxes/{sandboxId}/resume:
     post:
       operationId: resumeSandbox
@@ -194,6 +209,29 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/Probe"
+  /v1/evidence/observability:
+    post:
+      operationId: proveObservability
+      description: >
+        Runs the controlled checkpoint-mismatch drill, correlates app, gateway,
+        sandbox, and scoring spans in SLS, confirms the alert fired, and returns
+        the exact query, root cause, and recovery duration.
+      requestBody:
+        $ref: "#/components/requestBodies/ProbeRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/Probe"
+  /v1/evidence/cost:
+    post:
+      operationId: proveCostEfficiency
+      description: >
+        Reconciles the measured PAUSED interval with a settled Alibaba bill
+        export and current active, hibernated, request, disk, and snapshot rates.
+      requestBody:
+        $ref: "#/components/requestBodies/ProbeRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/Probe"
 components:
   securitySchemes:
     bearerAuth:
@@ -291,12 +329,21 @@ components:
         requestedAt:
           type: string
           format: date-time
+        runId:
+          type: string
+          format: uuid
+        traceId:
+          type: string
+          format: uuid
         targetCreates:
           type: integer
           minimum: 2
           maximum: 100000
         stressAcknowledged:
           type: boolean
+        maxSpendCny:
+          type: number
+          exclusiveMinimum: 0
   requestBodies:
     LifecycleRequest:
       required: true
@@ -324,6 +371,21 @@ components:
                 const: true
     Probe:
       description: Signed, structured probe result.
+      headers:
+        X-Dopa-Evidence-Timestamp:
+          description: Unix seconds used in the evidence signature.
+          required: true
+          schema:
+            type: string
+            pattern: "^[0-9]{10}$"
+        X-Dopa-Evidence-Signature:
+          description: >
+            Lowercase HMAC-SHA256 of `<timestamp>.<raw response body>` using
+            the independent evidence-signing secret.
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-f0-9]{64}$"
       content:
         application/json:
           schema:

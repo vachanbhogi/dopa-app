@@ -4,6 +4,7 @@ import { getFcReadiness, getFcServerConfig } from "@/lib/fc-sandbox/config";
 import {
   assertTransition,
   checkpointDigest,
+  evidenceReferenceDigest,
   isExpired,
   makeEvent,
 } from "@/lib/fc-sandbox/lifecycle";
@@ -14,6 +15,7 @@ import {
   createRun,
   getCapabilityEvidence,
   getEvents,
+  getExpiredRuns,
   getRun,
   toPublicRun,
   transitionRun,
@@ -24,6 +26,7 @@ import {
   requestFingerprint,
   safeTokenMatch,
 } from "@/lib/fc-sandbox/security";
+import { emitFcTelemetry } from "@/lib/fc-sandbox/telemetry";
 import type {
   FcCapabilityEvidence,
   FcPublicRun,
@@ -45,6 +48,12 @@ export class FcServiceError extends Error {
     readonly retryAfterSeconds?: number,
   ) {
     super(message);
+  }
+}
+
+class FcFailureDrillError extends Error {
+  constructor(readonly code: string) {
+    super(code);
   }
 }
 
@@ -86,6 +95,17 @@ async function advance(
       "STALE_RUN",
     );
   }
+  emitFcTelemetry("info", {
+    event: event.eventType,
+    runId: updated.id,
+    traceId: updated.traceId,
+    stage: to,
+    provider: updated.provider,
+    outcome: "succeeded",
+    ...(event.durationMs === null || event.durationMs === undefined
+      ? {}
+      : { durationMs: event.durationMs }),
+  });
   return updated;
 }
 
@@ -115,6 +135,43 @@ async function failRun(run: FcRunRecord, code: string) {
   }
 }
 
+async function recordCleanupFailure(run: FcRunRecord) {
+  emitFcTelemetry("warn", {
+    event: "sandbox.cleanup_failed",
+    runId: run.id,
+    traceId: run.traceId,
+    stage: run.status,
+    provider: run.provider,
+    outcome: "failed",
+    errorCode: "CLEANUP_FAILED",
+  });
+  try {
+    await appendRunEvent(
+      run.id,
+      makeEvent({
+        sequence: await nextSequence(run.id),
+        eventType: "sandbox.cleanup_failed",
+        stage: run.status,
+        summary:
+          "Sandbox cleanup needs operator follow-up; the exact run remains traceable.",
+        evidenceClass: run.evidenceClass,
+        checkpointHash: run.checkpointHash,
+        metadata: { code: "CLEANUP_FAILED" },
+      }),
+    );
+  } catch {
+    emitFcTelemetry("error", {
+      event: "sandbox.cleanup_trace_failed",
+      runId: run.id,
+      traceId: run.traceId,
+      stage: run.status,
+      provider: run.provider,
+      outcome: "failed",
+      errorCode: "CLEANUP_TRACE_FAILED",
+    });
+  }
+}
+
 function providerContext(run: FcRunRecord) {
   if (!run.checkpointHash) {
     throw new Error("The run has no checkpoint digest.");
@@ -123,6 +180,14 @@ function providerContext(run: FcRunRecord) {
     runId: run.id,
     traceId: run.traceId,
     checkpointHash: run.checkpointHash,
+  };
+}
+
+function cleanupProviderContext(run: FcRunRecord) {
+  return {
+    runId: run.id,
+    traceId: run.traceId,
+    checkpointHash: run.checkpointHash ?? "0".repeat(64),
   };
 }
 
@@ -192,6 +257,14 @@ export async function startFcRun(request: Request): Promise<FcRunAccess> {
       metadata: { provider: provider.mode },
     }),
   );
+  emitFcTelemetry("info", {
+    event: "run.created",
+    runId: run.id,
+    traceId: run.traceId,
+    stage: run.status,
+    provider: run.provider,
+    outcome: "succeeded",
+  });
 
   return {
     run: await toPublicRun(run),
@@ -270,8 +343,12 @@ export async function prepareFcRun(
         checkpointHash: null,
         metadata: {
           state: created.state,
-          sessionId: created.sessionId ?? null,
-          dynamicMountId: created.dynamicMountId ?? null,
+          sessionIdDigest: created.sessionId
+            ? evidenceReferenceDigest(created.sessionId)
+            : null,
+          dynamicMountIdDigest: created.dynamicMountId
+            ? evidenceReferenceDigest(created.dynamicMountId)
+            : null,
         },
       },
     );
@@ -284,6 +361,9 @@ export async function prepareFcRun(
       },
       created.sandboxId,
     );
+    if (validation.checkpointHash !== initialCheckpoint) {
+      throw new Error("The provider returned a different checkpoint digest.");
+    }
     current = await advance(
       current,
       "awaiting_approval",
@@ -299,7 +379,12 @@ export async function prepareFcRun(
           "The sample creative passed the bounded input and policy checks.",
         durationMs: validation.durationMs,
         checkpointHash: initialCheckpoint,
-        metadata: { checkpointVersion: 1 },
+        metadata: {
+          checkpointVersion: 1,
+          creativeDigest: validation.creativeDigest,
+          dynamicMountDigestBefore:
+            validation.dynamicMountDigest ?? null,
+        },
       },
     );
 
@@ -339,7 +424,9 @@ export async function prepareFcRun(
         checkpointHash: initialCheckpoint,
         metadata: {
           state: paused.state,
-          snapshotId: paused.snapshotId ?? null,
+          snapshotIdDigest: paused.snapshotId
+            ? evidenceReferenceDigest(paused.snapshotId)
+            : null,
           hibernationMode: paused.hibernationMode ?? null,
           computeBillingClaim:
             provider.mode === "agentrun"
@@ -349,12 +436,15 @@ export async function prepareFcRun(
         occurredAt: pausedAt,
       },
     );
-  } catch (error) {
-    console.error("FC demo preparation failed.", {
+  } catch {
+    emitFcTelemetry("error", {
+      event: "run.preparation_failed",
       runId: current.id,
       traceId: current.traceId,
       stage: current.status,
-      error: error instanceof Error ? error.message : "unknown",
+      provider: current.provider,
+      outcome: "failed",
+      errorCode: "PREPARATION_FAILED",
     });
     current = await failRun(current, "PREPARATION_FAILED");
     if (current.sandboxId) {
@@ -367,15 +457,8 @@ export async function prepareFcRun(
           },
           current.sandboxId,
         );
-      } catch (cleanupError) {
-        console.error("FC sandbox preparation cleanup failed.", {
-          runId: current.id,
-          traceId: current.traceId,
-          error:
-            cleanupError instanceof Error
-              ? cleanupError.message
-              : "unknown",
-        });
+      } catch {
+        await recordCleanupFailure(current);
       }
     }
   }
@@ -463,6 +546,22 @@ export async function approveFcRun(
       providerContext(current),
       sandboxId,
     );
+    if (
+      getFcServerConfig().failureMode === "resume_checkpoint_mismatch"
+    ) {
+      emitFcTelemetry("warn", {
+        event: "failure_drill.resume_checkpoint_mismatch",
+        runId: current.id,
+        traceId: current.traceId,
+        stage: current.status,
+        provider: current.provider,
+        outcome: "started",
+        errorCode: "FAULT_INJECTED_CHECKPOINT_MISMATCH",
+      });
+      throw new FcFailureDrillError(
+        "FAULT_INJECTED_CHECKPOINT_MISMATCH",
+      );
+    }
     if (resumed.checkpointHash !== current.checkpointHash) {
       throw new Error("Checkpoint continuity verification failed.");
     }
@@ -530,30 +629,38 @@ export async function approveFcRun(
           metadata: { cleanup: true },
         }),
       );
-    } catch (error) {
-      console.error("FC sandbox cleanup failed.", {
+      emitFcTelemetry("info", {
+        event: "sandbox.stopped",
         runId: current.id,
         traceId: current.traceId,
-        error: error instanceof Error ? error.message : "unknown",
+        stage: current.status,
+        provider: current.provider,
+        outcome: "succeeded",
       });
+    } catch {
+      await recordCleanupFailure(current);
     }
   } catch (error) {
-    console.error("FC demo approval failed.", {
+    const failureCode =
+      error instanceof FcFailureDrillError
+        ? error.code
+        : current.status === "scoring"
+          ? "SCORING_FAILED"
+          : "RESUME_FAILED";
+    emitFcTelemetry("error", {
+      event: "run.approval_path_failed",
       runId: current.id,
       traceId: current.traceId,
       stage: current.status,
-      error: error instanceof Error ? error.message : "unknown",
+      provider: current.provider,
+      outcome: "failed",
+      errorCode: failureCode,
     });
-    current = await failRun(current, "RESUME_OR_SCORE_FAILED");
+    current = await failRun(current, failureCode);
     try {
       await provider.stop(providerContext(current), sandboxId);
-    } catch (cleanupError) {
-      console.error("FC sandbox failure cleanup failed.", {
-        runId: current.id,
-        traceId: current.traceId,
-        error:
-          cleanupError instanceof Error ? cleanupError.message : "unknown",
-      });
+    } catch {
+      await recordCleanupFailure(current);
     }
   }
 
@@ -581,6 +688,61 @@ export async function appendProviderTrace(input: {
       metadata: input.metadata,
     }),
   );
+}
+
+export async function reapExpiredFcRuns() {
+  const expiredRuns = await getExpiredRuns(new Date().toISOString());
+  const provider = getFcSandboxProvider();
+  let cleaned = 0;
+  let followUpRequired = 0;
+
+  for (const run of expiredRuns) {
+    const claimed = await failRun(run, "RUN_EXPIRED");
+    if (claimed.status !== "failed" || !claimed.sandboxId) continue;
+
+    if (claimed.provider !== provider.mode) {
+      followUpRequired += 1;
+      await recordCleanupFailure(claimed);
+      continue;
+    }
+
+    try {
+      await provider.stop(
+        cleanupProviderContext(claimed),
+        claimed.sandboxId,
+      );
+      cleaned += 1;
+      await appendRunEvent(
+        claimed.id,
+        makeEvent({
+          sequence: await nextSequence(claimed.id),
+          eventType: "sandbox.expired_cleanup",
+          stage: "failed",
+          summary: "The expired sandbox was stopped by the bounded reaper.",
+          evidenceClass: claimed.evidenceClass,
+          checkpointHash: claimed.checkpointHash,
+          metadata: { cleanup: true, reason: "RUN_EXPIRED" },
+        }),
+      );
+      emitFcTelemetry("info", {
+        event: "sandbox.expired_cleanup",
+        runId: claimed.id,
+        traceId: claimed.traceId,
+        stage: claimed.status,
+        provider: claimed.provider,
+        outcome: "succeeded",
+      });
+    } catch {
+      followUpRequired += 1;
+      await recordCleanupFailure(claimed);
+    }
+  }
+
+  return {
+    inspected: expiredRuns.length,
+    cleaned,
+    followUpRequired,
+  };
 }
 
 export async function getFcProof(): Promise<{
