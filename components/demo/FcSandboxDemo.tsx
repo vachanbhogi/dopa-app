@@ -23,6 +23,21 @@ type StoredAccess = {
   approvalNonce: string;
 };
 
+type DemoError = {
+  message: string;
+  code: string | null;
+};
+
+class DemoRequestError extends Error {
+  constructor(
+    message: string,
+    readonly code: string | null,
+  ) {
+    super(message);
+    this.name = "DemoRequestError";
+  }
+}
+
 const STORAGE_KEY = "dopa-fc-demo-access-v1";
 
 const stageOrder: Array<{
@@ -65,11 +80,55 @@ function eventTone(event: FcRunEvent) {
 }
 
 async function responseBody(response: Response) {
-  const data: unknown = await response.json();
+  let data: unknown;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error("The demo returned an unreadable response.");
+  }
   if (typeof data !== "object" || data === null) {
     throw new Error("The demo returned an invalid response.");
   }
   return data as Record<string, unknown>;
+}
+
+function responseError(
+  data: Record<string, unknown>,
+  fallback: string,
+): DemoRequestError {
+  return new DemoRequestError(
+    typeof data.error === "string" ? data.error : fallback,
+    typeof data.code === "string" ? data.code : null,
+  );
+}
+
+function caughtError(caught: unknown, fallback: string): DemoError {
+  if (
+    typeof caught === "object" &&
+    caught !== null &&
+    "message" in caught &&
+    typeof caught.message === "string"
+  ) {
+    return {
+      message: caught.message,
+      code:
+        "code" in caught && typeof caught.code === "string"
+          ? caught.code
+          : null,
+    };
+  }
+  return { message: fallback, code: null };
+}
+
+function failedRunError(run: FcPublicRun): DemoError | null {
+  if (run.status !== "failed") return null;
+  const message =
+    run.errorCode === "SCORING_FAILED"
+      ? "The scorer did not return a valid result. The sandbox was stopped safely."
+      : run.errorCode === "RESUME_FAILED"
+        ? "The checkpoint could not be restored. The sandbox was stopped safely."
+        : "The sandbox stopped during preparation and cleanup was requested.";
+  return { message, code: run.errorCode };
 }
 
 export function FcSandboxDemo({ initialProof }: { initialProof: Proof }) {
@@ -77,7 +136,7 @@ export function FcSandboxDemo({ initialProof }: { initialProof: Proof }) {
   const [run, setRun] = useState<FcPublicRun | null>(null);
   const [access, setAccess] = useState<StoredAccess | null>(null);
   const [busy, setBusy] = useState<"start" | "approve" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<DemoError | null>(null);
   const [tick, setTick] = useState(() => Date.now());
 
   useEffect(() => {
@@ -173,13 +232,11 @@ export function FcSandboxDemo({ initialProof }: { initialProof: Proof }) {
       );
       const data = await responseBody(response);
       if (!response.ok) {
-        throw new Error(
-          typeof data.error === "string"
-            ? data.error
-            : "The sandbox could not be prepared.",
-        );
+        throw responseError(data, "The sandbox could not be prepared.");
       }
-      setRun(data as unknown as FcPublicRun);
+      const prepared = data as unknown as FcPublicRun;
+      setRun(prepared);
+      setError(failedRunError(prepared));
     } finally {
       polling = false;
       await pollingTask;
@@ -197,9 +254,7 @@ export function FcSandboxDemo({ initialProof }: { initialProof: Proof }) {
       });
       const data = await responseBody(response);
       if (!response.ok) {
-        throw new Error(
-          typeof data.error === "string" ? data.error : "The run could not start.",
-        );
+        throw responseError(data, "The run could not start.");
       }
       const started = data as unknown as FcRunAccess;
       const stored: StoredAccess = {
@@ -213,9 +268,7 @@ export function FcSandboxDemo({ initialProof }: { initialProof: Proof }) {
       await prepareRun(stored);
       await refreshProof();
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "The run could not start.",
-      );
+      setError(caughtError(caught, "The run could not start."));
     } finally {
       setBusy(null);
     }
@@ -239,23 +292,24 @@ export function FcSandboxDemo({ initialProof }: { initialProof: Proof }) {
       );
       const data = await responseBody(response);
       if (!response.ok) {
-        throw new Error(
-          typeof data.error === "string"
-            ? data.error
-            : "The approval could not be completed.",
-        );
+        throw responseError(data, "The approval could not be completed.");
       }
-      setRun(data as unknown as FcPublicRun);
+      const approved = data as unknown as FcPublicRun;
+      setRun(approved);
+      setError(failedRunError(approved));
       await refreshProof();
     } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "The approval could not be completed.",
-      );
+      setError(caughtError(caught, "The approval could not be completed."));
     } finally {
       setBusy(null);
     }
+  }
+
+  function resetRun() {
+    setRun(null);
+    setAccess(null);
+    setError(null);
+    window.sessionStorage.removeItem(STORAGE_KEY);
   }
 
   const activeIndex = run ? statusIndex(run.status) : -1;
@@ -301,7 +355,8 @@ export function FcSandboxDemo({ initialProof }: { initialProof: Proof }) {
             checkpoint digest → inspect the evidence ledger.
           </p>
           <p className="mt-3 font-mono text-[10px] text-[#626a76]">
-            Typical local walkthrough: under 30 seconds
+            Typical {isLocal ? "local walkthrough" : "live run"}: under 30
+            seconds
           </p>
         </div>
       </section>
@@ -344,7 +399,11 @@ export function FcSandboxDemo({ initialProof }: { initialProof: Proof }) {
                 disabled={busy !== null}
                 className="inline-flex h-10 items-center justify-center rounded-full bg-white px-5 text-sm font-[510] text-[#0b0c0e] transition-transform hover:scale-[1.015] disabled:cursor-wait disabled:opacity-60"
               >
-                {busy === "start" ? "Creating run…" : "Start FC sandbox run"}
+                {busy === "start"
+                  ? "Creating run…"
+                  : isLocal
+                    ? "Run local lifecycle demo"
+                    : "Start live FC sandbox"}
               </button>
             ) : run.status === "hibernated" ? (
               <button
@@ -358,12 +417,7 @@ export function FcSandboxDemo({ initialProof }: { initialProof: Proof }) {
             ) : (
               <button
                 type="button"
-                onClick={() => {
-                  setRun(null);
-                  setAccess(null);
-                  setError(null);
-                  window.sessionStorage.removeItem(STORAGE_KEY);
-                }}
+                onClick={resetRun}
                 disabled={busy !== null}
                 className="inline-flex h-10 items-center justify-center rounded-full border border-white/12 px-5 text-sm text-[#c6cad1] transition-colors hover:bg-white/5 disabled:opacity-50"
               >
@@ -375,9 +429,26 @@ export function FcSandboxDemo({ initialProof }: { initialProof: Proof }) {
           {error ? (
             <div
               role="alert"
-              className="border-b border-[#f46b79]/15 bg-[#f46b79]/5 px-5 py-3 text-sm text-[#f39aa3] md:px-6"
+              className="flex flex-col gap-3 border-b border-[#f46b79]/15 bg-[#f46b79]/5 px-5 py-4 text-sm text-[#f39aa3] sm:flex-row sm:items-center sm:justify-between md:px-6"
             >
-              {error}
+              <div>
+                <p>{error.message}</p>
+                {error.code ? (
+                  <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-[#bc717a]">
+                    Reference · {error.code}
+                  </p>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={
+                  run ? resetRun : startRun
+                }
+                disabled={busy !== null}
+                className="inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-[#f46b79]/25 px-3 text-[11px] text-[#ffc0c6] transition-colors hover:bg-[#f46b79]/10 disabled:cursor-wait disabled:opacity-50"
+              >
+                {run ? "Start a new run" : "Try again"}
+              </button>
             </div>
           ) : null}
 

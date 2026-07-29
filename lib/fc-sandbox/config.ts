@@ -211,6 +211,7 @@ export function getFcReadiness(): FcReadiness {
 
   return {
     mode: config.providerMode,
+    configurationComplete: missing.length === 0,
     durableStore: present(config.supabaseSecretKey ?? undefined),
     liveProvider: config.providerMode === "agentrun",
     scoringBackend: Boolean(

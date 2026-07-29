@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "sourceHash": "777effc1eb6de9c4",
+  "sourceHash": "9dde5e82fc7bc3b3",
   "routes": [
     "/",
     "/dashboard",
@@ -607,7 +607,6 @@
         "verified ·",
         "configured ·",
         "pending",
-        "Live badges are intentionally withheld. AgentRun credentials and a signed evidence run are required before any provider claim is marked verified.",
         "Live readiness blockers"
       ]
     },
@@ -629,8 +628,10 @@
         "Dopa validates a sample ad, checkpoints at human approval, pauses compute, restores the exact state, and only then calls TRIBE v2. Every event below states whether it is cloud evidence or a local demonstration.",
         "Judge path",
         "Start → inspect the paused boundary → approve once → verify the checkpoint digest → inspect the evidence ledger.",
-        "Typical local walkthrough: under 30 seconds",
+        "Typical",
+        ": under 30 seconds",
         "New run",
+        "Reference ·",
         "Active compute",
         "Hibernation gap",
         "Wake latency",

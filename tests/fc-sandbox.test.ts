@@ -377,11 +377,11 @@ test("keeps the deployable gateway and cleanup contracts in the checkout", () =>
   ]);
 
   const durableMigration = readFileSync(
-    "supabase/migrations/20260729140653_fc_sandbox_runs.sql",
+    "supabase/migrations/20260729165000_fc_sandbox_runs.sql",
     "utf8",
   );
   const hardeningMigration = readFileSync(
-    "supabase/migrations/20260729150000_fc_sandbox_evidence_hardening.sql",
+    "supabase/migrations/20260729165004_fc_sandbox_evidence_hardening.sql",
     "utf8",
   );
   assert.match(

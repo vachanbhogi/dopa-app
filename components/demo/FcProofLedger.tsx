@@ -103,9 +103,9 @@ export function FcProofLedger({
       {!proof.readiness.liveProvider ? (
         <div className="border-t border-[#f2b84b]/12 bg-[#f2b84b]/4 px-5 py-4 md:px-6">
           <p className="text-[11px] leading-5 text-[#a99062]">
-            Live badges are intentionally withheld. AgentRun credentials and a
-            signed evidence run are required before any provider claim is marked
-            verified.
+            {proof.readiness.configurationComplete
+              ? "Server configuration is complete, but live activation is intentionally withheld until Alibaba pause/resume and the signed evidence run are verified."
+              : "Live badges are intentionally withheld. Complete the readiness blockers and a signed evidence run before any provider claim is marked verified."}
           </p>
         </div>
       ) : null}

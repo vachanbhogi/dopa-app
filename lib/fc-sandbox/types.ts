@@ -115,6 +115,7 @@ export type FcCapabilityEvidence = {
 
 export type FcReadiness = {
   mode: FcProviderMode;
+  configurationComplete: boolean;
   durableStore: boolean;
   liveProvider: boolean;
   scoringBackend: boolean;
