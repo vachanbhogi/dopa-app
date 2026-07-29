@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { createBusiness } from "@/app/dashboard/actions";
+import { addCompetitor } from "@/app/dashboard/competitor-actions";
 import { createProduct } from "@/app/dashboard/product-actions";
+import { DopaMark, ArrowRight } from "@/components/landing/icons";
 import {
   BRAND_TONES,
   CAMPAIGN_GOALS,
@@ -14,35 +17,9 @@ import {
   type BusinessInput,
 } from "@/lib/business-types";
 
-import { addCompetitor } from "@/app/dashboard/competitor-actions";
+type Step = "import" | "review" | "launch";
 
-const STEP_COUNT = 10;
-
-type StepId =
-  | "welcome"
-  | "website"
-  | "name"
-  | "audience"
-  | "price"
-  | "tone"
-  | "industry"
-  | "goal"
-  | "competitors"
-  | "first_product";
-
-const STEPS: StepId[] = [
-  "welcome",
-  "website",
-  "name",
-  "audience",
-  "price",
-  "tone",
-  "industry",
-  "goal",
-  "competitors",
-  "first_product",
-];
-
+const STEPS: Step[] = ["import", "review", "launch"];
 
 type FirstProductDraft = {
   product_name: string;
@@ -60,24 +37,31 @@ const emptyFirstProduct = (): FirstProductDraft => ({
 
 const easeOut = [0.23, 1, 0.32, 1] as const;
 
-export function OnboardingFlow({ firstName }: { firstName: string }) {
+export function OnboardingFlow({ firstName: _firstName }: { firstName: string }) {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
-  const [stepIndex, setStepIndex] = useState(0);
-  const [direction, setDirection] = useState(1);
+  const [step, setStep] = useState<Step>("import");
   const [form, setForm] = useState<BusinessInput>(emptyBusinessInput());
   const [firstProduct, setFirstProduct] = useState<FirstProductDraft>(emptyFirstProduct);
-  const [competitorsInput, setCompetitorsInput] = useState<string>("");
+  const [competitorsInput, setCompetitorsInput] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [autoScanning, setAutoScanning] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanned, setScanned] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  async function handleAutoDiscover() {
+  const stepIndex = STEPS.indexOf(step);
+
+  const setField = <K extends keyof BusinessInput>(key: K, value: BusinessInput[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setError(null);
+  };
+
+  async function handleScan() {
     if (!form.website?.trim()) {
-      setError("Enter a website URL to discover");
+      setError("Enter a website URL");
       return;
     }
-    setAutoScanning(true);
+    setScanning(true);
     setError(null);
     try {
       const res = await fetch("/api/business/auto-discover", {
@@ -86,13 +70,13 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
         body: JSON.stringify({ websiteUrl: form.website }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to scan website");
-      }
+      if (!res.ok) throw new Error(data.error || "Failed to scan website");
+
       if (data.profile) {
         const p = data.profile;
         setForm((prev) => ({
           ...prev,
+          website: data.websiteUrl || prev.website,
           name: p.name || prev.name,
           industry: p.industry || prev.industry,
           target_audience: p.target_audience || prev.target_audience,
@@ -101,328 +85,292 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
           price_range: p.price_range || prev.price_range,
           campaign_goal: p.campaign_goal || prev.campaign_goal,
         }));
-
-        if (p.competitors && Array.isArray(p.competitors)) {
+        if (Array.isArray(p.competitors)) {
           setCompetitorsInput(p.competitors.join(", "));
         }
-
         if (p.first_product) {
-          const fp = p.first_product;
           setFirstProduct({
-            product_name: fp.product_name || "",
-            value_prop: fp.value_prop || "",
-            price: fp.price || "",
-            creative_hook: fp.creative_hook || "",
+            product_name: p.first_product.product_name || "",
+            value_prop: p.first_product.value_prop || "",
+            price: p.first_product.price || "",
+            creative_hook: p.first_product.creative_hook || "",
           });
         }
-        // Advance to next step once populated!
-        goNext({ skip: true });
+        setScanned(true);
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to scan website. You can enter details manually.");
+      setStep("review");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Scan failed. Try entering details manually.");
     } finally {
-      setAutoScanning(false);
+      setScanning(false);
     }
   }
 
-
-  const step = STEPS[stepIndex];
-  const isLast = stepIndex === STEPS.length - 1;
-
-  const setField = <K extends keyof BusinessInput>(key: K, value: BusinessInput[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    setError(null);
-  };
-
-  const goNext = (options?: { skip?: boolean }) => {
-    const skipping = options?.skip === true;
-
-    if (!skipping) {
-      if (step === "name" && !form.name.trim()) {
-        setError("Enter a business name to continue");
-        return;
-      }
-      if (step === "audience" && !form.target_audience?.trim()) {
-        setError("Describe your default target demographic");
-        return;
-      }
-      if (step === "price" && !form.price_range) {
-        setError("Pick a price tier");
-        return;
-      }
-      if (step === "tone" && !form.brand_voice) {
-        setError("Pick a brand tone");
-        return;
-      }
-      if (step === "industry" && !form.industry) {
-        setError("Pick an industry");
-        return;
-      }
-    }
-
-    if (isLast) {
-      if (!form.name.trim()) {
-        setError("Business name is required");
-        setDirection(-1);
-        setStepIndex(STEPS.indexOf("name"));
-        return;
-      }
-
-      startTransition(async () => {
-        setError(null);
-        const result = await createBusiness(form);
-        if (result.error) {
-          setError(result.error);
-          return;
-        }
-
-        if (result.business) {
-          if (competitorsInput.trim()) {
-            const list = competitorsInput
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean);
-            for (const compName of list) {
-              await addCompetitor(result.business.id, {
-                name: compName,
-                predicted_ctr: 1.35,
-              });
-            }
-          }
-
-          if (firstProduct.product_name.trim()) {
-            const productResult = await createProduct(result.business.id, {
-              product_name: firstProduct.product_name,
-              value_prop: firstProduct.value_prop,
-              price: firstProduct.price,
-              creative_hooks: firstProduct.creative_hook,
-            });
-            if (productResult.error) {
-              setError(productResult.error);
-              return;
-            }
-          }
-        }
-
-
-        router.push("/dashboard");
-      });
+  function handleFinish() {
+    if (!form.name.trim()) {
+      setError("Business name is required");
+      setStep("review");
       return;
     }
 
-    setDirection(1);
-    setStepIndex((i) => i + 1);
-  };
-
-  const goBack = () => {
-    if (stepIndex === 0) return;
-    setDirection(-1);
-    setStepIndex((i) => i - 1);
-    setError(null);
-  };
-
-  const slideVariants = reduceMotion
-    ? {
-        enter: { opacity: 0 },
-        center: { opacity: 1 },
-        exit: { opacity: 0 },
+    startTransition(async () => {
+      setError(null);
+      const result = await createBusiness(form);
+      if (result.error) {
+        setError(result.error);
+        return;
       }
+
+      if (result.business) {
+        if (competitorsInput.trim()) {
+          for (const name of competitorsInput.split(",").map((s) => s.trim()).filter(Boolean)) {
+            await addCompetitor(result.business.id, { name, predicted_ctr: 1.35 });
+          }
+        }
+        if (firstProduct.product_name.trim()) {
+          const productResult = await createProduct(result.business.id, {
+            product_name: firstProduct.product_name,
+            value_prop: firstProduct.value_prop,
+            price: firstProduct.price,
+            creative_hooks: firstProduct.creative_hook,
+          });
+          if (productResult.error) {
+            setError(productResult.error);
+            return;
+          }
+        }
+      }
+
+      router.push("/dashboard");
+    });
+  }
+
+  const slide = reduceMotion
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
     : {
-        enter: (d: number) => ({ opacity: 0, x: d > 0 ? 48 : -48 }),
-        center: { opacity: 1, x: 0 },
-        exit: (d: number) => ({ opacity: 0, x: d > 0 ? -48 : 48 }),
+        initial: { opacity: 0, y: 12 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, y: -8 },
       };
 
   return (
     <div className="relative flex min-h-screen flex-col bg-[#08090a] text-white">
-      {/* Ambient glow */}
       <div
-        className="pointer-events-none absolute inset-0 overflow-hidden"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_42%,rgba(88,92,140,0.2),transparent_55%)]"
         aria-hidden
-      >
-        <div className="absolute left-1/2 top-[-20%] h-[60vh] w-[80vw] -translate-x-1/2 rounded-full bg-brand/12 blur-[120px]" />
-        <div className="absolute bottom-0 right-0 h-[40vh] w-[50vw] rounded-full bg-accent/8 blur-[100px]" />
-      </div>
+      />
+      <div className="dopa-grain pointer-events-none absolute inset-0 opacity-40" aria-hidden />
 
-      {/* Progress */}
-      <header className="relative z-10 px-6 pt-6 sm:px-10 sm:pt-8">
-        <div className="mx-auto flex max-w-lg items-center gap-3">
-          {stepIndex > 0 ? (
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={pending}
-              aria-label="Back"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/4 text-secondary transition-[transform,border-color,color,background-color] duration-150 ease-out hover:border-white/20 hover:text-white active:scale-[0.97] disabled:opacity-50"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                <path d="M10 3L5 8l5 5" />
-              </svg>
-            </button>
-          ) : (
-            <div className="h-9 w-9 shrink-0" />
-          )}
-          <div className="flex flex-1 gap-1.5">
-            {Array.from({ length: STEP_COUNT }).map((_, i) => (
-              <div
-                key={i}
-                className="h-1 flex-1 overflow-hidden rounded-full bg-white/8"
-              >
-                <motion.div
-                  className="h-full rounded-full bg-brand"
-                  initial={false}
-                  animate={{ scaleX: i <= stepIndex ? 1 : 0 }}
-                  style={{ transformOrigin: "left" }}
-                  transition={{ duration: reduceMotion ? 0 : 0.35, ease: easeOut }}
-                />
-              </div>
-            ))}
-          </div>
-          <span className="w-9 shrink-0 text-right text-[11px] tabular-nums text-tertiary">
-            {stepIndex + 1}/{STEP_COUNT}
+      <header className="absolute inset-x-0 top-0 z-10">
+        <div className="mx-auto flex h-16 max-w-300 items-center justify-between px-5 md:px-8">
+          <Link href="/" className="flex items-center gap-2 text-white">
+            <DopaMark className="h-4.5 w-4.5" />
+            <span className="text-[15px] font-[510] tracking-[-0.01em]">Dopa</span>
+          </Link>
+          <span className="font-mono text-[12px] tabular-nums text-tertiary">
+            {stepIndex + 1} / {STEPS.length}
           </span>
         </div>
       </header>
 
-      {/* Step content */}
-      <main className="relative z-10 flex flex-1 flex-col px-6 pb-36 pt-10 sm:px-10 sm:pt-14">
-        <div className="mx-auto w-full max-w-lg">
-          <AnimatePresence mode="wait" custom={direction}>
-            <motion.div
-              key={step}
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: reduceMotion ? 0.15 : 0.4, ease: easeOut }}
-              className="space-y-8"
-            >
-              {step === "welcome" && (
-                <WelcomeStep firstName={firstName} />
-              )}
-              {step === "website" && (
-                <TextStep
-                  title="What's your website URL?"
-                  subtitle="Groq AI will scan your site and automatically populate your business details."
-                >
-                  <div className="space-y-4">
-                    <input
-                      autoFocus
-                      value={form.website ?? ""}
-                      onChange={(e) => setField("website", e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleAutoDiscover()}
-                      placeholder="https://aurabeauty.com"
-                      className={inputClass}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAutoDiscover}
-                      disabled={autoScanning || !form.website?.trim()}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand/20 py-3 text-[14px] font-medium text-brand border border-brand/30 transition-colors hover:bg-brand/30 disabled:opacity-40"
-                    >
-                      {autoScanning ? (
-                        <>
-                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
-                          <span>Scanning Website with Groq AI...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>✨ Auto-Discover with Groq AI</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </TextStep>
-              )}
-              {step === "name" && (
-                <TextStep
-                  title="What's your business called?"
-                  subtitle="This is how it will appear across your workspace."
-                >
+      <main className="relative z-10 flex flex-1 items-center justify-center px-5 py-24 md:px-8">
+        <div className="w-full max-w-300">
+        <AnimatePresence mode="wait">
+          {step === "import" && (
+            <motion.div key="import" {...slide} transition={{ duration: 0.35, ease: easeOut }}>
+              <div className="mx-auto w-full max-w-md -translate-y-6">
+                <div className="text-center">
+                  <h1 className="text-[40px] font-semibold leading-[1.05] tracking-[-0.04em] text-white sm:text-[48px]">
+                    Import your brand
+                  </h1>
+                  <p className="mx-auto mt-4 max-w-xs text-[15px] leading-6 text-[#8a8f98]">
+                    Paste your website URL and we&apos;ll optiimze for your profile.
+                  </p>
+                </div>
+
+                <div className="mt-9 space-y-3">
                   <input
                     autoFocus
-                    value={form.name}
-                    onChange={(e) => setField("name", e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && goNext()}
-                    placeholder="Aura Beauty Co."
-                    className={inputClass}
+                    value={form.website ?? ""}
+                    onChange={(e) => setField("website", e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleScan()}
+                    placeholder="aurabeauty.com"
+                    className={inputClassLg}
                   />
-                </TextStep>
-              )}
-              {step === "audience" && (
-                <TextStep
-                  title="Who is your default audience?"
-                  subtitle="Brand-level demographic — products can narrow this later."
-                >
-                  <textarea
-                    autoFocus
-                    value={form.target_audience}
-                    onChange={(e) => setField("target_audience", e.target.value)}
-                    rows={4}
-                    placeholder="Gen Z & Millennials (18–34), tech-savvy, eco-conscious shoppers."
-                    className={`${inputClass} resize-none leading-relaxed`}
-                  />
-                </TextStep>
-              )}
-              {step === "price" && (
-                <ChipStep
-                  title="What's your default price tier?"
-                  subtitle="Sets expectations for ad positioning and offers."
-                  options={PRICE_RANGES}
-                  value={form.price_range ?? ""}
-                  onChange={(v) => setField("price_range", v)}
-                />
-              )}
-              {step === "tone" && (
-                <ChipStep
-                  title="How should your brand sound?"
-                  subtitle="Dopa uses this tone when generating hooks and copy."
-                  options={BRAND_TONES}
-                  value={form.brand_voice ?? ""}
-                  onChange={(v) => setField("brand_voice", v)}
-                />
-              )}
-              {step === "industry" && (
-                <ChipStep
-                  title="What industry are you in?"
-                  subtitle="Helps us benchmark against similar advertisers."
-                  options={INDUSTRIES}
-                  value={form.industry ?? ""}
-                  onChange={(v) => setField("industry", v)}
-                />
-              )}
-              {step === "goal" && (
-                <ChipStep
-                  title="What's your primary campaign goal?"
-                  subtitle="We'll tune predictions and recommendations around this."
-                  options={CAMPAIGN_GOALS}
-                  value={form.campaign_goal ?? ""}
-                  onChange={(v) => setField("campaign_goal", v)}
-                />
-              )}
-              {step === "competitors" && (
-                <TextStep
-                  title="Who are your top competitors?"
-                  subtitle="Optional — enter competitor brand names (comma-separated). Dopa will monitor their ad moves."
-                >
-                  <textarea
-                    autoFocus
-                    value={competitorsInput}
-                    onChange={(e) => setCompetitorsInput(e.target.value)}
-                    rows={3}
-                    placeholder="Rival Labs, Brand X, Acme Beauty"
-                    className={`${inputClass} resize-none leading-relaxed`}
-                  />
-                </TextStep>
-              )}
+                  <button
+                    type="button"
+                    onClick={handleScan}
+                    disabled={scanning || !form.website?.trim()}
+                    className="flex h-11 w-full items-center justify-center rounded-xl bg-brand text-[14px] font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.97] disabled:opacity-40"
+                  >
+                    {scanning ? (
+                      <span className="inline-flex items-center gap-2">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                        Scanning…
+                      </span>
+                    ) : (
+                      "Scan brand"
+                    )}
+                  </button>
+                  {error ? <p className="text-center text-[13px] text-red-400">{error}</p> : null}
+                </div>
 
-              {step === "first_product" && (
-                <TextStep
-                  title="Add your first product"
-                  subtitle="Optional — name, value prop, price, and a hook to seed creative generation."
+                <div className="mt-6 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-white/6" aria-hidden />
+                  <span className="text-[12px] text-tertiary">or</span>
+                  <div className="h-px flex-1 bg-white/6" aria-hidden />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setStep("review");
+                  }}
+                  className="mt-5 inline-flex w-full items-center justify-center gap-1.5 text-[14px] text-secondary transition-colors hover:text-white"
                 >
-                  <div className="space-y-4">
+                  Enter details manually
+                  <ArrowRight className="h-3.5 w-3.5 opacity-70" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {step === "review" && (
+            <motion.div key="review" {...slide} transition={{ duration: 0.35, ease: easeOut }} className="w-full">
+              <div className="mx-auto mb-8 max-w-3xl text-center">
+                <h1 className="text-[32px] font-semibold leading-[1.08] tracking-[-0.04em] sm:text-[40px]">
+                  Review your brand profile
+                </h1>
+                <p className="mx-auto mt-3 max-w-lg text-[15px] leading-6 text-[#8a8f98]">
+                  {scanned
+                    ? "We extracted this from your site. Edit anything before launching."
+                    : "Set your brand defaults — Dopa uses these for every campaign."}
+                </p>
+              </div>
+
+              <div className="grid w-full gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+                <div className="dopa-panel space-y-5 p-6 sm:p-7">
+                  <Field label="Business name" required>
+                    <input
+                      value={form.name}
+                      onChange={(e) => setField("name", e.target.value)}
+                      placeholder="Aura Beauty Co."
+                      className={inputClass}
+                    />
+                  </Field>
+
+                  <Field label="Default audience">
+                    <textarea
+                      value={form.target_audience}
+                      onChange={(e) => setField("target_audience", e.target.value)}
+                      rows={2}
+                      placeholder="Gen Z & Millennials, eco-conscious shoppers"
+                      className={`${inputClass} resize-none`}
+                    />
+                  </Field>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Industry">
+                      <select
+                        value={form.industry}
+                        onChange={(e) => setField("industry", e.target.value)}
+                        className={inputClass}
+                      >
+                        <option value="">Select</option>
+                        {INDUSTRIES.map((i) => (
+                          <option key={i} value={i}>{i}</option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Campaign goal">
+                      <select
+                        value={form.campaign_goal}
+                        onChange={(e) => setField("campaign_goal", e.target.value)}
+                        className={inputClass}
+                      >
+                        <option value="">Select</option>
+                        {CAMPAIGN_GOALS.map((g) => (
+                          <option key={g} value={g}>{g}</option>
+                        ))}
+                      </select>
+                    </Field>
+                  </div>
+
+                  <Field label="Price tier">
+                    <ChipRow
+                      options={PRICE_RANGES}
+                      value={form.price_range ?? ""}
+                      onChange={(v) => setField("price_range", v)}
+                    />
+                  </Field>
+
+                  <Field label="Brand tone">
+                    <ChipRow
+                      options={BRAND_TONES}
+                      value={form.brand_voice ?? ""}
+                      onChange={(v) => setField("brand_voice", v)}
+                    />
+                  </Field>
+
+                  <Field label="Competitors" hint="Comma-separated">
+                    <input
+                      value={competitorsInput}
+                      onChange={(e) => setCompetitorsInput(e.target.value)}
+                      placeholder="Rival Labs, Brand X"
+                      className={inputClass}
+                    />
+                  </Field>
+
+                  {error ? <p className="text-[12px] text-red-400">{error}</p> : null}
+
+                  <div className="flex items-center justify-between gap-3 border-t border-white/[0.06] pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setStep("import")}
+                      className="text-[13px] text-secondary transition-colors hover:text-white"
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!form.name.trim()) {
+                          setError("Business name is required");
+                          return;
+                        }
+                        setError(null);
+                        setStep("launch");
+                      }}
+                      className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-[13px] font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.97]"
+                    >
+                      Continue
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                        <path d="M6 3l5 5-5 5" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <BrandPreviewCard form={form} competitors={competitorsInput} website={form.website} />
+              </div>
+            </motion.div>
+          )}
+
+          {step === "launch" && (
+            <motion.div key="launch" {...slide} transition={{ duration: 0.35, ease: easeOut }}>
+              <div className="mx-auto w-full max-w-2xl -translate-y-6">
+                <div className="text-center">
+                  <h1 className="text-[36px] font-semibold leading-[1.08] tracking-[-0.04em] sm:text-[44px]">
+                    Add your first product
+                  </h1>
+                  <p className="mx-auto mt-4 max-w-md text-[16px] leading-7 text-[#8a8f98]">
+                    Optional — seed hooks and TRIBE v2 scoring for {form.name || "your brand"}.
+                  </p>
+                </div>
+
+                <div className="dopa-panel mt-10 space-y-5 p-6 text-left sm:p-8">
+                  <Field label="Product name">
                     <input
                       autoFocus
                       value={firstProduct.product_name}
@@ -430,186 +378,254 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
                         setFirstProduct((p) => ({ ...p, product_name: e.target.value }))
                       }
                       placeholder="Aura Glow Skin Serum"
-                      className={inputClass}
+                      className={inputClassLg}
                     />
+                  </Field>
+                  <Field label="Value proposition">
                     <textarea
                       value={firstProduct.value_prop}
                       onChange={(e) =>
                         setFirstProduct((p) => ({ ...p, value_prop: e.target.value }))
                       }
-                      rows={2}
+                      rows={3}
                       placeholder="Visible glow in 7 days without oiliness"
-                      className={`${inputClass} resize-none leading-relaxed`}
+                      className={`${inputClassLg} resize-none`}
                     />
-                    <input
-                      value={firstProduct.price}
-                      onChange={(e) =>
-                        setFirstProduct((p) => ({ ...p, price: e.target.value }))
-                      }
-                      placeholder="Price — e.g. 79"
-                      className={inputClass}
-                    />
-                    <input
-                      value={firstProduct.creative_hook}
-                      onChange={(e) =>
-                        setFirstProduct((p) => ({ ...p, creative_hook: e.target.value }))
-                      }
-                      placeholder="Primary hook — e.g. 7-day glow challenge"
-                      className={inputClass}
-                    />
+                  </Field>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Field label="Price">
+                      <input
+                        value={firstProduct.price}
+                        onChange={(e) =>
+                          setFirstProduct((p) => ({ ...p, price: e.target.value }))
+                        }
+                        placeholder="79"
+                        className={inputClassLg}
+                      />
+                    </Field>
+                    <Field label="Primary hook">
+                      <input
+                        value={firstProduct.creative_hook}
+                        onChange={(e) =>
+                          setFirstProduct((p) => ({ ...p, creative_hook: e.target.value }))
+                        }
+                        placeholder="7-day glow challenge"
+                        className={inputClassLg}
+                      />
+                    </Field>
                   </div>
-                </TextStep>
-              )}
-            </motion.div>
-          </AnimatePresence>
 
-          {error ? (
-            <p className="mt-6 text-center text-[13px] text-red-400">{error}</p>
-          ) : null}
+                  {error ? <p className="text-[13px] text-red-400">{error}</p> : null}
+
+                  <div className="flex items-center justify-between gap-3 border-t border-white/[0.06] pt-5">
+                    <button
+                      type="button"
+                      onClick={() => setStep("review")}
+                      className="text-[14px] text-secondary transition-colors hover:text-white"
+                    >
+                      ← Back
+                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleFinish}
+                        disabled={pending}
+                        className="text-[14px] text-tertiary transition-colors hover:text-secondary"
+                      >
+                        Skip
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleFinish}
+                        disabled={pending}
+                        className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-[14px] font-medium text-white transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.97] disabled:opacity-50"
+                      >
+                        {pending ? (
+                          <>
+                            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                            Launching…
+                          </>
+                        ) : (
+                          "Launch workspace →"
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         </div>
       </main>
-
-      {/* Bottom CTA */}
-      <footer className="fixed inset-x-0 bottom-0 z-20 border-t border-white/6 bg-[#08090a]/80 px-6 py-5 backdrop-blur-xl sm:px-10">
-        <div className="mx-auto flex max-w-lg flex-col gap-3">
-          <button
-            type="button"
-            onClick={() => goNext()}
-            disabled={pending}
-            className="flex h-12 w-full items-center justify-center rounded-xl bg-brand text-[15px] font-medium text-white shadow-[0_0_0_1px_rgba(255,255,255,0.06)_inset,0_8px_32px_rgba(94,106,210,0.35)] transition-[transform,opacity] duration-150 ease-out hover:opacity-95 active:scale-[0.98] disabled:opacity-50"
-          >
-            {pending ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Setting up…
-              </span>
-            ) : step === "welcome" ? (
-              "Get started"
-            ) : isLast ? (
-              "Finish setup"
-            ) : (
-              "Continue"
-            )}
-          </button>
-          {step === "first_product" || step === "competitors" || (step !== "welcome" && step !== "name" && !isLast) ? (
-            <button
-              type="button"
-              onClick={() => goNext({ skip: true })}
-              className="text-center text-[13px] text-tertiary transition-colors duration-150 hover:text-secondary"
-            >
-              {step === "first_product" ? "Skip — add products later" : step === "competitors" ? "Skip — add competitors later" : "Skip for now"}
-            </button>
-          ) : null}
-
-        </div>
-      </footer>
     </div>
   );
 }
 
-function WelcomeStep({ firstName }: { firstName: string }) {
+function BrandPreviewCard({
+  form,
+  competitors,
+  website,
+}: {
+  form: BusinessInput;
+  competitors: string;
+  website?: string;
+}) {
+  const competitorList = competitors
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+
+  const filled = [
+    form.name,
+    form.target_audience,
+    form.industry,
+    form.brand_voice,
+    form.price_range,
+    form.campaign_goal,
+  ].filter(Boolean).length;
+
   return (
-    <div className="space-y-8 text-center sm:text-left">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand/20 sm:mx-0">
-        <svg className="h-8 w-8 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-          <path d="M12 3v18M12 5c-2-2-5-1.5-5 2S10 11 12 11c-2.5 0-5 .5-5 3.5s2.5 4 5 2" />
-          <path d="M12 5c2-2 5-1.5 5 2S14 11 12 11c2.5 0 5 .5 5 3.5s-2.5 4-5 2" />
-        </svg>
+    <div className="dopa-panel flex flex-col overflow-hidden">
+      <div className="border-b border-white/[0.06] px-4 py-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] font-medium text-white">TRIBE v2 Brand Profile</span>
+          <span className="rounded-[5px] border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] text-secondary">
+            Live preview
+          </span>
+        </div>
       </div>
-      <div className="space-y-3">
-        <h1 className="text-[28px] font-semibold leading-[1.15] tracking-[-0.03em] sm:text-[32px]">
-          Hey {firstName}, let&apos;s set up your brand
-        </h1>
-        <p className="text-[15px] leading-relaxed text-secondary">
-          Set your brand defaults first, then optionally add a product.
-          Dopa uses both to score creatives with TRIBE v2 and fuel ad generation.
-        </p>
+
+      <div className="flex-1 space-y-4 p-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/20 text-[13px] font-semibold text-brand">
+            {form.name?.[0]?.toUpperCase() || "?"}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-[14px] font-medium text-white">
+              {form.name || "Business name"}
+            </p>
+            <p className="truncate text-[11px] text-tertiary">
+              {website || "No website"}
+            </p>
+          </div>
+        </div>
+
+        <PreviewRow label="Audience" value={form.target_audience} />
+        <PreviewRow label="Industry" value={form.industry} />
+        <PreviewRow label="Tone" value={form.brand_voice} />
+        <PreviewRow label="Price tier" value={form.price_range} />
+        <PreviewRow label="Goal" value={form.campaign_goal} />
+
+        {competitorList.length > 0 ? (
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-wider text-tertiary">
+              Competitors
+            </p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {competitorList.map((c) => (
+                <span
+                  key={c}
+                  className="rounded-[5px] border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[11px] text-secondary"
+                >
+                  {c}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-auto rounded-lg border border-white/[0.06] bg-[#0c0d0e] p-3">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-tertiary">Profile completeness</span>
+            <span className="font-mono text-secondary">{Math.round((filled / 6) * 100)}%</span>
+          </div>
+          <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.06]">
+            <div
+              className="h-full rounded-full bg-brand transition-[width] duration-300 ease-out"
+              style={{ width: `${(filled / 6) * 100}%` }}
+            />
+          </div>
+          <p className="mt-2 text-[11px] leading-4 text-tertiary">
+            Dopa will use this context for cortical encoding, CTR prediction, and ad generation.
+          </p>
+        </div>
       </div>
-      <ul className="space-y-3 text-left">
-        {[
-          "Brand defaults for every campaign",
-          "Product profiles with hooks & features",
-          "TRIBE v2 pre-test before ad spend",
-        ].map((item) => (
-          <li key={item} className="flex items-center gap-3 text-[14px] text-secondary">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
-              <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <path d="M2 6l3 3 5-5" />
-              </svg>
-            </span>
-            {item}
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
 
-function TextStep({
-  title,
-  subtitle,
+function PreviewRow({ label, value }: { label: string; value?: string }) {
+  return (
+    <div>
+      <p className="text-[10px] font-medium uppercase tracking-wider text-tertiary">{label}</p>
+      <p className="mt-0.5 text-[12px] leading-5 text-secondary">
+        {value?.trim() || <span className="text-tertiary/60">—</span>}
+      </p>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  required,
   children,
 }: {
-  title: string;
-  subtitle: string;
+  label: string;
+  hint?: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-[26px] font-semibold leading-[1.2] tracking-[-0.03em] sm:text-[30px]">
-          {title}
-        </h1>
-        <p className="text-[14px] leading-relaxed text-secondary">{subtitle}</p>
-      </div>
+    <label className="block space-y-1.5">
+      <span className="flex items-baseline gap-1.5">
+        <span className="text-[12px] font-medium text-white">
+          {label}
+          {required ? <span className="text-brand"> *</span> : null}
+        </span>
+        {hint ? <span className="text-[11px] text-tertiary">{hint}</span> : null}
+      </span>
       {children}
-    </div>
+    </label>
   );
 }
 
-function ChipStep({
-  title,
-  subtitle,
+function ChipRow({
   options,
   value,
   onChange,
 }: {
-  title: string;
-  subtitle: string;
   options: readonly string[];
   value: string;
-  onChange: (value: string) => void;
+  onChange: (v: string) => void;
 }) {
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-[26px] font-semibold leading-[1.2] tracking-[-0.03em] sm:text-[30px]">
-          {title}
-        </h1>
-        <p className="text-[14px] leading-relaxed text-secondary">{subtitle}</p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => {
-          const selected = value === option;
-          return (
-            <button
-              key={option}
-              type="button"
-              onClick={() => onChange(option)}
-              className={`rounded-full border px-4 py-2.5 text-[13px] transition-[transform,border-color,background-color,color] duration-150 ease-out active:scale-[0.97] ${
-                selected
-                  ? "border-brand/60 bg-brand/20 font-medium text-white"
-                  : "border-white/10 bg-white/3 text-secondary hover:border-white/20 hover:text-white"
-              }`}
-            >
-              {option}
-            </button>
-          );
-        })}
-      </div>
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((option) => {
+        const selected = value === option;
+        return (
+          <button
+            key={option}
+            type="button"
+            onClick={() => onChange(option)}
+            className={`rounded-[5px] border px-2.5 py-1.5 text-[11px] transition-[border-color,background-color,color,transform] duration-150 active:scale-[0.97] ${
+              selected
+                ? "border-white/20 bg-white/[0.08] font-medium text-white"
+                : "border-white/[0.08] bg-transparent text-secondary hover:border-white/15 hover:text-white"
+            }`}
+          >
+            {option}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
 const inputClass =
-  "w-full rounded-xl border border-white/10 bg-white/4 px-4 py-3.5 text-[15px] text-white outline-none transition-[border-color,background-color] duration-150 placeholder:text-tertiary hover:border-white/15 focus:border-brand/50 focus:bg-white/[0.06]";
+  "w-full rounded-xl border border-white/[0.08] bg-[#0c0d0e] px-3.5 py-2.5 text-[14px] text-white outline-none transition-[border-color] duration-150 placeholder:text-tertiary hover:border-white/[0.12] focus:border-white/20";
+
+const inputClassLg =
+  "w-full rounded-xl border border-white/[0.1] bg-[#0c0d0e] px-4 py-3 text-[15px] text-white outline-none transition-[border-color] duration-150 placeholder:text-tertiary hover:border-white/[0.15] focus:border-white/25";
