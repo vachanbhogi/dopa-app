@@ -352,18 +352,18 @@ export function DashboardShell({
 
       {/* ── Main ── */}
       <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="relative flex h-13 shrink-0 items-center px-4 sm:px-6">
-          <div className="z-10 flex min-w-0 shrink-0 items-center gap-2">
+        <header className="relative grid h-13 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 sm:px-6 md:grid-cols-[minmax(0,1fr)_minmax(12rem,2.5fr)_auto]">
+          <div className="flex min-w-0 items-center gap-2">
             <span className="truncate text-[12px] text-tertiary">{selectedBusiness?.name}</span>
             <span className="text-tertiary/50">/</span>
             <h1 className="truncate text-[15px] font-medium text-white">{activeTabLabel}</h1>
           </div>
 
-          <div className="pointer-events-none absolute inset-x-4 hidden justify-center sm:inset-x-6 md:flex">
+          <div className="hidden min-w-0 justify-center md:flex">
             <button
               type="button"
               onClick={() => setCommandMenuOpen(true)}
-              className={`${commandBar} pointer-events-auto cursor-pointer`}
+              className={`${commandBar} cursor-pointer`}
               aria-label="Open command menu"
             >
               <svg
@@ -378,14 +378,16 @@ export function DashboardShell({
                 <circle cx="7" cy="7" r="4.5" />
                 <path d="M10.5 10.5L13 13" />
               </svg>
-              <span className="flex-1 text-left text-secondary">Search or command…</span>
+              <span className="min-w-0 flex-1 truncate text-left text-secondary">
+                Search or command…
+              </span>
               <kbd className="rounded border border-white/10 bg-white/6 px-1.5 py-0.5 font-mono text-[10px] text-tertiary">
                 ⌘K
               </kbd>
             </button>
           </div>
 
-          <div className="z-10 ml-auto flex items-center justify-end gap-1">
+          <div className="flex items-center justify-end gap-1">
             {selectedBusiness ? (
               <CompetitorAlertsButton
                 businessId={selectedBusiness.id}

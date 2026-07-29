@@ -24,4 +24,4 @@ export const dropdownItem =
   "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-secondary transition-[background-color,color] duration-150 hover:bg-white/4 hover:text-white";
 
 export const commandBar =
-  "pointer-events-auto hidden h-9 w-[min(56rem,calc(100vw-20rem))] max-w-none items-center gap-2 rounded-lg border border-white/10 bg-white/4 px-3.5 text-[13px] transition-colors hover:border-white/15 hover:bg-white/6 sm:flex";
+  "flex h-9 w-full max-w-224 min-w-0 items-center gap-2 rounded-lg border border-white/10 bg-white/4 px-3.5 text-[13px] transition-colors hover:border-white/15 hover:bg-white/6";
