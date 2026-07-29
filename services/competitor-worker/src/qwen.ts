@@ -434,7 +434,7 @@ export async function researchCompetitors(
   let candidates: ResearchCandidateInput[] = [];
   let signals: CompetitorResearchResult["signals"] = [];
   let rawReport: unknown = null;
-  let structurallyValid = false;
+  let reportAccepted = false;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     structured = await callQwen(config, {
       model: config.qwenModel,
@@ -456,32 +456,37 @@ export async function researchCompetitors(
     rawReport = functionArguments(structured);
     const now = new Date();
     if (
-      isJsonObject(rawReport) &&
-      Array.isArray(rawReport.candidates) &&
-      Array.isArray(rawReport.signals) &&
-      rawReport.candidates.every(
-        (candidate) =>
-          normalizeResearchCandidates([candidate], sources, now).length === 1,
-      )
+      !isJsonObject(rawReport) ||
+      !Array.isArray(rawReport.candidates) ||
+      !Array.isArray(rawReport.signals)
     ) {
-      const normalizedSignals = rawReport.signals.map((signal) =>
-        normalizeSignal(signal, sources, now),
-      );
-      if (normalizedSignals.every((signal) => signal !== null)) {
-        candidates = normalizeResearchCandidates(
-          rawReport.candidates,
-          sources,
-          now,
-        );
-        signals = normalizedSignals.filter(
-          (signal): signal is NonNullable<typeof signal> => signal !== null,
-        );
-        structurallyValid = true;
-        break;
-      }
+      continue;
     }
+    const allCandidatesValid = rawReport.candidates.every(
+      (candidate) =>
+        normalizeResearchCandidates([candidate], sources, now).length === 1,
+    );
+    const normalizedSignals = rawReport.signals.map((signal) =>
+      normalizeSignal(signal, sources, now),
+    );
+    const allSignalsValid = normalizedSignals.every(
+      (signal) => signal !== null,
+    );
+    if (!allCandidatesValid || !allSignalsValid) {
+      if (attempt === 0) continue;
+    }
+    candidates = normalizeResearchCandidates(
+      rawReport.candidates,
+      sources,
+      now,
+    );
+    signals = normalizedSignals.filter(
+      (signal): signal is NonNullable<typeof signal> => signal !== null,
+    );
+    reportAccepted = true;
+    break;
   }
-  if (!structured || !isJsonObject(rawReport) || !structurallyValid) {
+  if (!structured || !isJsonObject(rawReport) || !reportAccepted) {
     throw new QwenRequestError(
       "Qwen did not return a valid structured report.",
       null,

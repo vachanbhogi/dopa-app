@@ -205,6 +205,102 @@ describe("Qwen research pipeline", () => {
     } satisfies Partial<QwenRequestError>);
   });
 
+  test("drops unsupported entries after the structured-output repair attempt", async () => {
+    const sourceUrl = "https://news.example/supported";
+    const validCandidate = {
+      name: "Supported Rival",
+      website_url: "https://supported.example",
+      relationship: "indirect",
+      threat_horizon: "now",
+      why_competitor: "It competes for the same campaign-testing budget.",
+      why_now: "A recent product update was reported.",
+      confidence: 68,
+      components: {
+        customer_overlap: 70,
+        product_substitutability: 50,
+        momentum: 60,
+        distribution_overlap: 70,
+        evidence_quality: 60,
+      },
+      evidence: [
+        {
+          source_url: sourceUrl,
+          title: "Supported update",
+          source_type: "news",
+          claim: "The product added a campaign-testing workflow.",
+          excerpt: "A short paraphrase.",
+          published_at: "2026-07-10T00:00:00Z",
+          observed_at: "2026-07-29T00:00:00Z",
+        },
+      ],
+    };
+    const report = {
+      candidates: [
+        validCandidate,
+        {
+          ...validCandidate,
+          name: "Unsupported Rival",
+          website_url: "https://unsupported.example",
+          evidence: [
+            {
+              ...validCandidate.evidence[0],
+              source_url: "https://uncatalogued.example/claim",
+            },
+          ],
+        },
+      ],
+      signals: [],
+    };
+    const responses = [
+      {
+        output: [
+          {
+            type: "web_search_call",
+            action: {
+              sources: [{ url: sourceUrl, title: "Supported update" }],
+            },
+          },
+          {
+            type: "message",
+            content: [{ type: "output_text", text: "Research summary." }],
+          },
+        ],
+      },
+      {
+        output: [
+          {
+            type: "function_call",
+            name: "submit_competitor_report",
+            arguments: JSON.stringify(report),
+          },
+        ],
+      },
+      {
+        output: [
+          {
+            type: "function_call",
+            name: "submit_competitor_report",
+            arguments: JSON.stringify(report),
+          },
+        ],
+      },
+    ];
+    let calls = 0;
+    globalThis.fetch = (async () =>
+      Response.json(responses[calls++])) as typeof fetch;
+
+    const result = await researchCompetitors(
+      config,
+      job,
+      async () => undefined,
+    );
+
+    expect(calls).toBe(3);
+    expect(result.candidates.map((candidate) => candidate.name)).toEqual([
+      "Supported Rival",
+    ]);
+  });
+
   test("refuses every model call after the configured key deadline", async () => {
     let called = false;
     globalThis.fetch = (async () => {
