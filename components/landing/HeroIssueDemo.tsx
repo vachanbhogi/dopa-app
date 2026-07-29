@@ -258,7 +258,7 @@ export function HeroIssueDemo() {
         <div className="flex items-center gap-2 border-b border-white/6 px-3 py-2.5">
           <Avatar initials="D" color="#5e6ad2" size={16} />
           <span className="text-[12px] font-medium text-white">Dopa</span>
-          <span className="rounded bg-[#5e6ad2]/25 px-1.5 py-[1px] text-[10px] text-[#828fff]">
+          <span className="rounded bg-[#5e6ad2]/25 px-1.5 py-px text-[10px] text-[#828fff]">
             TRIBE v2
           </span>
           <span className="ml-auto text-[11px] text-[#62666d]">AD-1942</span>

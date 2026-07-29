@@ -268,7 +268,7 @@ export function BrainTab() {
   return (
     <div className="space-y-7">
       <div className="animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both]">
-        <p className="max-w-[720px] text-[14px] leading-6 text-secondary">
+        <p className="max-w-180 text-[14px] leading-6 text-secondary">
           Upload an ad to predict its average click-through rate and see the
           cortical response TRIBE v2 models for the clip.
         </p>
@@ -298,7 +298,7 @@ export function BrainTab() {
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-black">
+          <div className="overflow-hidden rounded-xl border border-white/8 bg-black">
             <div className="aspect-video">
               {previewUrl ? (
                 <video
@@ -442,7 +442,7 @@ function ScoreResults({
           >
             Predicted average CTR
           </h2>
-          <p className="mt-1 max-w-[520px] text-[12px] leading-5 text-secondary">
+          <p className="mt-1 max-w-130 text-[12px] leading-5 text-secondary">
             Dopa&apos;s video-only model estimate for this creative—not a live
             campaign result.
           </p>
@@ -481,7 +481,7 @@ function ScoreResults({
           ) : (
             <div className="flex h-full items-center justify-center px-6 text-center">
               {animationError ? (
-                <p className="max-w-[420px] text-[12px] leading-5 text-secondary">
+                <p className="max-w-105 text-[12px] leading-5 text-secondary">
                   {animationError}
                 </p>
               ) : (
@@ -594,7 +594,7 @@ function RegionCard({
       <p className="text-[11px] leading-5 text-secondary">
         {region.description}
       </p>
-      <div className="min-w-[92px]">
+      <div className="min-w-23">
         <div className="mb-1 flex items-center justify-between font-mono text-[9px] text-tertiary">
           <span>Relative</span>
           <span>{Math.round(region.relative_response)}/100</span>
