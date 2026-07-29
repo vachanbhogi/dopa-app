@@ -42,7 +42,7 @@ function SidebarItem({
 }) {
   return (
     <div
-      className={`flex items-center rounded-[6px] px-2 py-[5px] text-[12.5px] leading-none ${
+      className={`flex items-center rounded-md px-2 py-1.25 text-[12.5px] leading-none ${
         active
           ? "bg-white/[0.07] text-white"
           : "text-[#8a8f98] hover:bg-white/[0.035] hover:text-[#d0d6e0]"
@@ -64,11 +64,11 @@ function SidebarItem({
 
 export function HeroIssueDemo() {
   return (
-    <div className="relative overflow-hidden rounded-[12px] border border-white/[0.08] bg-[#0f1011] shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_30px_80px_rgba(0,0,0,0.55)]">
-      <div className="relative grid min-h-[560px] grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)_260px]">
-        <aside className="hidden border-r border-white/[0.06] bg-[#0c0d0e] p-2.5 lg:block">
+    <div className="relative overflow-hidden rounded-xl border border-white/8 bg-[#0f1011] shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_30px_80px_rgba(0,0,0,0.55)]">
+      <div className="relative grid min-h-140 grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)_260px]">
+        <aside className="hidden border-r border-white/6 bg-[#0c0d0e] p-2.5 lg:block">
           <div className="mb-3 flex items-center gap-2 px-2 py-1.5">
-            <span className="flex h-[18px] w-[18px] items-center justify-center rounded-[4px] bg-[#5e6ad2] text-[10px] font-semibold text-white">
+            <span className="flex h-4.5 w-4.5 items-center justify-center rounded-sm bg-[#5e6ad2] text-[10px] font-semibold text-white">
               A
             </span>
             <span className="text-[12.5px] font-medium text-[#d0d6e0]">Workspace</span>
@@ -130,13 +130,13 @@ export function HeroIssueDemo() {
           </div>
         </aside>
 
-        <section className="border-r border-white/[0.06] p-6 md:p-8">
-          <h3 className="max-w-[520px] text-[28px] font-semibold leading-[1.15] tracking-[-0.03em] text-white md:text-[34px]">
+        <section className="border-r border-white/6 p-6 md:p-8">
+          <h3 className="max-w-130 text-[28px] font-semibold leading-[1.15] tracking-[-0.03em] text-white md:text-[34px]">
             Summer drop · unbox hook
           </h3>
-          <p className="mt-4 max-w-[520px] text-[13.5px] leading-6 text-[#8a8f98]">
+          <p className="mt-4 max-w-130 text-[13.5px] leading-6 text-[#8a8f98]">
             Run creative through{" "}
-            <code className="rounded-[4px] bg-white/[0.06] px-1.5 py-[1px] font-mono text-[12px] text-[#d0d6e0]">
+            <code className="rounded-sm bg-white/6 px-1.5 py-px font-mono text-[12px] text-[#d0d6e0]">
               TRIBE v2
             </code>{" "}
             cortical encoding, then dopa-model predicts average click-through
@@ -190,7 +190,7 @@ export function HeroIssueDemo() {
                   </span>
                 }
               />
-              <div className="rounded-[8px] border border-white/[0.08] bg-white/[0.025] p-3">
+              <div className="rounded-lg border border-white/8 bg-white/2.5 p-3">
                 <div className="mb-2 flex flex-wrap items-center gap-2 text-[12px]">
                   <Avatar initials="D" color="#5e6ad2" />
                   <span className="font-medium text-white">Dopa</span>
@@ -254,8 +254,8 @@ export function HeroIssueDemo() {
       </div>
 
       {/* Floating agent panel — matches Linear hero */}
-      <div className="absolute bottom-6 right-6 z-10 hidden w-[320px] overflow-hidden rounded-[10px] border border-white/[0.1] bg-[#141516]/95 shadow-[0_20px_60px_rgba(0,0,0,0.65)] backdrop-blur-md md:block">
-        <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2.5">
+      <div className="absolute bottom-6 right-6 z-10 hidden w-[320px] overflow-hidden rounded-[10px] border border-white/10 bg-[#141516]/95 shadow-[0_20px_60px_rgba(0,0,0,0.65)] backdrop-blur-md md:block">
+        <div className="flex items-center gap-2 border-b border-white/6 px-3 py-2.5">
           <Avatar initials="D" color="#5e6ad2" size={16} />
           <span className="text-[12px] font-medium text-white">Dopa</span>
           <span className="rounded bg-[#5e6ad2]/25 px-1.5 py-[1px] text-[10px] text-[#828fff]">
@@ -273,7 +273,7 @@ export function HeroIssueDemo() {
             <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[#828fff]" />
             Thinking...
           </p>
-          <div className="rounded-md border border-white/[0.06] bg-black/30 px-2 py-1.5 text-[10px]">
+          <div className="rounded-md border border-white/6 bg-black/30 px-2 py-1.5 text-[10px]">
             <div className="text-[#62666d]">brain_video → mean CTR head</div>
             <div className="text-emerald-400/90">
               Predicted average CTR 2.84%
@@ -288,7 +288,7 @@ export function HeroIssueDemo() {
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex rounded-[4px] bg-white/[0.06] px-1.5 py-[2px] text-[11px] text-[#8a8f98]">
+    <span className="inline-flex rounded-sm bg-white/6 px-1.5 py-0.5 text-[11px] text-[#8a8f98]">
       {children}
     </span>
   );

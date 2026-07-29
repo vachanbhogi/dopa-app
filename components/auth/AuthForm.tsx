@@ -46,7 +46,7 @@ export function AuthForm({
               type="text"
               autoComplete="name"
               required
-              className="h-10 w-full rounded-md border border-white/10 bg-white/[0.04] px-3 text-[14px] text-white outline-none transition-colors placeholder:text-tertiary focus:border-brand/50"
+              className="h-10 w-full rounded-md border border-white/10 bg-white/4 px-3 text-[14px] text-white outline-none transition-colors placeholder:text-tertiary focus:border-brand/50"
               placeholder="Manu Arora"
             />
           </div>
@@ -61,7 +61,7 @@ export function AuthForm({
             type="email"
             autoComplete="email"
             required
-            className="h-10 w-full rounded-md border border-white/10 bg-white/[0.04] px-3 text-[14px] text-white outline-none transition-colors placeholder:text-tertiary focus:border-brand/50"
+            className="h-10 w-full rounded-md border border-white/10 bg-white/4 px-3 text-[14px] text-white outline-none transition-colors placeholder:text-tertiary focus:border-brand/50"
             placeholder="you@company.com"
           />
         </div>
@@ -76,7 +76,7 @@ export function AuthForm({
             autoComplete={isLogin ? "current-password" : "new-password"}
             required
             minLength={6}
-            className="h-10 w-full rounded-md border border-white/10 bg-white/[0.04] px-3 text-[14px] text-white outline-none transition-colors placeholder:text-tertiary focus:border-brand/50"
+            className="h-10 w-full rounded-md border border-white/10 bg-white/4 px-3 text-[14px] text-white outline-none transition-colors placeholder:text-tertiary focus:border-brand/50"
             placeholder="••••••••"
           />
         </div>

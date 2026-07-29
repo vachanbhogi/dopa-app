@@ -187,10 +187,10 @@ export function GoogleAdsTab() {
                 <div className="relative">
                   <button
                     onClick={() => setShowAccountModal(!showAccountModal)}
-                    className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[12px] font-medium text-white hover:border-white/20"
+                    className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/3 px-3 py-1.5 text-[12px] font-medium text-white hover:border-white/20"
                   >
                     <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                    <span className="truncate max-w-[160px]">{selectedAccount.name}</span>
+                    <span className="truncate max-w-40">{selectedAccount.name}</span>
                     <svg className="h-3 w-3 text-secondary" viewBox="0 0 16 16" fill="none" stroke="currentColor">
                       <path d="M4 6l4 4 4-4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -211,7 +211,7 @@ export function GoogleAdsTab() {
                           className={`flex w-full flex-col gap-0.5 rounded-lg px-2.5 py-2 text-left transition-colors ${
                             acc.id === selectedAccountId
                               ? "bg-brand/20 text-white font-medium"
-                              : "text-secondary hover:bg-white/[0.05] hover:text-white"
+                              : "text-secondary hover:bg-white/5 hover:text-white"
                           }`}
                         >
                           <div className="truncate font-medium">{acc.name}</div>
@@ -265,19 +265,19 @@ export function GoogleAdsTab() {
 
       {/* Main Connection / Empty State */}
       {isLoadingApi ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.015] py-20 px-6 text-center">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-white/6 bg-white/1.5 py-20 px-6 text-center">
           <span className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white" />
           <p className="mt-4 text-[13px] text-secondary">Checking Google OAuth session & campaign stream…</p>
         </div>
       ) : !isConnected ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.01] py-16 px-6 text-center animate-fade-in">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/1 py-16 px-6 text-center animate-fade-in">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400">
             <svg className="h-7 w-7 fill-current" viewBox="0 0 24 24">
               <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972-3.332 0-6.033-2.701-6.033-6.032s2.701-6.032 6.033-6.032c1.498 0 2.866.549 3.921 1.453l2.814-2.814C17.503 2.988 15.139 2 12.545 2 6.721 2 2 6.721 2 12.545S6.721 23.09 12.545 23.09c6.627 0 10.5-4.664 10.5-10.732 0-.663-.067-1.309-.172-1.921h-10.328z" />
             </svg>
           </div>
           <h3 className="mt-4 text-[16px] font-medium text-white">Connect your Google Ads account</h3>
-          <p className="mt-1.5 max-w-[420px] text-[13px] text-secondary leading-relaxed">
+          <p className="mt-1.5 max-w-105 text-[13px] text-secondary leading-relaxed">
             {apiError
               ? apiError
               : "Sign in with Google to grant Dopa access to stream your live Google Ads campaigns and score ad creatives."}
@@ -297,7 +297,7 @@ export function GoogleAdsTab() {
       ) : (
         <>
           {/* Connected Account Overview Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] px-4 py-3 text-[12px] text-secondary">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/3 px-4 py-3 text-[12px] text-secondary">
             <div className="flex items-center gap-4">
               <div>
                 Connected Account: <span className="font-medium text-white">{connectedEmail}</span>
@@ -315,7 +315,7 @@ export function GoogleAdsTab() {
           </div>
 
           {campaigns.length === 0 ? (
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-8 text-center">
+            <div className="rounded-xl border border-white/6 bg-white/1.5 p-8 text-center">
               <p className="text-[14px] font-medium text-white">Google OAuth Account Connected ({connectedEmail})</p>
               <p className="mt-1.5 text-[13px] text-secondary">
                 To stream campaign metrics directly from Google Ads API, ensure your Google Ads Customer ID is linked or configured in your workspace settings.
@@ -337,7 +337,7 @@ export function GoogleAdsTab() {
                   <h3 className="text-[14px] font-medium text-white">Live Google Ads Campaigns ({filteredCampaigns.length})</h3>
 
                   {/* Filter Pills */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto rounded-lg border border-white/[0.06] bg-white/[0.02] p-1">
+                  <div className="flex items-center gap-1.5 overflow-x-auto rounded-lg border border-white/6 bg-white/1.5 p-1">
                     {["All", "Performance Max", "YouTube", "Search", "Display"].map((type) => (
                       <button
                         key={type}
@@ -355,11 +355,11 @@ export function GoogleAdsTab() {
                 </div>
 
                 {/* Campaign Table */}
-                <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.015]">
+                <div className="overflow-hidden rounded-xl border border-white/6 bg-white/2">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-[13px]">
                       <thead>
-                        <tr className="border-b border-white/[0.06] bg-white/[0.02] text-[11px] font-medium uppercase tracking-wider text-tertiary">
+                        <tr className="border-b border-white/6 bg-white/2 text-[11px] font-medium uppercase tracking-wider text-tertiary">
                           <th className="px-4 py-3">Campaign Name & Channel</th>
                           <th className="px-4 py-3">Live Spend</th>
                           <th className="px-4 py-3">Live CTR</th>
@@ -369,15 +369,15 @@ export function GoogleAdsTab() {
                           <th className="px-4 py-3 text-right">Brain Score</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/[0.04]">
+                      <tbody className="divide-y divide-white/4">
                         {filteredCampaigns.map((cmp) => {
                           const isAnalyzing = analyzingCmp === cmp.id;
                           return (
-                            <tr key={cmp.id} className="transition-colors hover:bg-white/[0.02]">
+                            <tr key={cmp.id} className="transition-colors hover:bg-white/2">
                               <td className="px-4 py-3.5">
                                 <div className="font-medium text-white">{cmp.name}</div>
                                 <div className="mt-0.5 flex items-center gap-2 text-[11px] text-tertiary">
-                                  <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-secondary">{cmp.type}</span>
+                                  <span className="rounded bg-white/6 px-1.5 py-0.5 text-secondary">{cmp.type}</span>
                                 </div>
                               </td>
                               <td className="px-4 py-3.5 font-medium text-white">${cmp.spend.toLocaleString()}</td>
@@ -443,7 +443,7 @@ function MetricCard({
   positive?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 transition-colors hover:border-white/10">
+    <div className="rounded-xl border border-white/6 bg-white/2 p-4 transition-colors hover:border-white/10">
       <div className="text-[11px] font-medium uppercase tracking-wider text-tertiary">{label}</div>
       <div className="mt-1.5 text-[24px] font-semibold tracking-[-0.03em] text-white">{value}</div>
       {change && (

@@ -36,8 +36,8 @@ export function DashboardShell({
   return (
     <div className="flex h-screen bg-background text-foreground">
       {/* ── Sidebar ── */}
-      <aside className="flex w-[220px] shrink-0 flex-col border-r border-white/[0.06] bg-[#09090b]">
-        <div className="flex h-13 items-center gap-2.5 border-b border-white/[0.06] px-4">
+      <aside className="flex w-55 shrink-0 flex-col border-r border-white/6 bg-[#09090b]">
+        <div className="flex h-13 items-center gap-2.5 border-b border-white/6 px-4">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-[11px] font-bold text-white">
             {initials[0]}
           </span>
@@ -56,13 +56,13 @@ export function DashboardShell({
                 key={tab.id}
                 onClick={() => setActive(tab.id)}
                 className={`
-                  group relative flex w-full items-center gap-2.5 rounded-lg px-3 py-[9px] text-[13px]
+                  group relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2.25 text-[13px]
                   transition-[background-color,color] duration-150
                   active:scale-[0.98] active:transition-transform active:duration-100 active:ease-out
                   ${
                     isActive
-                      ? "bg-white/[0.08] font-medium text-white"
-                      : "text-[#8a8f98] hover:bg-white/[0.04] hover:text-[#c4c9d4]"
+                      ? "bg-white/8 font-medium text-white"
+                      : "text-[#8a8f98] hover:bg-white/4 hover:text-[#c4c9d4]"
                   }
                 `}
               >
@@ -73,7 +73,7 @@ export function DashboardShell({
           })}
         </nav>
 
-        <div className="border-t border-white/[0.06] px-3 py-3">
+        <div className="border-t border-white/6 px-3 py-3">
           <div className="flex items-center gap-2.5">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand/25 text-[10px] font-medium text-brand">
               {initials}
@@ -87,7 +87,7 @@ export function DashboardShell({
 
       {/* ── Main ── */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-13 shrink-0 items-center justify-between border-b border-white/[0.06] px-6">
+        <header className="flex h-13 shrink-0 items-center justify-between border-b border-white/6 px-6">
           <h1 className="text-[15px] font-medium text-white">
             {tabs.find((t) => t.id === active)?.label}
           </h1>
@@ -110,7 +110,7 @@ export function DashboardShell({
         </header>
 
         <main className="flex-1 overflow-y-auto">
-          <div key={active} className="mx-auto max-w-[1000px] px-6 py-8">
+          <div key={active} className="mx-auto max-w-250 px-6 py-8">
             {active === "brain" && <BrainTab />}
             {active === "googleAds" && <GoogleAdsTab />}
             {active === "keywords" && <PlaceholderPanel title="Keywords" body="Track trending ad keywords and messaging hooks across your campaigns." />}
@@ -128,14 +128,14 @@ function PlaceholderPanel({ title, body }: { title: string; body: string }) {
   return (
     <div className="animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both]">
       <p className="text-[14px] leading-6 text-secondary">{body}</p>
-      <div className="mt-8 flex flex-col items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.015] py-16">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04]">
+      <div className="mt-8 flex flex-col items-center justify-center rounded-xl border border-white/6 bg-white/1.5 py-16">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/4">
           <svg className="h-6 w-6 text-white/30" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
             <path d="M8 3v10M3 8h10" />
           </svg>
         </div>
         <p className="mt-4 text-[15px] font-medium text-white">No {title.toLowerCase()} yet</p>
-        <p className="mt-1.5 max-w-[300px] text-center text-[13px] leading-5 text-secondary">
+        <p className="mt-1.5 max-w-75 text-center text-[13px] leading-5 text-secondary">
           This feature will be available soon.
         </p>
       </div>

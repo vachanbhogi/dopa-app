@@ -6,7 +6,7 @@ export default function PrivacyPage() {
     <div className="min-h-screen bg-background text-foreground flex flex-col justify-between">
       <DemoHeader />
 
-      <main className="relative pt-28 pb-20 px-5 md:px-8 max-w-[800px] mx-auto flex-1 w-full">
+      <main className="relative pt-28 pb-20 px-5 md:px-8 max-w-200 mx-auto flex-1 w-full">
         <h1 className="text-[32px] font-semibold text-white tracking-[-0.03em] mb-3">
           Privacy Policy
         </h1>

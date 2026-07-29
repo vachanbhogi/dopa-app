@@ -11,13 +11,13 @@ const nav = [
 export async function Header() {
   return (
     <header className="absolute inset-x-0 top-0 z-50">
-      <div className="mx-auto flex h-[64px] max-w-[1200px] items-center justify-between px-5 md:px-8">
+      <div className="mx-auto flex h-16 max-w-300 items-center justify-between px-5 md:px-8">
         <Link
           href="/"
           className="flex items-center gap-2 text-white"
           aria-label="Dopa"
         >
-          <DopaMark className="h-[18px] w-[18px]" />
+          <DopaMark className="h-4.5 w-4.5" />
           <span className="text-[15px] font-[510] tracking-[-0.01em]">Dopa</span>
         </Link>
 

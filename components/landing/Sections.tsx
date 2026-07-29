@@ -20,9 +20,9 @@ const pillars = [
 
 export function Species() {
   return (
-    <section className="border-t border-white/[0.06]">
-      <div className="mx-auto max-w-[1200px] px-5 py-24 md:px-8 md:py-32">
-        <h2 className="mx-auto max-w-[820px] text-center text-[28px] font-medium leading-[1.2] tracking-[-0.03em] text-foreground md:text-[40px]">
+    <section className="border-t border-white/6">
+      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-32">
+        <h2 className="mx-auto max-w-205 text-center text-[28px] font-medium leading-[1.2] tracking-[-0.03em] text-foreground md:text-[40px]">
           A new species of campaign tool. Purpose-built for marketing teams with AI
           workflows at its core, Dopa predicts average CTR from modeled cortical
           response — then puts the evidence in context.
@@ -31,22 +31,22 @@ export function Species() {
         <div className="mt-16 grid gap-10 md:mt-24 md:grid-cols-3 md:gap-8">
           {pillars.map((p) => (
             <div key={p.title} className="group">
-              <div className="dopa-panel relative mb-5 aspect-[4/3] overflow-hidden">
+              <div className="dopa-panel relative mb-5 aspect-4/3 overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(94,106,210,0.18),transparent_55%)]" />
                 <div className="absolute inset-0 opacity-40 dopa-grain" />
                 <div className="absolute bottom-3 left-3 rounded bg-black/40 px-2 py-1 font-mono text-[10px] text-tertiary">
                   {p.fig}
                 </div>
-                <div className="absolute inset-6 rounded-lg border border-white/[0.08] bg-[#0f1011]/80 p-3">
+                <div className="absolute inset-6 rounded-lg border border-white/8 bg-[#0f1011]/80 p-3">
                   <div className="mb-2 h-2 w-16 rounded bg-white/10" />
                   <div className="space-y-1.5">
-                    <div className="h-2 w-full rounded bg-white/[0.06]" />
-                    <div className="h-2 w-[85%] rounded bg-white/[0.06]" />
-                    <div className="h-2 w-[70%] rounded bg-white/[0.06]" />
+                    <div className="h-2 w-full rounded bg-white/6" />
+                    <div className="h-2 w-[85%] rounded bg-white/6" />
+                    <div className="h-2 w-[70%] rounded bg-white/6" />
                   </div>
                   <div className="mt-4 flex gap-2">
                     <div className="h-6 flex-1 rounded bg-brand/30" />
-                    <div className="h-6 w-10 rounded bg-white/[0.06]" />
+                    <div className="h-6 w-10 rounded bg-white/6" />
                   </div>
                 </div>
               </div>
@@ -156,9 +156,9 @@ export function Intake() {
   ];
 
   return (
-    <section id="intake" className="border-t border-white/[0.06]">
-      <div className="mx-auto max-w-[1200px] px-5 py-24 md:px-8 md:py-28">
-        <div className="max-w-[640px]">
+    <section id="intake" className="border-t border-white/6">
+      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
+        <div className="max-w-160">
           <SectionLink index="1.0" label="Intake" />
           <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
             Make campaign operations self-driving
@@ -172,7 +172,7 @@ export function Intake() {
         <div className="dopa-panel mt-12 overflow-hidden p-3 md:p-4">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {columns.map((col) => (
-              <div key={col.title} className="rounded-lg bg-white/[0.02] p-3">
+              <div key={col.title} className="rounded-lg bg-white/2 p-3">
                 <div className="mb-3 flex items-center justify-between text-[12px]">
                   <span className="font-medium text-foreground">{col.title}</span>
                   <span className="text-tertiary">{col.count}</span>
@@ -185,7 +185,7 @@ export function Intake() {
                     return (
                       <div
                         key={title}
-                        className="rounded-md border border-white/[0.06] bg-[#0f1011] px-2.5 py-2"
+                        className="rounded-md border border-white/6 bg-[#0f1011] px-2.5 py-2"
                       >
                         <div className="text-[12px] leading-4 text-foreground">{title}</div>
                         {(tags.length > 0 || id) && (
@@ -196,7 +196,7 @@ export function Intake() {
                             {tags.map((t) => (
                               <span
                                 key={t}
-                                className="rounded bg-white/[0.06] px-1 py-0.5 text-[10px] text-secondary"
+                                className="rounded bg-white/6 px-1 py-0.5 text-[10px] text-secondary"
                               >
                                 {t}
                               </span>
@@ -211,14 +211,14 @@ export function Intake() {
             ))}
           </div>
 
-          <div className="mt-4 rounded-lg border border-white/[0.06] bg-[#0b0c0d] p-4">
+          <div className="mt-4 rounded-lg border border-white/6 bg-[#0b0c0d] p-4">
             <div className="mb-3 text-[11px] text-tertiary">Thread in #feedback</div>
             <div className="space-y-3 text-[13px] leading-5">
               <Slack name="maya" text="Has anyone scored the new unbox cut against Rival Labs?" />
               <Slack name="lena" text="Live A/B is burning budget on the soft CTA — can we pretest?" />
               <Slack name="maya" text="Yea, we should run TRIBE v2 and compare predicted average CTR before spend..." />
               <Slack name="alex" text="Let’s review the CTR estimates beside the modeled cortical response." />
-              <div className="rounded-md border border-dashed border-white/[0.1] bg-white/[0.02] px-3 py-2 text-secondary">
+              <div className="rounded-md border border-dashed border-white/10 bg-white/2 px-3 py-2 text-secondary">
                 <span className="text-accent">@Dopa</span> score these cuts, pause weak ones, and
                 assign winners to me
               </div>
@@ -261,9 +261,9 @@ export function Plan() {
   ];
 
   return (
-    <section id="plan" className="border-t border-white/[0.06]">
-      <div className="mx-auto max-w-[1200px] px-5 py-24 md:px-8 md:py-28">
-        <div className="max-w-[640px]">
+    <section id="plan" className="border-t border-white/6">
+      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
+        <div className="max-w-160">
           <SectionLink index="2.0" label="Plan" />
           <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
             Define the campaign direction
@@ -276,12 +276,12 @@ export function Plan() {
         </div>
 
         <div className="dopa-panel mt-12 overflow-x-auto p-4 md:p-6">
-          <div className="mb-4 grid min-w-[720px] grid-cols-8 gap-2 text-center text-[11px] text-tertiary">
+          <div className="mb-4 grid min-w-180 grid-cols-8 gap-2 text-center text-[11px] text-tertiary">
             {months.map((m) => (
               <div key={m}>{m}</div>
             ))}
           </div>
-          <div className="relative min-w-[720px] space-y-3">
+          <div className="relative min-w-180 space-y-3">
             <RoadBar label="Summer Drop" from={1} span={3} tone="brand" sub="Unbox · UGC · CTA tests" />
             <RoadBar label="Competitor watch" from={3} span={3} tone="green" sub="Scrape · Score · Alert" />
             <RoadBar label="A/B replacement" from={5} span={3} tone="amber" sub="Brain delta · Ship" />
@@ -290,7 +290,7 @@ export function Plan() {
             {initiatives.map((i) => (
               <div
                 key={i.name}
-                className="flex items-center justify-between rounded-md border border-white/[0.06] px-3 py-2 text-[13px]"
+                className="flex items-center justify-between rounded-md border border-white/6 px-3 py-2 text-[13px]"
               >
                 <span>{i.name}</span>
                 <span className="text-tertiary">{i.count}</span>
@@ -347,9 +347,9 @@ export function Build() {
   const agents = ["Dopa", "Triage", "Research", "TRIBE encode", "Metric head", "Maya"];
 
   return (
-    <section id="build" className="border-t border-white/[0.06]">
-      <div className="mx-auto max-w-[1200px] px-5 py-24 md:px-8 md:py-28">
-        <div className="max-w-[640px]">
+    <section id="build" className="border-t border-white/6">
+      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
+        <div className="max-w-160">
           <SectionLink index="3.0" label="Build" />
           <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
             Move campaigns forward across teams and agents
@@ -362,7 +362,7 @@ export function Build() {
 
         <div className="mt-12 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="dopa-panel overflow-hidden">
-            <div className="border-b border-white/[0.06] px-4 py-3 text-[12px] text-secondary">
+            <div className="border-b border-white/6 px-4 py-3 text-[12px] text-secondary">
               Dopa · Agent
             </div>
             <div className="space-y-3 p-4 font-mono text-[12px] leading-5 text-secondary">
@@ -381,7 +381,7 @@ export function Build() {
           </div>
           <div className="dopa-panel p-4">
             <div className="mb-3 text-[12px] text-secondary">Agents Command Menu</div>
-            <div className="mb-4 rounded-md border border-white/[0.08] bg-black/30 px-3 py-2 text-[13px] text-tertiary">
+            <div className="mb-4 rounded-md border border-white/8 bg-black/30 px-3 py-2 text-[13px] text-tertiary">
               No results found.
             </div>
             <div className="space-y-1">
@@ -389,7 +389,7 @@ export function Build() {
                 <div
                   key={a}
                   className={`flex items-center justify-between rounded-md px-2 py-2 text-[13px] ${
-                    i === 0 ? "bg-white/[0.05]" : "hover:bg-white/[0.03]"
+                    i === 0 ? "bg-white/5" : "hover:bg-white/3"
                   }`}
                 >
                   <span>{a}</span>
@@ -430,9 +430,9 @@ inspect(result.corticalResponse)`;
 
 export function Diffs() {
   return (
-    <section id="diffs" className="border-t border-white/[0.06]">
-      <div className="mx-auto max-w-[1200px] px-5 py-24 md:px-8 md:py-28">
-        <div className="max-w-[640px]">
+    <section id="diffs" className="border-t border-white/6">
+      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
+        <div className="max-w-160">
           <SectionLink index="4.0" label="Diffs" />
           <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
             Review creatives and agent output
@@ -445,13 +445,13 @@ export function Diffs() {
         </div>
 
         <div className="dopa-panel mt-12 overflow-hidden">
-          <div className="flex flex-wrap items-center gap-3 border-b border-white/[0.06] px-4 py-3 text-[12px] text-secondary">
+          <div className="flex flex-wrap items-center gap-3 border-b border-white/6 px-4 py-3 text-[12px] text-secondary">
             <span className="text-foreground">Dopa</span>
             <span className="text-tertiary">·</span>
             <span className="font-mono">campaigns/summer-drop/unbox.mp4</span>
           </div>
           <div className="grid md:grid-cols-2">
-            <pre className="overflow-x-auto border-b border-white/[0.06] p-4 font-mono text-[11px] leading-5 text-red-300/80 md:border-b-0 md:border-r">
+            <pre className="overflow-x-auto border-b border-white/6 p-4 font-mono text-[11px] leading-5 text-red-300/80 md:border-b-0 md:border-r">
               {beforeCode}
             </pre>
             <pre className="overflow-x-auto p-4 font-mono text-[11px] leading-5 text-emerald-300/90">
@@ -466,9 +466,9 @@ export function Diffs() {
 
 export function Monitor() {
   return (
-    <section id="monitor" className="border-t border-white/[0.06]">
-      <div className="mx-auto max-w-[1200px] px-5 py-24 md:px-8 md:py-28">
-        <div className="max-w-[640px]">
+    <section id="monitor" className="border-t border-white/6">
+      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
+        <div className="max-w-160">
           <SectionLink index="5.0" label="Monitor" />
           <h2 className="mt-5 text-[32px] font-medium leading-[1.15] tracking-[-0.03em] md:text-[40px]">
             Understand performance at scale

@@ -279,13 +279,13 @@ export function BrainTab() {
           {...getRootProps()}
           className={`group cursor-pointer overflow-hidden rounded-xl border border-dashed transition-[border-color,background-color] duration-200 ${
             isDragActive
-              ? "border-brand bg-brand/[0.07]"
-              : "border-white/[0.1] bg-white/[0.018] hover:border-white/[0.2] hover:bg-white/[0.03]"
+              ? "border-brand bg-brand/6"
+              : "border-white/8 bg-white/1.5 hover:border-white/15 hover:bg-white/2.5"
           }`}
         >
           <input {...getInputProps()} />
           <div className="flex aspect-video flex-col items-center justify-center px-6 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04]">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/8 bg-white/6">
               <UploadIcon />
             </div>
             <p className="mt-4 text-[14px] font-medium text-white">
@@ -312,7 +312,7 @@ export function BrainTab() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-lg border border-white/6 bg-white/2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="truncate text-[13px] font-medium text-white">
                 {file.name}
@@ -335,7 +335,7 @@ export function BrainTab() {
                 type="button"
                 onClick={analyze}
                 disabled={busy}
-                className="inline-flex min-w-[146px] items-center justify-center gap-2 rounded-md bg-brand px-4 py-1.5 text-[12px] font-medium text-white transition-[opacity,transform] hover:opacity-90 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-wait disabled:opacity-55"
+                className="inline-flex min-w-35 items-center justify-center gap-2 rounded-md bg-brand px-4 py-1.5 text-[12px] font-medium text-white transition-[opacity,transform] hover:opacity-90 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-wait disabled:opacity-55"
               >
                 {busy ? <Spinner /> : <BrainIcon />}
                 {phaseLabel(phase)}
@@ -345,7 +345,7 @@ export function BrainTab() {
 
           {busy ? (
             <div
-              className="overflow-hidden rounded-full bg-white/[0.06]"
+              className="overflow-hidden rounded-full bg-white/6"
               aria-label={phaseLabel(phase)}
             >
               <div
@@ -429,9 +429,9 @@ function ScoreResults({
   return (
     <section
       aria-labelledby="analysis-result"
-      className="animate-[stagger-in_500ms_cubic-bezier(0.23,1,0.32,1)_both] space-y-5 border-t border-white/[0.07] pt-7"
+      className="animate-[stagger-in_500ms_cubic-bezier(0.23,1,0.32,1)_both] space-y-5 border-t border-white/6 pt-7"
     >
-      <div className="grid gap-5 rounded-xl border border-white/[0.08] bg-[linear-gradient(120deg,rgba(94,106,210,0.12),rgba(255,255,255,0.018)_55%)] p-5 sm:grid-cols-[1fr_auto] sm:items-end sm:p-6">
+      <div className="grid gap-5 rounded-xl border border-white/8 bg-[linear-gradient(120deg,rgba(94,106,210,0.12),rgba(255,255,255,0.018)_55%)] p-5 sm:grid-cols-[1fr_auto] sm:items-end sm:p-6">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#9298d7]">
             Model output
@@ -453,8 +453,8 @@ function ScoreResults({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#050506]">
-        <div className="flex items-center justify-between border-b border-white/[0.07] px-4 py-3">
+      <div className="overflow-hidden rounded-xl border border-white/8 bg-[#050506]">
+        <div className="flex items-center justify-between border-b border-white/6 px-4 py-3">
           <div>
             <h3 className="text-[13px] font-medium text-white">
               Predicted cortical response
@@ -494,7 +494,7 @@ function ScoreResults({
           )}
         </div>
 
-        <div className="grid gap-px border-t border-white/[0.07] bg-white/[0.07] sm:grid-cols-4">
+        <div className="grid gap-px border-t border-white/6 bg-white/6 sm:grid-cols-4">
           <DataPoint
             label="Clip"
             value={`${response.duration_seconds.toFixed(1)}s`}
@@ -539,7 +539,7 @@ function ScoreResults({
         </div>
       </div>
 
-      <div className="rounded-lg border border-white/[0.07] bg-white/[0.018] px-4 py-3 text-[11px] leading-5 text-tertiary">
+      <div className="rounded-lg border border-white/6 bg-white/1.5 px-4 py-3 text-[11px] leading-5 text-tertiary">
         <p>
           This is an in-silico prediction for an average subject. It is not an
           individual brain scan, a medical result, or evidence that the ad
@@ -579,7 +579,7 @@ function RegionCard({
   rank: number;
 }) {
   return (
-    <div className="grid gap-3 rounded-lg border border-white/[0.07] bg-white/[0.018] px-4 py-3 sm:grid-cols-[28px_180px_1fr_auto] sm:items-center">
+    <div className="grid gap-3 rounded-lg border border-white/6 bg-white/1.5 px-4 py-3 sm:grid-cols-[28px_180px_1fr_auto] sm:items-center">
       <span className="font-mono text-[11px] text-tertiary">
         {String(rank).padStart(2, "0")}
       </span>
@@ -599,7 +599,7 @@ function RegionCard({
           <span>Relative</span>
           <span>{Math.round(region.relative_response)}/100</span>
         </div>
-        <div className="h-1 overflow-hidden rounded-full bg-white/[0.07]">
+        <div className="h-1 overflow-hidden rounded-full bg-white/6">
           <div
             className="h-full rounded-full bg-[linear-gradient(90deg,#6f64bb,#f3a35b)]"
             style={{ width: `${region.relative_response}%` }}
@@ -623,8 +623,8 @@ function DataPoint({ label, value }: { label: string; value: string }) {
 
 function EmptyResult() {
   return (
-    <div className="border-t border-white/[0.07] pt-7">
-      <div className="flex min-h-36 items-center justify-center rounded-xl border border-dashed border-white/[0.08] bg-white/[0.012] px-6 text-center">
+    <div className="border-t border-white/6 pt-7">
+      <div className="flex min-h-36 items-center justify-center rounded-xl border border-dashed border-white/8 bg-white/1 px-6 text-center">
         <div>
           <p className="text-[12px] font-medium text-white/70">
             Your analysis will appear here

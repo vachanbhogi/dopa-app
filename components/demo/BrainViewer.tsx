@@ -232,7 +232,7 @@ export function BrainViewer({ regions }: { regions: BrainRegion[] }) {
   const maxImportance = Math.max(...regions.map((r) => r.importance));
 
   return (
-    <div className="relative w-full rounded-xl border border-white/[0.06] bg-gradient-to-b from-[#0a0a12] to-[#06060a] overflow-hidden" style={{ height: 440 }}>
+    <div className="relative w-full rounded-xl border border-white/6 bg-linear-to-b from-[#0a0a12] to-[#06060a] overflow-hidden" style={{ height: 440 }}>
       <Canvas
         camera={{ position: [0, 0.3, 4.2], fov: 40 }}
         gl={{ antialias: true, alpha: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}

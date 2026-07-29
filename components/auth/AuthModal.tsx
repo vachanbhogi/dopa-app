@@ -31,11 +31,11 @@ export function AuthModal({
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 p-5 backdrop-blur-md"
+      className="fixed inset-0 z-120 flex items-center justify-center bg-black/80 p-5 backdrop-blur-md"
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative w-full max-w-[420px] animate-fade-up">
+      <div className="relative w-full max-w-105 animate-fade-up">
         <Link
           href="/"
           aria-label="Close"
@@ -44,9 +44,9 @@ export function AuthModal({
           ✕
         </Link>
 
-        <div className="rounded-2xl border border-white/[0.08] bg-[#0f1011] p-8 shadow-2xl shadow-black/60">
+        <div className="rounded-2xl border border-white/8 bg-[#0f1011] p-8 shadow-2xl shadow-black/60">
           <div className="flex items-center gap-2 text-white">
-            <DopaMark className="h-[18px] w-[18px]" />
+            <DopaMark className="h-4.5 w-4.5" />
             <span className="text-[15px] font-[510] tracking-[-0.01em]">Dopa</span>
           </div>
 

@@ -46,8 +46,8 @@ const quotes = [
 
 export function Changelog() {
   return (
-    <section id="changelog" className="border-t border-white/[0.06]">
-      <div className="mx-auto max-w-[1200px] px-5 py-24 md:px-8 md:py-28">
+    <section id="changelog" className="border-t border-white/6">
+      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
         <div className="flex items-end justify-between gap-4">
           <h2 className="text-[28px] font-medium tracking-[-0.02em] md:text-[32px]">
             Changelog
@@ -64,11 +64,11 @@ export function Changelog() {
           {changelog.map((item) => (
             <article
               key={item.title}
-              className="grid gap-2 border-b border-white/[0.06] pb-8 last:border-0 md:grid-cols-[1fr_140px]"
+              className="grid gap-2 border-b border-white/6 pb-8 last:border-0 md:grid-cols-[1fr_140px]"
             >
               <div>
                 <h3 className="text-[16px] font-medium tracking-[-0.01em]">{item.title}</h3>
-                <p className="mt-2 max-w-[640px] text-[14px] leading-6 text-secondary">
+                <p className="mt-2 max-w-160 text-[14px] leading-6 text-secondary">
                   {item.body}
                 </p>
               </div>
@@ -83,8 +83,8 @@ export function Changelog() {
 
 export function Testimonials() {
   return (
-    <section id="customers" className="border-t border-white/[0.06]">
-      <div className="mx-auto max-w-[1200px] px-5 py-24 md:px-8 md:py-28">
+    <section id="customers" className="border-t border-white/6">
+      <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
         <div className="grid gap-10 md:grid-cols-3">
           {quotes.map((q) => (
             <figure key={q.name}>
@@ -98,7 +98,7 @@ export function Testimonials() {
             </figure>
           ))}
         </div>
-        <p className="mt-16 max-w-[520px] text-[16px] leading-7 text-secondary">
+        <p className="mt-16 max-w-130 text-[16px] leading-7 text-secondary">
           Dopa helps marketing teams predict ad performance before spend. From ambitious
           startups to growing performance orgs.
         </p>
@@ -116,8 +116,8 @@ export function Testimonials() {
 
 export function FinalCta() {
   return (
-    <section className="border-t border-white/[0.06]">
-      <div className="relative mx-auto max-w-[1200px] overflow-hidden px-5 py-28 text-center md:px-8 md:py-36">
+    <section className="border-t border-white/6">
+      <div className="relative mx-auto max-w-300 overflow-hidden px-5 py-28 text-center md:px-8 md:py-36">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(94,106,210,0.16),transparent_60%)]" />
         <h2 className="relative text-[36px] font-medium tracking-[-0.03em] md:text-[48px]">
           Built for the future.
@@ -133,19 +133,19 @@ export function FinalCta() {
           </Link>
           <a
             href="#contact"
-            className="inline-flex h-10 items-center rounded-lg border border-white/[0.1] px-4 text-[14px] text-foreground hover:bg-white/[0.04]"
+            className="inline-flex h-10 items-center rounded-lg border border-white/10 px-4 text-[14px] text-foreground hover:bg-white/4"
           >
             Contact sales
           </a>
           <a
             href="#app"
-            className="inline-flex h-10 items-center rounded-lg border border-white/[0.1] px-4 text-[14px] text-foreground hover:bg-white/[0.04]"
+            className="inline-flex h-10 items-center rounded-lg border border-white/10 px-4 text-[14px] text-foreground hover:bg-white/4"
           >
             Open app
           </a>
           <a
             href="#download"
-            className="inline-flex h-10 items-center rounded-lg border border-white/[0.1] px-4 text-[14px] text-foreground hover:bg-white/[0.04]"
+            className="inline-flex h-10 items-center rounded-lg border border-white/10 px-4 text-[14px] text-foreground hover:bg-white/4"
           >
             Download
           </a>
@@ -157,8 +157,8 @@ export function FinalCta() {
 
 export function Footer() {
   return (
-    <footer id="contact" className="border-t border-white/[0.06] bg-[#08090a]">
-      <div className="mx-auto flex max-w-[1200px] flex-col md:flex-row items-center justify-between gap-6 px-5 py-8 md:px-8">
+    <footer id="contact" className="border-t border-white/6 bg-[#08090a]">
+      <div className="mx-auto flex max-w-300 flex-col md:flex-row items-center justify-between gap-6 px-5 py-8 md:px-8">
         <div className="flex items-center gap-2 text-foreground">
           <DopaMark className="h-4 w-4 text-white" />
           <span className="text-[14px] font-medium text-white">Dopa</span>

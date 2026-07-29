@@ -13,15 +13,15 @@ export function AuthShell({
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center px-5 py-16">
       <div className="pointer-events-none absolute inset-0 dopa-grain opacity-60" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(ellipse_at_50%_0%,rgba(94,106,210,0.2),transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-105 bg-[radial-gradient(ellipse_at_50%_0%,rgba(94,106,210,0.2),transparent_60%)]" />
 
-      <div className="relative w-full max-w-[400px]">
+      <div className="relative w-full max-w-100">
         <Link
           href="/"
           className="mb-8 inline-flex items-center gap-2 text-white"
           aria-label="Dopa home"
         >
-          <DopaMark className="h-[18px] w-[18px]" />
+          <DopaMark className="h-4.5 w-4.5" />
           <span className="text-[15px] font-[510] tracking-[-0.01em]">Dopa</span>
         </Link>
 
