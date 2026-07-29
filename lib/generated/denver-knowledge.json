@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "sourceHash": "8ceee3d0a94a7932",
+  "sourceHash": "ac55b50cacd4ab6d",
   "routes": [
     "/",
     "/dashboard",
@@ -81,8 +81,6 @@
         "AI request data:",
         "prompts and relevant workspace or page context sent for Denver responses, business discovery, public-web competitor research, and keyword generation.",
         "Competitor research stores source URLs, short paraphrased evidence, scores, and observation dates rather than full scraped pages.",
-        "Notification information:",
-        "browser push endpoints and device-generated encryption keys when you explicitly enable browser notifications.",
         "Technical information:",
         "IP address, browser and device information, request timestamps, and diagnostic data that our hosting and service providers ordinarily process to operate and secure the Service.",
         "3. How we collect information",
@@ -114,7 +112,7 @@
         "Keep your credentials confidential and notify us if you believe your account has been compromised.",
         "9. Your choices and privacy rights",
         "You can update workspace data in the dashboard and disconnect Google Ads from its integration page.",
-        "You can also disable daily competitor monitoring, in-app alerts, or browser push at any time.",
+        "You can also disable daily competitor monitoring or in-app alerts at any time.",
         "Depending on where you live, you may also have rights to request access, correction, deletion, or a copy of personal information, to object to or restrict certain processing, and to appeal a denied request.",
         "We will not discriminate against you for exercising a privacy right.",
         "Submit a request through the Dopa support channel available to your organization.",
@@ -181,7 +179,7 @@
         "misrepresent AI estimates as observed facts, scientific measurements, or guaranteed business outcomes; or",
         "use automated means to overload, scrape, or resell the Service without written permission.",
         "6. Connected and third-party services",
-        "The Service may interoperate with Supabase, Groq, Google Ads, Alibaba Cloud, browser push services, model-hosting infrastructure, and other third parties.",
+        "The Service may interoperate with Supabase, Groq, Google Ads, Alibaba Cloud, model-hosting infrastructure, and other third parties.",
         "Their services are governed by their own terms and policies.",
         "You authorize Dopa to exchange the information necessary to perform actions you request.",
         "The current Google Ads integration is read-only and does not authorize Dopa to create campaigns or spend funds.",
@@ -425,7 +423,6 @@
         "Local time",
         "Alert at threat score",
         "In-app alerts",
-        "Browser push",
         "Timezone:"
       ]
     },

@@ -1,7 +1,6 @@
 import { parseResearchResult } from "@/lib/competitor-intelligence/validation";
 import { severityForScore } from "@/lib/competitor-intelligence/scoring";
 import { readVerifiedInternalJson } from "@/lib/server/internal-auth";
-import { sendBusinessPush } from "@/lib/server/push";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export async function POST(request: Request) {
@@ -62,12 +61,11 @@ export async function POST(request: Request) {
 
   const { data: settings } = await admin
     .from("competitor_monitor_settings")
-    .select("min_alert_score, notify_in_app, notify_browser")
+    .select("min_alert_score, notify_in_app")
     .eq("business_id", run.business_id)
     .maybeSingle();
   const minimum = settings?.min_alert_score ?? 70;
-  const notificationsEnabled =
-    (settings?.notify_in_app ?? true) || (settings?.notify_browser ?? false);
+  const notificationsEnabled = settings?.notify_in_app ?? true;
 
   const alertRows: Array<Record<string, unknown>> = [];
   if (notificationsEnabled) {
@@ -112,7 +110,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const { data: completion, error: completionError } = await admin.rpc(
+  const { error: completionError } = await admin.rpc(
     "complete_competitor_research",
     {
       p_run_id: run.id,
@@ -131,36 +129,6 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-  const alertIds =
-    completion &&
-    typeof completion === "object" &&
-    "alert_ids" in completion &&
-    Array.isArray(completion.alert_ids)
-      ? completion.alert_ids.filter(
-          (value: unknown): value is string => typeof value === "string",
-        )
-      : [];
-  const wasIdempotent =
-    completion &&
-    typeof completion === "object" &&
-    "idempotent" in completion &&
-    completion.idempotent === true;
-
-  if (alertRows.length > 0 && !wasIdempotent) {
-    const top = result.candidates[0];
-    await sendBusinessPush(
-      run.business_id,
-      {
-        title: `Dopa found ${result.candidates.length} researched competitor${result.candidates.length === 1 ? "" : "s"}`,
-        body: top
-          ? `${top.name} leads the list at ${top.threat_score}/100.`
-          : "New sourced competitor activity is ready to review.",
-        url: "/dashboard?tab=competitors",
-      },
-      alertIds,
-    );
-  }
-
   return Response.json({
     success: true,
     candidates: result.candidates.length,

@@ -1,7 +1,6 @@
 import { RESEARCH_CONTRACT_VERSION } from "@/lib/competitor-intelligence/types";
 import { isJsonObject, isUuid, stringValue } from "@/lib/validation";
 import { readVerifiedInternalJson } from "@/lib/server/internal-auth";
-import { sendBusinessPush } from "@/lib/server/push";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 const runningStages = new Set(["searching", "synthesizing", "finalizing"]);
@@ -74,7 +73,7 @@ export async function POST(request: Request) {
 
   if (isFailure) {
     const dedupeKey = `${runId}:research_failed`;
-    const { data: alert } = await admin
+    await admin
       .from("competitor_alerts")
       .upsert(
         {
@@ -87,18 +86,7 @@ export async function POST(request: Request) {
           dedupe_key: dedupeKey,
         },
         { onConflict: "dedupe_key", ignoreDuplicates: true },
-      )
-      .select("id")
-      .maybeSingle();
-    await sendBusinessPush(
-      run.business_id,
-      {
-        title: "Dopa competitor research needs attention",
-        body: errorMessage ?? "Competitor research failed.",
-        url: "/dashboard?tab=competitors",
-      },
-      alert ? [alert.id] : [],
-    );
+      );
   }
 
   return Response.json({ success: true });

@@ -127,7 +127,6 @@ create table if not exists public.competitor_monitor_settings (
   timezone text not null default 'America/Los_Angeles',
   min_alert_score integer not null default 70 check (min_alert_score between 0 and 100),
   notify_in_app boolean not null default true,
-  notify_browser boolean not null default false,
   next_run_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -149,26 +148,11 @@ create table if not exists public.competitor_alerts (
   body text not null,
   dedupe_key text not null unique,
   read_at timestamptz,
-  push_sent_at timestamptz,
   created_at timestamptz not null default now()
 );
 
 create index if not exists competitor_alerts_business_created_idx
   on public.competitor_alerts (business_id, created_at desc);
-
-create table if not exists public.push_subscriptions (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users (id) on delete cascade,
-  endpoint text not null unique,
-  p256dh text not null,
-  auth text not null,
-  user_agent text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create index if not exists push_subscriptions_user_idx
-  on public.push_subscriptions (user_id);
 
 create table if not exists public.competitor_workers (
   worker_id text primary key,
@@ -216,7 +200,6 @@ alter table public.competitor_candidates enable row level security;
 alter table public.competitor_evidence enable row level security;
 alter table public.competitor_monitor_settings enable row level security;
 alter table public.competitor_alerts enable row level security;
-alter table public.push_subscriptions enable row level security;
 alter table public.competitor_workers enable row level security;
 alter table public.internal_request_nonces enable row level security;
 
@@ -359,17 +342,11 @@ create policy "Users can view own competitor alerts"
     )
   );
 
-create policy "Users can manage own push subscriptions"
-  on public.push_subscriptions for all to authenticated
-  using (user_id = (select auth.uid()))
-  with check (user_id = (select auth.uid()));
-
 revoke all on table public.competitor_research_runs from anon, authenticated;
 revoke all on table public.competitor_candidates from anon, authenticated;
 revoke all on table public.competitor_evidence from anon, authenticated;
 revoke all on table public.competitor_monitor_settings from anon, authenticated;
 revoke all on table public.competitor_alerts from anon, authenticated;
-revoke all on table public.push_subscriptions from anon, authenticated;
 revoke all on table public.competitor_workers from anon, authenticated;
 revoke all on table public.internal_request_nonces from anon, authenticated;
 
@@ -378,14 +355,12 @@ grant select on table public.competitor_candidates to authenticated;
 grant select on table public.competitor_evidence to authenticated;
 grant select, insert, update on table public.competitor_monitor_settings to authenticated;
 grant select on table public.competitor_alerts to authenticated;
-grant select, insert, update, delete on table public.push_subscriptions to authenticated;
 
 grant select, insert, update, delete on table public.competitor_research_runs to service_role;
 grant select, insert, update, delete on table public.competitor_candidates to service_role;
 grant select, insert, update, delete on table public.competitor_evidence to service_role;
 grant select, insert, update, delete on table public.competitor_monitor_settings to service_role;
 grant select, insert, update, delete on table public.competitor_alerts to service_role;
-grant select, insert, update, delete on table public.push_subscriptions to service_role;
 grant select, insert, update, delete on table public.competitor_workers to service_role;
 grant select, insert, update, delete on table public.internal_request_nonces to service_role;
 

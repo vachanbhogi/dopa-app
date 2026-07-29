@@ -179,7 +179,6 @@ export type MonitorSettingsDto = {
   timezone: string;
   min_alert_score: number;
   notify_in_app: boolean;
-  notify_browser: boolean;
   next_run_at: string | null;
 };
 

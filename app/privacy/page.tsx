@@ -69,11 +69,6 @@ export default function PrivacyPage() {
                 full scraped pages.
               </li>
               <li>
-                <span className="text-white">Notification information:</span>{" "}
-                browser push endpoints and device-generated encryption keys
-                when you explicitly enable browser notifications.
-              </li>
-              <li>
                 <span className="text-white">Technical information:</span> IP
                 address, browser and device information, request timestamps,
                 and diagnostic data that our hosting and service providers
@@ -123,8 +118,8 @@ export default function PrivacyPage() {
               authentication and database hosting (Supabase), AI processing
               (Groq and Alibaba Cloud Model Studio), competitor-research
               infrastructure (Alibaba Cloud), ad scoring and cortical modeling,
-              infrastructure and hosting, browser push delivery, and services
-              you connect (including Google). These providers process
+              infrastructure and hosting, and services you connect (including
+              Google). These providers process
               information under their own terms and our arrangements with them.
               We may also disclose information when required by law, to protect
               users or the Service, or as part of a merger, financing,
@@ -179,7 +174,7 @@ export default function PrivacyPage() {
             <p>
               You can update workspace data in the dashboard and disconnect
               Google Ads from its integration page. You can also disable daily
-              competitor monitoring, in-app alerts, or browser push at any time.
+              competitor monitoring or in-app alerts at any time.
               Depending on where you live, you may also have rights to request
               access, correction, deletion, or a copy of personal information,
               to object to or restrict certain processing, and to appeal a

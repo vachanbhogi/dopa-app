@@ -75,7 +75,6 @@ const defaultSettings = (businessId: string): MonitorSettingsDto => ({
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   min_alert_score: 70,
   notify_in_app: true,
-  notify_browser: false,
   next_run_at: null,
 });
 
@@ -268,9 +267,6 @@ export function CompetitorsTab({ business }: { business: Business }) {
     setSavingSettings(true);
     setError(null);
     try {
-      if (settings.notify_browser) {
-        await subscribeToBrowserPush();
-      }
       const response = await fetch("/api/competitors/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -281,7 +277,6 @@ export function CompetitorsTab({ business }: { business: Business }) {
           timezone: settings.timezone,
           minAlertScore: settings.min_alert_score,
           notifyInApp: settings.notify_in_app,
-          notifyBrowser: settings.notify_browser,
         }),
       });
       const data: unknown = await response.json();
@@ -822,13 +817,6 @@ function MonitoringPanel({
               onChange({ ...settings, notify_in_app })
             }
           />
-          <Toggle
-            label="Browser push"
-            checked={settings.notify_browser}
-            onChange={(notify_browser) =>
-              onChange({ ...settings, notify_browser })
-            }
-          />
         </div>
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/6 pt-4">
@@ -871,56 +859,6 @@ function Toggle({
       />
     </label>
   );
-}
-
-async function subscribeToBrowserPush() {
-  if (
-    !("serviceWorker" in navigator) ||
-    !("PushManager" in window) ||
-    typeof Notification === "undefined"
-  ) {
-    throw new Error("Browser notifications are not supported on this device.");
-  }
-  const permission = await Notification.requestPermission();
-  if (permission !== "granted") {
-    throw new Error(
-      "Notification permission was not granted. On iPhone, install Dopa to the Home Screen first.",
-    );
-  }
-  const keyResponse = await fetch("/api/push/subscriptions");
-  const keyData: unknown = await keyResponse.json();
-  if (!keyResponse.ok || !isJsonObject(keyData) || typeof keyData.publicKey !== "string") {
-    throw new Error(
-      isJsonObject(keyData) && typeof keyData.error === "string"
-        ? keyData.error
-        : "Browser notifications are not configured.",
-    );
-  }
-  const registration = await navigator.serviceWorker.register("/sw.js", {
-    scope: "/",
-    updateViaCache: "none",
-  });
-  const existing = await registration.pushManager.getSubscription();
-  const subscription =
-    existing ??
-    (await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: base64Key(keyData.publicKey),
-    }));
-  const response = await fetch("/api/push/subscriptions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(subscription.toJSON()),
-  });
-  if (!response.ok) throw new Error("Could not save browser notification access.");
-}
-
-function base64Key(value: string) {
-  const padding = "=".repeat((4 - (value.length % 4)) % 4);
-  const raw = window.atob(
-    (value + padding).replace(/-/g, "+").replace(/_/g, "/"),
-  );
-  return Uint8Array.from([...raw].map((character) => character.charCodeAt(0)));
 }
 
 function Message({

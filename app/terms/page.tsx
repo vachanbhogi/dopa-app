@@ -115,12 +115,12 @@ export default function TermsPage() {
           <TermsSection title="6. Connected and third-party services">
             <p>
               The Service may interoperate with Supabase, Groq, Google Ads,
-              Alibaba Cloud, browser push services, model-hosting
-              infrastructure, and other third parties. Their services are
-              governed by their own terms and policies. You authorize Dopa to
-              exchange the information necessary to perform actions you
-              request. The current Google Ads integration is read-only and does
-              not authorize Dopa to create campaigns or spend funds.
+              Alibaba Cloud, model-hosting infrastructure, and other third
+              parties. Their services are governed by their own terms and
+              policies. You authorize Dopa to exchange the information
+              necessary to perform actions you request. The current Google Ads
+              integration is read-only and does not authorize Dopa to create
+              campaigns or spend funds.
             </p>
           </TermsSection>
 

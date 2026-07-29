@@ -84,7 +84,7 @@ export async function GET(request: Request) {
       supabase
         .from("competitor_monitor_settings")
         .select(
-          "business_id, enabled, cadence, local_time, timezone, min_alert_score, notify_in_app, notify_browser, next_run_at",
+          "business_id, enabled, cadence, local_time, timezone, min_alert_score, notify_in_app, next_run_at",
         )
         .eq("business_id", businessId)
         .maybeSingle(),
@@ -152,7 +152,6 @@ export async function GET(request: Request) {
     timezone: "America/Los_Angeles",
     min_alert_score: 70,
     notify_in_app: true,
-    notify_browser: false,
     next_run_at: null,
   };
 

@@ -35,8 +35,7 @@ export async function PATCH(request: Request) {
     minimum < 0 ||
     minimum > 100 ||
     typeof value.enabled !== "boolean" ||
-    typeof value.notifyInApp !== "boolean" ||
-    typeof value.notifyBrowser !== "boolean"
+    typeof value.notifyInApp !== "boolean"
   ) {
     return Response.json({ error: "Invalid monitor settings." }, { status: 400 });
   }
@@ -69,14 +68,13 @@ export async function PATCH(request: Request) {
         timezone,
         min_alert_score: minimum,
         notify_in_app: value.notifyInApp,
-        notify_browser: value.notifyBrowser,
         next_run_at: nextRunAt,
         updated_at: now,
       },
       { onConflict: "business_id" },
     )
     .select(
-      "business_id, enabled, cadence, local_time, timezone, min_alert_score, notify_in_app, notify_browser, next_run_at",
+      "business_id, enabled, cadence, local_time, timezone, min_alert_score, notify_in_app, next_run_at",
     )
     .single();
   if (error) {
