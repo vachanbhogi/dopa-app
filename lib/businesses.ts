@@ -2,24 +2,8 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { BUSINESS_SELECT, type Business } from "@/lib/business-types";
 
-function defaultBusinessName(fullName?: string | null, email?: string | null): string {
-  if (fullName?.trim()) return fullName.trim();
-  if (email) {
-    const local = email.split("@")[0]?.replace(/[._-]+/g, " ").trim();
-    if (local) {
-      return local
-        .split(" ")
-        .filter(Boolean)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(" ");
-    }
-  }
-  return "My Business";
-}
-
 export async function getBusinessesForUser(
   userId: string,
-  options?: { fullName?: string | null; email?: string | null },
 ): Promise<{ businesses: Business[]; selectedBusinessId: string | null }> {
   const supabase = createClient(await cookies());
 
@@ -33,23 +17,10 @@ export async function getBusinessesForUser(
     throw new Error(error.message);
   }
 
-  let list = (businesses ?? []) as Business[];
+  const list = (businesses ?? []) as Business[];
 
   if (list.length === 0) {
-    const { data: created, error: insertError } = await supabase
-      .from("businesses")
-      .insert({
-        owner_id: userId,
-        name: defaultBusinessName(options?.fullName, options?.email),
-      })
-      .select(BUSINESS_SELECT)
-      .single();
-
-    if (insertError) {
-      throw new Error(insertError.message);
-    }
-
-    list = [created as Business];
+    return { businesses: [], selectedBusinessId: null };
   }
 
   const { data: prefs, error: prefsError } = await supabase

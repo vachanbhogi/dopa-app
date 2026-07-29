@@ -25,6 +25,7 @@ async function requireUser() {
 
 function revalidateDashboard() {
   revalidatePath("/dashboard");
+  revalidatePath("/onboarding");
 }
 
 export async function selectBusiness(businessId: string) {
@@ -123,9 +124,6 @@ export async function deleteBusiness(businessId: string) {
     .eq("owner_id", auth.user.id);
 
   if (listError) return { error: listError.message };
-  if ((owned ?? []).length <= 1) {
-    return { error: "You need at least one business" };
-  }
 
   const { error } = await auth.supabase
     .from("businesses")
@@ -136,6 +134,21 @@ export async function deleteBusiness(businessId: string) {
   if (error) return { error: error.message };
 
   const remaining = (owned ?? []).filter((b) => b.id !== businessId);
+
+  if (remaining.length === 0) {
+    await auth.supabase.from("user_preferences").upsert(
+      {
+        user_id: auth.user.id,
+        selected_business_id: null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    );
+
+    revalidateDashboard();
+    return { success: true, redirectTo: "/onboarding" as const };
+  }
+
   const nextId = remaining[0]?.id;
   if (nextId) {
     await auth.supabase.from("user_preferences").upsert(

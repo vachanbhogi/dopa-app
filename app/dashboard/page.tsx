@@ -38,10 +38,11 @@ export default async function DashboardPage({
       ? (tab as DashboardTab)
       : "brain";
 
-  const { businesses, selectedBusinessId } = await getBusinessesForUser(user.id, {
-    fullName: user.user_metadata?.full_name,
-    email: user.email,
-  });
+  const { businesses, selectedBusinessId } = await getBusinessesForUser(user.id);
+
+  if (businesses.length === 0) {
+    redirect("/onboarding");
+  }
 
   return (
     <DashboardShell

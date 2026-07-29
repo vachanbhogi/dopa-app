@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   createBusiness,
@@ -113,6 +114,7 @@ function BusinessForm({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   const setField = <K extends keyof BusinessInput>(key: K, value: BusinessInput[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -158,6 +160,10 @@ function BusinessForm({
         setError(result.error);
         return;
       }
+      if ("redirectTo" in result && result.redirectTo) {
+        router.push(result.redirectTo);
+        return;
+      }
       setMessage("Business deleted");
       const next = businesses.find((b) => b.id !== editingId);
       onEditingIdChange(next?.id ?? "new");
@@ -175,7 +181,7 @@ function BusinessForm({
             Details that help ad scoring, hooks, and messaging recommendations.
           </p>
         </div>
-        {editingId && editingId !== "new" && businesses.length > 1 ? (
+        {editingId && editingId !== "new" ? (
           <button
             type="button"
             onClick={handleDelete}

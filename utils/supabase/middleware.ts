@@ -40,6 +40,14 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (path.startsWith("/onboarding") && !user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    url.searchParams.set("modal", "login");
+    url.searchParams.set("redirectTo", "/onboarding");
+    return NextResponse.redirect(url);
+  }
+
   if ((path === "/login" || path === "/signup") && user) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
