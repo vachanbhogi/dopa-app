@@ -10,10 +10,7 @@ export default async function LoginPage({
   const params = await searchParams;
 
   return (
-    <AuthShell
-      title="Welcome back"
-      subtitle="Log in to your Dopa campaign dashboard."
-    >
+    <AuthShell title="Welcome back">
       <AuthForm
         mode="login"
         action={login}

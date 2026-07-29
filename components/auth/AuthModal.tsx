@@ -13,11 +13,9 @@ type AuthModalProps = {
 const copy = {
   login: {
     title: "Welcome back",
-    subtitle: "Log in to your Dopa campaign dashboard.",
   },
   signup: {
-    title: "Sign up for an account",
-    subtitle: undefined,
+    title: "Create your account",
   },
 };
 
@@ -27,44 +25,59 @@ export function AuthModal({
   error,
   message,
 }: AuthModalProps) {
-  const { title, subtitle } = copy[mode];
+  const { title } = copy[mode];
 
   return (
     <div
-      className="fixed inset-0 z-120 flex items-center justify-center bg-black/80 p-5 backdrop-blur-md"
+      className="fixed inset-0 z-120 flex items-center justify-center bg-black/75 p-5 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
     >
       <div className="relative w-full max-w-105 animate-fade-up">
-        <Link
-          href="/"
-          aria-label="Close"
-          className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-[14px] text-white/70 transition-colors hover:bg-white/20 hover:text-white"
-        >
-          ✕
-        </Link>
+        <div
+          className="pointer-events-none absolute inset-x-0 -top-20 h-40 bg-[radial-gradient(ellipse_at_50%_0%,rgba(88,92,140,0.08),transparent_75%)]"
+          aria-hidden
+        />
 
-        <div className="rounded-2xl border border-white/8 bg-[#0f1011] p-8 shadow-2xl shadow-black/60">
-          <div className="flex items-center gap-2 text-white">
-            <DopaMark className="h-4.5 w-4.5" />
-            <span className="text-[15px] font-[510] tracking-[-0.01em]">Dopa</span>
+        <div className="relative overflow-hidden rounded-xl border border-white/8 bg-[#0f1011] shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
+          <div className="flex items-center justify-between border-b border-white/6 px-5 py-3.5 sm:px-6">
+            <div className="flex items-center gap-2 text-white">
+              <DopaMark className="h-4.5 w-4.5" />
+              <span className="text-[15px] font-[510] tracking-[-0.01em]">Dopa</span>
+            </div>
+            <Link
+              href="/"
+              aria-label="Close"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-[13px] text-tertiary transition-colors hover:bg-white/6 hover:text-white"
+            >
+              <svg
+                className="h-3.5 w-3.5"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                aria-hidden
+              >
+                <path d="M4 4l8 8M12 4l-8 8" />
+              </svg>
+            </Link>
           </div>
 
-          <h1 className="mt-6 text-[24px] font-semibold tracking-[-0.02em] text-white">
-            {title}
-          </h1>
-          {subtitle ? (
-            <p className="mt-2 text-[14px] leading-6 text-secondary">{subtitle}</p>
-          ) : null}
+          <div className="px-5 pt-6 pb-5 sm:px-6 sm:pt-7 sm:pb-6">
+            <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-white sm:text-[24px]">
+              {title}
+            </h1>
 
-          <div className="mt-6">
-            <AuthForm
-              mode={mode}
-              action={mode === "login" ? login : signup}
-              redirectTo={redirectTo}
-              error={error}
-              message={message}
-            />
+            <div className="mt-6">
+              <AuthForm
+                mode={mode}
+                action={mode === "login" ? login : signup}
+                redirectTo={redirectTo}
+                error={error}
+                message={message}
+              />
+            </div>
           </div>
         </div>
       </div>

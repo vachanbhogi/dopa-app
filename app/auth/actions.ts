@@ -35,7 +35,6 @@ export async function login(formData: FormData) {
 export async function signup(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
-  const fullName = String(formData.get("fullName") ?? "").trim();
 
   const supabase = createClient(await cookies());
   const origin = await getOrigin();
@@ -43,9 +42,6 @@ export async function signup(formData: FormData) {
     email,
     password,
     options: {
-      data: {
-        full_name: fullName,
-      },
       emailRedirectTo: `${origin}/dashboard`,
     },
   });
