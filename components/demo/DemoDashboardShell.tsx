@@ -421,12 +421,7 @@ export function DemoDashboardShell({
               />
             ) : null}
             {active === "keywords" ? (
-              <KeywordsTab
-                business={selectedBusiness}
-                demoMode
-                initialProducts={workspace.products}
-                initialKeywords={workspace.keywords}
-              />
+              <KeywordsTab business={selectedBusiness} />
             ) : null}
             {active === "autoCampaign" ? (
               <AutoCampaignTab

@@ -30,11 +30,32 @@ export function formatFcTelemetry(
   });
 }
 
+function shipTelemetryToSls(
+  level: FcTelemetryLevel,
+  input: FcTelemetryInput,
+  observedAt: string,
+) {
+  void import("@/lib/fc-sandbox/sls")
+    .then(({ postLogsToSls, telemetryFieldsToSlsContents }) => {
+      const contents = telemetryFieldsToSlsContents(
+        level,
+        input as Record<string, unknown>,
+        observedAt,
+      );
+      const time = Math.floor(Date.parse(observedAt) / 1000) || Math.floor(Date.now() / 1000);
+      return postLogsToSls([{ time, contents }]);
+    })
+    .catch(() => {
+      // SLS shipping must never surface into callers.
+    });
+}
+
 export function emitFcTelemetry(
   level: FcTelemetryLevel,
   input: FcTelemetryInput,
 ) {
-  const line = formatFcTelemetry(level, input);
+  const observedAt = new Date().toISOString();
+  const line = formatFcTelemetry(level, input, observedAt);
   if (level === "error") {
     console.error(line);
   } else if (level === "warn") {
@@ -42,4 +63,5 @@ export function emitFcTelemetry(
   } else {
     console.info(line);
   }
+  shipTelemetryToSls(level, input, observedAt);
 }

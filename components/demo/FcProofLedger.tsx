@@ -1,5 +1,6 @@
 "use client";
 
+import { FcCostQuantification } from "@/components/demo/FcCostQuantification";
 import type {
   FcCapabilityEvidence,
   FcReadiness,
@@ -8,6 +9,17 @@ import type {
 type Proof = {
   readiness: FcReadiness;
   capabilities: FcCapabilityEvidence[];
+  /** Optional timing from the latest proof run when the proof payload includes it. */
+  latestRun?: {
+    metrics?: {
+      activeMs?: number | null;
+      hibernatedMs?: number | null;
+    } | null;
+  } | null;
+  metrics?: {
+    activeMs?: number | null;
+    hibernatedMs?: number | null;
+  } | null;
 };
 
 const statusStyle = {
@@ -15,6 +27,39 @@ const statusStyle = {
   configured: "border-[#8f86ff]/25 bg-[#8f86ff]/8 text-[#aaa3ff]",
   pending: "border-white/10 bg-white/3 text-[#777e8a]",
 } as const;
+
+function finiteMetric(
+  value: string | number | boolean | null | undefined,
+): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : null;
+}
+
+function resolveCostMetrics(proof: Proof): {
+  activeMs: number | null;
+  hibernatedMs: number | null;
+} {
+  const fromLatest = proof.latestRun?.metrics;
+  const fromProof = proof.metrics;
+  const costCapability = proof.capabilities.find(
+    (item) => item.capability === "cost_efficiency",
+  );
+
+  const activeMs =
+    finiteMetric(fromLatest?.activeMs) ??
+    finiteMetric(fromProof?.activeMs) ??
+    finiteMetric(costCapability?.metrics.activeMs) ??
+    finiteMetric(costCapability?.metrics.active_ms);
+
+  const hibernatedMs =
+    finiteMetric(fromLatest?.hibernatedMs) ??
+    finiteMetric(fromProof?.hibernatedMs) ??
+    finiteMetric(costCapability?.metrics.hibernatedMs) ??
+    finiteMetric(costCapability?.metrics.hibernated_ms);
+
+  return { activeMs, hibernatedMs };
+}
 
 export function FcProofLedger({
   proof,
@@ -29,6 +74,7 @@ export function FcProofLedger({
   const verifiedCount = proof.capabilities.filter(
     (item) => item.status === "verified",
   ).length;
+  const costMetrics = resolveCostMetrics(proof);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-white/9 bg-[#0c0d10]/90">
@@ -99,6 +145,13 @@ export function FcProofLedger({
           </article>
         ))}
       </div>
+
+      {expanded ? (
+        <FcCostQuantification
+          activeMs={costMetrics.activeMs}
+          hibernatedMs={costMetrics.hibernatedMs}
+        />
+      ) : null}
 
       {!proof.readiness.liveProvider ? (
         <div className="border-t border-[#f2b84b]/12 bg-[#f2b84b]/4 px-5 py-4 md:px-6">

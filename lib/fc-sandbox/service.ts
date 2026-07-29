@@ -1,5 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import { evaluateAlertRules } from "@/lib/fc-sandbox/alerting";
 import { getFcReadiness, getFcServerConfig } from "@/lib/fc-sandbox/config";
 import {
   assertTransition,
@@ -106,6 +107,12 @@ async function advance(
       ? {}
       : { durationMs: event.durationMs }),
   });
+  void evaluateAlertRules(updated, {
+    eventType: event.eventType,
+    stage: to,
+    metadata: event.metadata ?? {},
+    durationMs: event.durationMs,
+  });
   return updated;
 }
 
@@ -131,6 +138,14 @@ async function failRun(run: FcRunRecord, code: string) {
       )) ?? run
     );
   } catch {
+    void evaluateAlertRules(
+      { ...run, status: "failed", safeErrorCode: code },
+      {
+        eventType: "run.failed",
+        stage: "failed",
+        metadata: { code },
+      },
+    );
     return run;
   }
 }
@@ -145,18 +160,23 @@ async function recordCleanupFailure(run: FcRunRecord) {
     outcome: "failed",
     errorCode: "CLEANUP_FAILED",
   });
+  const cleanupEvent = {
+    eventType: "sandbox.cleanup_failed" as const,
+    stage: run.status,
+    metadata: { code: "CLEANUP_FAILED" as const },
+  };
   try {
     await appendRunEvent(
       run.id,
       makeEvent({
         sequence: await nextSequence(run.id),
-        eventType: "sandbox.cleanup_failed",
-        stage: run.status,
+        eventType: cleanupEvent.eventType,
+        stage: cleanupEvent.stage,
         summary:
           "Sandbox cleanup needs operator follow-up; the exact run remains traceable.",
         evidenceClass: run.evidenceClass,
         checkpointHash: run.checkpointHash,
-        metadata: { code: "CLEANUP_FAILED" },
+        metadata: cleanupEvent.metadata,
       }),
     );
   } catch {
@@ -170,6 +190,7 @@ async function recordCleanupFailure(run: FcRunRecord) {
       errorCode: "CLEANUP_TRACE_FAILED",
     });
   }
+  void evaluateAlertRules(run, cleanupEvent);
 }
 
 function providerContext(run: FcRunRecord) {
@@ -750,11 +771,15 @@ export async function getFcProof(): Promise<{
   capabilities: FcCapabilityEvidence[];
 }> {
   const readiness = getFcReadiness();
+  const config = getFcServerConfig();
   const configured = new Set<string>();
   if (readiness.liveProvider) {
     configured.add("sandbox_lifecycle");
     configured.add("hibernation_wakeup");
     configured.add("stateful_sessions");
+    configured.add("observability");
+  }
+  if (config.alertWebhookUrl) {
     configured.add("observability");
   }
   if (
@@ -764,9 +789,34 @@ export async function getFcProof(): Promise<{
   ) {
     configured.add("cost_efficiency");
   }
+  const capabilities = await getCapabilityEvidence(configured);
   return {
     readiness,
-    capabilities: await getCapabilityEvidence(configured),
+    capabilities: capabilities.map((capability) => {
+      if (capability.capability !== "observability" || !config.alertWebhookUrl) {
+        return capability;
+      }
+      if (capability.status === "verified") {
+        return {
+          ...capability,
+          metrics: {
+            ...capability.metrics,
+            alertWebhookConfigured: true,
+          },
+        };
+      }
+      return {
+        ...capability,
+        metrics: {
+          ...capability.metrics,
+          alertWebhookConfigured: true,
+          alertRules: "RUN_FAILED,SLA_BREACH,CLEANUP_FAILED",
+          wakeLatencySlaMs: 3_000,
+        },
+        note:
+          "Alert webhook and RUN_FAILED/SLA_BREACH/CLEANUP_FAILED rules are configured; a live SLS failure drill is still required for verified evidence.",
+      };
+    }),
   };
 }
 

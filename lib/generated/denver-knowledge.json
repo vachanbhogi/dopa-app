@@ -1,10 +1,11 @@
 {
   "version": 2,
-  "sourceHash": "9cf153448a0928b1",
+  "sourceHash": "f4ea299fc4abafcf",
   "routes": [
     "/",
     "/dashboard",
     "/demo",
+    "/demo/dashboard",
     "/fc-proof",
     "/login",
     "/onboarding",
@@ -30,6 +31,10 @@
       "label": "Keywords"
     },
     {
+      "id": "autoCampaign",
+      "label": "Auto Launcher"
+    },
+    {
       "id": "brain",
       "label": "Brain"
     },
@@ -40,13 +45,23 @@
   ],
   "chunks": [
     {
+      "id": "app-demo-dashboard-page-tsx",
+      "area": "Dashboard",
+      "source": "app/demo/dashboard/page.tsx",
+      "route": "/demo/dashboard",
+      "text": [
+        "Demo dashboard — Dopa",
+        "Explore the real Dopa dashboard after brand intake — no account required."
+      ]
+    },
+    {
       "id": "app-demo-page-tsx",
       "area": "Demo",
       "source": "app/demo/page.tsx",
       "route": "/demo",
       "text": [
-        "FC Sandbox proof demo — Dopa",
-        "Run Dopa's approval-gated creative scoring lifecycle and inspect its AgentRun evidence."
+        "Try Dopa — Import your brand",
+        "Account-free onboarding demo. Scan alibaba.com or your own website and review a draft brand profile."
       ]
     },
     {
@@ -65,7 +80,7 @@
         "Live gate ·",
         "Implementation map",
         "From browser intent to isolated compute",
-        "Run the golden path →"
+        "Inspect evidence ledger →"
       ]
     },
     {
@@ -256,6 +271,19 @@
       ]
     },
     {
+      "id": "components-desktoponly-tsx",
+      "area": "Desktop Only",
+      "source": "components/DesktopOnly.tsx",
+      "text": [
+        "Not available on mobile",
+        "The Dopa demo needs a larger screen for brand intake and the workspace walkthrough. Open this page on a laptop or desktop to continue.",
+        "The Dopa workspace is built for desktop review — cortical playback, competitor intel, and campaign ops. Switch to a wider screen to continue.",
+        "Dopa home",
+        "Dopa",
+        "Back to home"
+      ]
+    },
+    {
       "id": "components-auth-authform-tsx",
       "area": "Auth Form",
       "source": "components/auth/AuthForm.tsx",
@@ -308,12 +336,56 @@
       ]
     },
     {
+      "id": "components-dashboard-autocampaigntab-tsx",
+      "area": "Auto Campaign Tab",
+      "source": "components/dashboard/AutoCampaignTab.tsx",
+      "text": [
+        "Auto Campaign & Hook Generator",
+        "Synthesize brand context, product specs, keywords, and rival evidence into a pre-tested ad campaign with high-converting hooks.",
+        "All Products (Brand Level)",
+        "Synthesizing Blueprint…",
+        "Auto-Generate Campaign",
+        "No Campaign Blueprint Generated",
+        "Select a product or brand scope and click",
+        "to synthesize hooks, keyword strategies, and ad copy backed by rival intelligence.",
+        "Fusing Context & Synthesizing Campaign…",
+        "Fusing business positioning, product features, keyword intent, and rival threat evidence.",
+        "Campaign Blueprint · Ready",
+        "Predicted CTR",
+        "Suggested Hooks (",
+        "Keyword Strategy",
+        "Ad Concepts & Video Scripts (",
+        "Commercial High-Intent",
+        "Problem & Solution",
+        "Competitor Conquesting",
+        "Negative Keywords",
+        "Suggested Daily Budget:",
+        "/day",
+        "Bidding Strategy:",
+        "Headlines (Google RSA)",
+        "Descriptions",
+        "Platform:",
+        "Duration:",
+        "Visual:",
+        "Audio/Voice:",
+        "&ldquo;",
+        "&rdquo;",
+        "Overlay:",
+        "Visual Theme:",
+        "Impact Score",
+        "Target Emotion:",
+        "Countering:",
+        "None specified"
+      ]
+    },
+    {
       "id": "components-dashboard-braintab-tsx",
       "area": "Brain Tab",
       "source": "components/dashboard/BrainTab.tsx",
       "text": [
         "Preparing the interactive cortex…",
         "Upload an ad that is 60 seconds or shorter.",
+        "Demo preview loaded. Sign up to score your own creatives with TRIBE v2.",
         "Upload an ad to predict its average click-through rate and see the cortical response TRIBE v2 models for the clip.",
         "Clear",
         "Upload",
@@ -322,6 +394,7 @@
         "3D model",
         "Neural desk",
         "CTR",
+        "Export Brain JSON",
         "Upload · Queue · Inference · 3D model",
         "Choose an ad video",
         "MP4 or MOV · up to 60 seconds · 250 MB maximum",
@@ -347,8 +420,10 @@
         "Switch workspace",
         "Workspaces",
         "New business",
+        "Demo mode — sign up to save your brand profile.",
         "Business created",
         "Saved",
+        "Demo mode — sign up to manage workspaces.",
         "Business deleted",
         "Cancel",
         "Delete",
@@ -389,6 +464,7 @@
         "Competitors",
         "Products",
         "Keywords",
+        "Auto Launcher",
         "Brain",
         "Google Ads",
         "Denver AI",
@@ -477,6 +553,7 @@
         "Competitors",
         "Products",
         "Keywords",
+        "Auto Launcher",
         "Brain",
         "Google Ads",
         "Select business",
@@ -581,13 +658,16 @@
       "area": "Products Tab",
       "source": "components/dashboard/ProductsTab.tsx",
       "text": [
+        "Demo mode — sign up to add products.",
         "Product profiles power creative generation and TRIBE v2 pre-tests. Each product inherits",
         "'s brand defaults unless you override them in the editor.",
         "Add product",
+        "Demo mode — sign up to manage products.",
         "No products yet",
         "Add your first product to fuel ad ideas, hooks, and TRIBE v2 scoring.",
         "Add first product",
         "more",
+        "Demo mode — sign up to save products.",
         "Product name",
         "iPhone 16 Pro",
         "Category",
@@ -637,13 +717,34 @@
       ]
     },
     {
-      "id": "components-demo-brainviewer-tsx",
-      "area": "Brain Viewer",
-      "source": "components/demo/BrainViewer.tsx",
+      "id": "components-demo-demodashboardshell-tsx",
+      "area": "Demo Dashboard Shell",
+      "source": "components/demo/DemoDashboardShell.tsx",
       "text": [
-        "Video cortical regions",
-        "Text-audio cortical regions",
-        "Drag to rotate · Scroll to zoom"
+        "Business",
+        "Competitors",
+        "Products",
+        "Keywords",
+        "Auto Launcher",
+        "Brain",
+        "Google Ads",
+        "Loading demo workspace…",
+        "Demo",
+        "Restart onboarding",
+        "Dashboard",
+        "DV",
+        "demo@dopa.ai",
+        "Settings",
+        "Sign up",
+        "Search or command…",
+        "⌘K",
+        "Onboarding",
+        "Home",
+        "Recommended next step",
+        "Upload a creative",
+        "On Brain · upload below",
+        "Open Auto Campaign",
+        "Ready to build for your brand?"
       ]
     },
     {
@@ -653,12 +754,34 @@
       "text": [
         "Features",
         "Demo",
-        "FC proof",
+        "Dashboard",
         "Privacy",
         "Dopa",
         "Primary",
-        "Dashboard",
-        "Log in"
+        "Log in",
+        "Sign up"
+      ]
+    },
+    {
+      "id": "components-demo-fccostquantification-tsx",
+      "area": "Fc Cost Quantification",
+      "source": "components/demo/FcCostQuantification.tsx",
+      "text": [
+        "Cost quantification",
+        "Active vs idle baseline · FC hibernation savings",
+        "Example · 120s active + 1h hibernated",
+        "From proof run ·",
+        "active ·",
+        "hibernated",
+        "Active run",
+        "Idle baseline",
+        "Kept active for full interval",
+        "Saved",
+        "% vs idle baseline",
+        "Hibernated path",
+        "Idle continuous",
+        "Total with pause",
+        "Savings"
       ]
     },
     {
@@ -671,44 +794,6 @@
         "configured ·",
         "pending",
         "Live readiness blockers"
-      ]
-    },
-    {
-      "id": "components-demo-fcsandboxdemo-tsx",
-      "area": "Fc Sandbox Demo",
-      "source": "components/demo/FcSandboxDemo.tsx",
-      "text": [
-        "Run accepted",
-        "Sandbox provisioned",
-        "Sandbox validates input",
-        "Approval checkpoint",
-        "Compute hibernated",
-        "State restored",
-        "TRIBE v2 inference",
-        "Result committed",
-        "Alibaba Cloud FC Sandbox / golden path",
-        "One creative. One sleeping sandbox. One proof trail.",
-        "Dopa validates a sample ad, checkpoints at human approval, pauses compute, restores the exact state, and only then calls TRIBE v2. Every event below states whether it is cloud evidence or a local demonstration.",
-        "Judge path",
-        "Start → inspect the paused boundary → approve once → verify the checkpoint digest → inspect the evidence ledger.",
-        "Typical",
-        ": under 30 seconds",
-        "New run",
-        "Reference ·",
-        "Active compute",
-        "Hibernation gap",
-        "Wake latency",
-        "Checkpoint v",
-        "sha256:",
-        "Trace spine",
-        "durable events",
-        "Start the sample to generate a trace.",
-        "Predicted CTR",
-        "Model",
-        "Recommendation",
-        "Truth boundary",
-        "Purple means implemented or demonstrated. Green appears only after a signed live harness writes immutable evidence metadata. Local timing is never presented as Alibaba billing or performance.",
-        "Inspect the full evidence ledger →"
       ]
     },
     {
@@ -726,13 +811,12 @@
         "Predictions are estimates for review, not guarantees of live campaign performance.",
         "Built for the future.",
         "Available today.",
-        "Get started",
-        "Try the demo",
-        "Open dashboard",
+        "Try brand import demo",
+        "Sign up",
         "Dopa",
         "Dopa, Inc.",
         "Demo",
-        "Dashboard",
+        "Judges / Alibaba Cloud proof",
         "Privacy",
         "Terms"
       ]
@@ -765,8 +849,8 @@
         "Pre-spend creative intelligence",
         "for marketing teams",
         "Upload an ad, predict its average click-through rate, and inspect the cortical response modeled by TRIBE v2.",
-        "New",
-        "DEMO"
+        "Try brand import demo",
+        "Sign up"
       ]
     },
     {
@@ -780,36 +864,62 @@
         "Keywords",
         "Brain",
         "Google Ads",
-        "Workspace",
+        "V1 early visual",
+        "Strong early visual response at product reveal.",
+        "FFA face / form",
+        "Form-selective response during fabric close-up.",
+        "MT motion",
+        "Motion onset at hook.",
+        "PPA place",
+        "Mild place response on street cutaway.",
+        "Northstar Apparel",
         "you@dopa.ai",
+        "Northstar",
         "Search or command…",
         "⌘K",
         "Home",
-        "Upload an ad to predict its average click-through rate and see the cortical response TRIBE v2 models for the clip.",
-        "Neural desk · ready",
-        "No creative selected",
-        "CTR —",
-        "0 regions",
-        "— clip",
-        "Analyze",
-        "Upload",
-        "Waiting for creative",
+        "Predicted average CTR with TRIBE v2 cortical evidence — review before you spend.",
+        "Neural desk · live",
+        "Summit Tee — UGC hook.mp4",
+        "CTR 2.84%",
+        "4 regions",
+        "12.0s clip",
+        "Re-run",
+        "Replace",
+        "Analysis complete",
         "Upload · Inference · 3D model",
+        "Upload",
         "Inference",
         "3D model",
-        "Choose an ad video",
-        "MP4 or MOV · up to 60 seconds · 250 MB maximum",
-        "Peak response track · awaiting",
-        "0s → 30.0s",
-        "Region pending",
+        "Summit Tee — fabric reveal",
+        "Peak attention · 7.2s",
+        "Predicted CTR 2.84%",
+        "Peak response track",
+        "0s → 12.0s",
         "Brain sync",
         "Average-subject cortical model",
         "TRIBE v2",
-        "Cortex appears after analysis",
-        "Dominant ROI",
-        "Awaiting response",
-        "The strongest modeled cortical region will land here.",
-        "Region"
+        "Cortical cue · V1 peak",
+        "Dominant ROI"
+      ]
+    },
+    {
+      "id": "components-landing-landingbrainviewer-tsx",
+      "area": "Landing Brain Viewer",
+      "source": "components/landing/LandingBrainViewer.tsx",
+      "text": [
+        "V1 Early Visual",
+        "FFA Face / Form",
+        "MT Motion Track",
+        "PPA Place Area",
+        "Neural desk · scored",
+        "Summit Tee — UGC hook.mp4",
+        "CTR 2.84%",
+        "4 regions",
+        "12.0s clip",
+        "Predicted CTR",
+        "TRIBE v2 cortical evidence aggregated across visual parcels before spend.",
+        "Confidence band · mid-high"
       ]
     },
     {
@@ -909,14 +1019,14 @@
         "Buyer queries",
         "Predicted CTR",
         "Headline align",
-        "Hook",
-        "Peak",
-        "CTA",
-        "End",
-        "V1 early visual",
-        "FFA face / form",
-        "MT motion",
-        "PPA place"
+        "Brain",
+        "Predict CTR from human fMRI cortical visual response",
+        "Frame-by-frame cortical heatmap timeline, parcel activation preview, and dopa-model CTR scorecard — the core review surface.",
+        "Cortical heatmap",
+        "fMRI visual encoding",
+        "Hemodynamic lag",
+        "Spend",
+        "Conversions"
       ]
     },
     {
@@ -927,9 +1037,11 @@
         "Enter a website URL",
         "Business name is required",
         "Dopa",
+        "Demo",
         "Import your brand",
-        "Paste your website URL and we'll build a draft profile for review.",
-        "aurabeauty.com",
+        "https://www.alibaba.com/",
+        "Example",
+        "alibaba.com",
         "Scanning…",
         "or",
         "Enter details manually",
@@ -938,17 +1050,17 @@
         "Aura Beauty Co.",
         "Default audience",
         "Gen Z & Millennials, eco-conscious shoppers",
+        "Competitors",
+        "Rival Labs, Brand X",
+        "More brand details",
         "Industry",
         "Select",
         "Campaign goal",
         "Price tier",
         "Brand tone",
-        "Competitors",
-        "Rival Labs, Brand X",
         "← Back",
         "Continue",
         "Add your first product",
-        "Optional — seed hooks and TRIBE v2 scoring for",
         "Product name",
         "Aura Glow Skin Serum",
         "Value proposition",

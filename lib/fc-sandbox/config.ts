@@ -38,6 +38,19 @@ function httpsUrl(value: string | undefined): string | null {
   }
 }
 
+/** HTTPS webhook URLs may carry query tokens (e.g. DingTalk access_token). */
+function httpsWebhookUrl(value: string | undefined): string | null {
+  const candidate = value?.trim();
+  if (!candidate) return null;
+  try {
+    const url = new URL(candidate);
+    if (url.protocol !== "https:") return null;
+    return `${url.origin}${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return null;
+  }
+}
+
 function hostname(value: string | undefined): string | null {
   const candidate = value?.trim();
   if (
@@ -76,6 +89,14 @@ export type FcServerConfig = {
   demoCreativeUrl: string | null;
   hibernationMode: "deep" | "light";
   failureMode: "none" | "resume_checkpoint_mismatch";
+  alertWebhookUrl: string | null;
+  sls: {
+    endpoint: string | null;
+    project: string | null;
+    logstore: string | null;
+    accessKeyId: string | null;
+    accessKeySecret: string | null;
+  };
 };
 
 export function getFcServerConfig(): FcServerConfig {
@@ -122,6 +143,14 @@ export function getFcServerConfig(): FcServerConfig {
     process.env.FC_DEMO_FAILURE_MODE === "resume_checkpoint_mismatch"
       ? "resume_checkpoint_mismatch"
       : "none";
+  const alertWebhookUrl = httpsWebhookUrl(process.env.FC_ALERT_WEBHOOK_URL);
+  const sls = {
+    endpoint: process.env.ALIYUN_SLS_ENDPOINT?.trim() || null,
+    project: process.env.ALIYUN_SLS_PROJECT?.trim() || null,
+    logstore: process.env.ALIYUN_SLS_LOGSTORE?.trim() || null,
+    accessKeyId: secret(process.env.ALIYUN_SLS_ACCESS_KEY_ID),
+    accessKeySecret: secret(process.env.ALIYUN_SLS_ACCESS_KEY_SECRET),
+  };
   const requestedLive = process.env.FC_SANDBOX_PROVIDER === "agentrun";
   const directReady = Boolean(apiKey && apiUrl && domain && templateName);
   const gatewayReady = Boolean(
@@ -163,6 +192,8 @@ export function getFcServerConfig(): FcServerConfig {
     demoCreativeUrl,
     hibernationMode,
     failureMode,
+    alertWebhookUrl,
+    sls,
   };
 }
 

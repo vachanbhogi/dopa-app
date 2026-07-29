@@ -21,8 +21,27 @@ import {
   validateStressAuthorization,
   type FcProbeResult,
 } from "../lib/fc-sandbox/evidence";
+import {
+  calculateFcHibernationSavingsFromCny,
+  calculateFcRunCost,
+  FC_COST_SAMPLE_ACTIVE_MS,
+  FC_COST_SAMPLE_HIBERNATED_MS,
+} from "../lib/fc-sandbox/cost";
+import {
+  buildAlert,
+  matchAlertRules,
+  WAKE_LATENCY_SLA_MS,
+} from "../lib/fc-sandbox/alerting";
+import type { FcRunRecord } from "../lib/fc-sandbox/types";
 import { formatFcTelemetry } from "../lib/fc-sandbox/telemetry";
 import { verifyEvidenceSignature } from "../lib/fc-sandbox/evidence-signature";
+import {
+  buildSlsAuthorization,
+  buildSlsSignString,
+  contentMd5,
+  encodeSlsLogGroup,
+  postLogsToSls,
+} from "../lib/fc-sandbox/sls";
 
 function test(name: string, run: () => void) {
   run();
@@ -397,4 +416,290 @@ test("keeps the deployable gateway and cleanup contracts in the checkout", () =>
     hardeningMigration,
     /revoke all on table private\.fc_demo_global_rate_limit/,
   );
+});
+
+test("quantifies USD FC run cost against an idle-active baseline", () => {
+  const sample = calculateFcRunCost(
+    FC_COST_SAMPLE_ACTIVE_MS,
+    FC_COST_SAMPLE_HIBERNATED_MS,
+  );
+  assert.deepEqual(sample, {
+    activeCostUsd: 0.003792,
+    hibernatedCostUsd: 0.0072,
+    totalCostUsd: 0.010992,
+    baselineIdleCostUsd: 0.117552,
+    savedUsd: 0.10656,
+    savingsPercent: 90.65,
+  });
+
+  const zero = calculateFcRunCost(0, 0);
+  assert.equal(zero.totalCostUsd, 0);
+  assert.equal(zero.savedUsd, 0);
+  assert.equal(zero.savingsPercent, 0);
+
+  const hibernatedOnly = calculateFcRunCost(0, 3_600_000);
+  assert.equal(hibernatedOnly.activeCostUsd, 0);
+  assert.equal(hibernatedOnly.hibernatedCostUsd, 0.0072);
+  assert.equal(hibernatedOnly.baselineIdleCostUsd, 0.11376);
+  assert.ok(hibernatedOnly.savedUsd > 0);
+  assert.ok(hibernatedOnly.savingsPercent > 90);
+
+  assert.throws(() => calculateFcRunCost(-1, 0));
+  assert.throws(() => calculateFcRunCost(0, Number.NaN));
+});
+
+test("maps CNY hourly rates into bill-backed hibernation savings", () => {
+  const viaWrapper = calculateFcHibernationSavingsFromCny({
+    waitHours: 2,
+    activeHourlyCny: 1,
+    hibernatedHourlyCny: 0.1,
+    requestAndSnapshotCny: 0.05,
+  });
+  assert.deepEqual(
+    viaWrapper,
+    calculateHibernationSavings({
+      waitHours: 2,
+      activeHourlyCny: 1,
+      hibernatedHourlyCny: 0.1,
+      requestAndSnapshotCny: 0.05,
+    }),
+  );
+});
+
+test("builds Alibaba SLS PutLogs HMAC-SHA1 authorization", () => {
+  const headers = {
+    "x-log-apiversion": "0.6.0",
+    "x-log-bodyrawsize": "50",
+    "x-log-compresstype": "gzip",
+    "x-log-signaturemethod": "hmac-sha1",
+  };
+  const signString = buildSlsSignString({
+    method: "POST",
+    contentMd5: "1DD45FA4A70A9300CC9FE7305AF2C494",
+    contentType: "application/x-protobuf",
+    date: "Mon, 09 Nov 2015 06:03:03 GMT",
+    headers,
+    resource: "/logstores/fc-telemetry/shards/lb",
+  });
+  assert.equal(
+    signString,
+    [
+      "POST",
+      "1DD45FA4A70A9300CC9FE7305AF2C494",
+      "application/x-protobuf",
+      "Mon, 09 Nov 2015 06:03:03 GMT",
+      "x-log-apiversion:0.6.0",
+      "x-log-bodyrawsize:50",
+      "x-log-compresstype:gzip",
+      "x-log-signaturemethod:hmac-sha1",
+      "/logstores/fc-telemetry/shards/lb",
+    ].join("\n"),
+  );
+
+  const authorization = buildSlsAuthorization({
+    accessKeyId: "testAccessKeyId",
+    accessKeySecret: "testAccessKeySecret",
+    method: "POST",
+    contentMd5: "1DD45FA4A70A9300CC9FE7305AF2C494",
+    contentType: "application/x-protobuf",
+    date: "Mon, 09 Nov 2015 06:03:03 GMT",
+    headers,
+    resource: "/logstores/fc-telemetry/shards/lb",
+  });
+  const expectedSignature = createHmac("sha1", "testAccessKeySecret")
+    .update(signString, "utf8")
+    .digest("base64");
+  assert.equal(authorization, `LOG testAccessKeyId:${expectedSignature}`);
+});
+
+test("encodes SLS log payloads as protobuf LogGroup bytes", () => {
+  const body = encodeSlsLogGroup([
+    {
+      time: 1_753_804_800,
+      contents: {
+        schema: "dopa.fc-sandbox.telemetry.v1",
+        level: "info",
+        event: "run.started",
+        traceId: "trace-1",
+      },
+    },
+  ]);
+  assert.ok(body.byteLength > 20);
+  const asText = Buffer.from(body).toString("utf8");
+  assert.match(asText, /dopa\.fc-sandbox\.telemetry\.v1/);
+  assert.match(asText, /trace-1/);
+  assert.match(asText, /run\.started/);
+  assert.equal(contentMd5(body).length, 32);
+  assert.match(contentMd5(body), /^[A-F0-9]{32}$/);
+});
+
+{
+  const previous = {
+    endpoint: process.env.ALIYUN_SLS_ENDPOINT,
+    project: process.env.ALIYUN_SLS_PROJECT,
+    logstore: process.env.ALIYUN_SLS_LOGSTORE,
+    accessKeyId: process.env.ALIYUN_SLS_ACCESS_KEY_ID,
+    accessKeySecret: process.env.ALIYUN_SLS_ACCESS_KEY_SECRET,
+  };
+  delete process.env.ALIYUN_SLS_ENDPOINT;
+  delete process.env.ALIYUN_SLS_PROJECT;
+  delete process.env.ALIYUN_SLS_LOGSTORE;
+  delete process.env.ALIYUN_SLS_ACCESS_KEY_ID;
+  delete process.env.ALIYUN_SLS_ACCESS_KEY_SECRET;
+  const result = await postLogsToSls([
+    { time: 1_753_804_800, contents: { event: "run.started" } },
+  ]);
+  assert.deepEqual(result, { success: false, error: "sls_unconfigured" });
+  for (const [key, value] of Object.entries(previous)) {
+    const envKey = {
+      endpoint: "ALIYUN_SLS_ENDPOINT",
+      project: "ALIYUN_SLS_PROJECT",
+      logstore: "ALIYUN_SLS_LOGSTORE",
+      accessKeyId: "ALIYUN_SLS_ACCESS_KEY_ID",
+      accessKeySecret: "ALIYUN_SLS_ACCESS_KEY_SECRET",
+    }[key as keyof typeof previous];
+    if (value === undefined) delete process.env[envKey!];
+    else process.env[envKey!] = value;
+  }
+  console.log("✓ returns sls_unconfigured without SLS credentials");
+}
+
+function sampleRun(
+  overrides: Partial<FcRunRecord> = {},
+): FcRunRecord {
+  const timestamp = "2026-07-29T12:00:00.000Z";
+  return {
+    id: "run-1",
+    traceId: "trace-1",
+    publicTokenHash: "token",
+    approvalNonceHash: "nonce",
+    requestFingerprintHash: "fp",
+    scenario: "retail_launch",
+    provider: "local",
+    evidenceClass: "local_demonstration",
+    status: "scoring",
+    sandboxId: "sandbox-1",
+    sandboxState: "RUNNING",
+    checkpointHash: "a".repeat(64),
+    checkpointVersion: 1,
+    result: null,
+    safeErrorCode: null,
+    requestedAt: timestamp,
+    pausedAt: timestamp,
+    resumedAt: timestamp,
+    completedAt: null,
+    activeMs: 1_000,
+    hibernatedMs: 2_000,
+    wakeLatencyMs: 500,
+    expiresAt: timestamp,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    ...overrides,
+  };
+}
+
+test("matches RUN_FAILED, SLA_BREACH, and CLEANUP_FAILED alert rules", () => {
+  assert.deepEqual(
+    matchAlertRules(sampleRun({ status: "failed", safeErrorCode: "RESUME_FAILED" }), {
+      eventType: "run.failed",
+      stage: "failed",
+      metadata: { code: "RESUME_FAILED" },
+    }),
+    ["RUN_FAILED"],
+  );
+
+  assert.deepEqual(
+    matchAlertRules(sampleRun({ status: "resuming" }), {
+      eventType: "sandbox.resumed",
+      stage: "resuming",
+      metadata: { code: "FAULT_INJECTED_CHECKPOINT_MISMATCH" },
+    }),
+    ["RUN_FAILED"],
+  );
+
+  assert.deepEqual(
+    matchAlertRules(
+      sampleRun({ wakeLatencyMs: WAKE_LATENCY_SLA_MS + 1 }),
+      {
+        eventType: "sandbox.resumed",
+        stage: "scoring",
+        metadata: { wakeLatencyMs: WAKE_LATENCY_SLA_MS + 1 },
+      },
+    ),
+    ["SLA_BREACH"],
+  );
+
+  assert.deepEqual(
+    matchAlertRules(sampleRun({ wakeLatencyMs: WAKE_LATENCY_SLA_MS }), {
+      eventType: "sandbox.resumed",
+      stage: "scoring",
+      metadata: { wakeLatencyMs: WAKE_LATENCY_SLA_MS },
+    }),
+    [],
+  );
+
+  assert.deepEqual(
+    matchAlertRules(sampleRun({ status: "completed" }), {
+      eventType: "sandbox.cleanup_failed",
+      stage: "completed",
+      metadata: { code: "CLEANUP_FAILED" },
+    }),
+    ["CLEANUP_FAILED"],
+  );
+
+  assert.deepEqual(
+    matchAlertRules(
+      sampleRun({
+        status: "failed",
+        safeErrorCode: "FAULT_INJECTED_CHECKPOINT_MISMATCH",
+        wakeLatencyMs: 4_000,
+      }),
+      {
+        eventType: "run.failed",
+        stage: "failed",
+        metadata: {
+          code: "FAULT_INJECTED_CHECKPOINT_MISMATCH",
+          wakeLatencyMs: 4_000,
+        },
+      },
+    ),
+    ["RUN_FAILED", "SLA_BREACH"],
+  );
+});
+
+test("builds bounded alert payloads for webhook dispatch", () => {
+  const alert = buildAlert(
+    sampleRun({
+      status: "failed",
+      safeErrorCode: "PREPARATION_FAILED",
+    }),
+    {
+      eventType: "run.failed",
+      stage: "failed",
+      metadata: { code: "PREPARATION_FAILED" },
+    },
+    "RUN_FAILED",
+    "2026-07-29T12:00:00.000Z",
+  );
+  assert.equal(alert.schema, "dopa.fc-sandbox.alert.v1");
+  assert.equal(alert.rule, "RUN_FAILED");
+  assert.equal(alert.severity, "error");
+  assert.equal(alert.code, "PREPARATION_FAILED");
+  assert.equal(alert.runId, "run-1");
+  assert.equal(alert.traceId, "trace-1");
+  assert.match(alert.message, /failed state/i);
+
+  const sla = buildAlert(
+    sampleRun({ wakeLatencyMs: 4_200 }),
+    {
+      eventType: "sandbox.resumed",
+      stage: "scoring",
+      metadata: { wakeLatencyMs: 4_200 },
+    },
+    "SLA_BREACH",
+    "2026-07-29T12:00:00.000Z",
+  );
+  assert.equal(sla.severity, "warn");
+  assert.equal(sla.wakeLatencyMs, 4_200);
+  assert.match(sla.message, /4200ms/);
 });
