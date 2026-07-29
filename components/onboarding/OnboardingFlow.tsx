@@ -14,7 +14,9 @@ import {
   type BusinessInput,
 } from "@/lib/business-types";
 
-const STEP_COUNT = 8;
+import { addCompetitor } from "@/app/dashboard/competitor-actions";
+
+const STEP_COUNT = 10;
 
 type StepId =
   | "welcome"
@@ -25,6 +27,7 @@ type StepId =
   | "tone"
   | "industry"
   | "goal"
+  | "competitors"
   | "first_product";
 
 const STEPS: StepId[] = [
@@ -36,8 +39,10 @@ const STEPS: StepId[] = [
   "tone",
   "industry",
   "goal",
+  "competitors",
   "first_product",
 ];
+
 
 type FirstProductDraft = {
   product_name: string;
@@ -62,6 +67,7 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
   const [direction, setDirection] = useState(1);
   const [form, setForm] = useState<BusinessInput>(emptyBusinessInput());
   const [firstProduct, setFirstProduct] = useState<FirstProductDraft>(emptyFirstProduct);
+  const [competitorsInput, setCompetitorsInput] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [autoScanning, setAutoScanning] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -95,6 +101,11 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
           price_range: p.price_range || prev.price_range,
           campaign_goal: p.campaign_goal || prev.campaign_goal,
         }));
+
+        if (p.competitors && Array.isArray(p.competitors)) {
+          setCompetitorsInput(p.competitors.join(", "));
+        }
+
         if (p.first_product) {
           const fp = p.first_product;
           setFirstProduct({
@@ -113,6 +124,7 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
       setAutoScanning(false);
     }
   }
+
 
   const step = STEPS[stepIndex];
   const isLast = stepIndex === STEPS.length - 1;
@@ -164,18 +176,34 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
           return;
         }
 
-        if (result.business && firstProduct.product_name.trim()) {
-          const productResult = await createProduct(result.business.id, {
-            product_name: firstProduct.product_name,
-            value_prop: firstProduct.value_prop,
-            price: firstProduct.price,
-            creative_hooks: firstProduct.creative_hook,
-          });
-          if (productResult.error) {
-            setError(productResult.error);
-            return;
+        if (result.business) {
+          if (competitorsInput.trim()) {
+            const list = competitorsInput
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+            for (const compName of list) {
+              await addCompetitor(result.business.id, {
+                name: compName,
+                predicted_ctr: 1.35,
+              });
+            }
+          }
+
+          if (firstProduct.product_name.trim()) {
+            const productResult = await createProduct(result.business.id, {
+              product_name: firstProduct.product_name,
+              value_prop: firstProduct.value_prop,
+              price: firstProduct.price,
+              creative_hooks: firstProduct.creative_hook,
+            });
+            if (productResult.error) {
+              setError(productResult.error);
+              return;
+            }
           }
         }
+
 
         router.push("/dashboard");
       });
@@ -373,6 +401,22 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
                   onChange={(v) => setField("campaign_goal", v)}
                 />
               )}
+              {step === "competitors" && (
+                <TextStep
+                  title="Who are your top competitors?"
+                  subtitle="Optional — enter competitor brand names (comma-separated). Dopa will monitor their ad moves."
+                >
+                  <textarea
+                    autoFocus
+                    value={competitorsInput}
+                    onChange={(e) => setCompetitorsInput(e.target.value)}
+                    rows={3}
+                    placeholder="Rival Labs, Brand X, Acme Beauty"
+                    className={`${inputClass} resize-none leading-relaxed`}
+                  />
+                </TextStep>
+              )}
+
               {step === "first_product" && (
                 <TextStep
                   title="Add your first product"
@@ -447,15 +491,16 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
               "Continue"
             )}
           </button>
-          {step === "first_product" || (step !== "welcome" && step !== "name" && !isLast) ? (
+          {step === "first_product" || step === "competitors" || (step !== "welcome" && step !== "name" && !isLast) ? (
             <button
               type="button"
               onClick={() => goNext({ skip: true })}
               className="text-center text-[13px] text-tertiary transition-colors duration-150 hover:text-secondary"
             >
-              {step === "first_product" ? "Skip — add products later" : "Skip for now"}
+              {step === "first_product" ? "Skip — add products later" : step === "competitors" ? "Skip — add competitors later" : "Skip for now"}
             </button>
           ) : null}
+
         </div>
       </footer>
     </div>

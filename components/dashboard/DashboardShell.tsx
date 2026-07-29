@@ -7,6 +7,7 @@ import { selectBusiness } from "@/app/dashboard/actions";
 import type { Business } from "@/lib/business-types";
 import { BrainTab } from "./BrainTab";
 import { BusinessTab } from "./BusinessTab";
+import { CompetitorsTab } from "./CompetitorsTab";
 import { GoogleAdsTab } from "./GoogleAdsTab";
 import { KeywordsTab } from "./KeywordsTab";
 import { ProductsTab } from "./ProductsTab";
@@ -236,12 +237,10 @@ export function DashboardShell({
                 selectedBusinessId={selectedBusinessId}
               />
             )}
-            {active === "competitors" && (
-              <PlaceholderPanel
-                title="Competitors"
-                body="Scrape competitor ads from the open web and score them on the same brain → metric stack."
-              />
-            )}
+            {active === "competitors" && selectedBusiness ? (
+              <CompetitorsTab business={selectedBusiness} />
+            ) : null}
+
             {active === "products" && selectedBusiness ? (
               <ProductsTab businessId={selectedBusiness.id} business={selectedBusiness} />
             ) : null}

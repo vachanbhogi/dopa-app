@@ -71,6 +71,7 @@ Given a website domain and extracted page content, analyze the brand and return 
   "value_proposition": "Core benefit proposition",
   "price_range": "One of ['Budget (under $25)', 'Mid-range ($25–$100)', 'Premium ($100–$500)', 'Luxury ($500+)']",
   "campaign_goal": "One of ['Brand awareness', 'Traffic', 'Lead generation', 'Conversions / sales', 'App installs', 'Engagement']",
+  "competitors": ["Top Competitor Brand 1", "Top Competitor Brand 2", "Top Competitor Brand 3"],
   "first_product": {
     "product_name": "Primary Product Name",
     "value_prop": "Product benefit",
@@ -80,6 +81,7 @@ Given a website domain and extracted page content, analyze the brand and return 
 }
 
 Return ONLY valid JSON.`;
+
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
