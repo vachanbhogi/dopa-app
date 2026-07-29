@@ -54,6 +54,46 @@ body:has(#fc-sandbox-surface) [data-denver-root] {
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
 }
 
+.brain-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 9999px;
+  border: 2px solid #fff;
+  background: var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  transition: transform 100ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.brain-scrubber::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: transparent;
+}
+
+.brain-scrubber::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  border: 2px solid #fff;
+  background: var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+.brain-scrubber::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .brain-scrubber:active::-webkit-slider-thumb {
+    transform: scale(0.97);
+  }
+}
+
 @keyframes dopa-fade-up {
   from {
     opacity: 0;

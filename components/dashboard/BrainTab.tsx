@@ -8,7 +8,6 @@ import {
   fetchBrainModel,
   scoreAd,
   type BrainModelPayload,
-  type BrainRegionResponse,
   type ScoreResponse,
 } from "@/lib/dopa-api";
 import { createClient } from "@/utils/supabase/client";
@@ -21,7 +20,7 @@ const CorticalModelViewer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex aspect-[16/9] items-center justify-center gap-2 text-[12px] text-secondary">
+      <div className="flex aspect-video items-center justify-center gap-2 bg-background text-[12px] text-secondary">
         <Spinner />
         Preparing the interactive cortex…
       </div>
@@ -312,96 +311,31 @@ export function BrainTab() {
   };
 
   return (
-    <div className="space-y-7">
+    <div className="animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both] space-y-4">
       <input {...getInputProps()} />
 
-      <div className="animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both]">
-        <p className="max-w-180 text-[14px] leading-6 text-secondary">
-          Upload an ad to predict its average click-through rate and see the
-          cortical response TRIBE v2 models for the clip.
-        </p>
-      </div>
+      <p className="max-w-2xl text-[14px] leading-6 text-secondary">
+        Upload an ad to predict its average click-through rate and see the
+        cortical response TRIBE v2 models for the clip.
+      </p>
 
-      {!file ? (
-        <div
-          {...getRootProps()}
-          role="button"
-          aria-label="Choose an ad video"
-          className={`group cursor-pointer overflow-hidden rounded-xl border border-dashed transition-[border-color,background-color] duration-200 ${
-            isDragActive
-              ? "border-brand bg-brand/6"
-              : "border-white/8 bg-white/1.5 hover:border-white/15 hover:bg-white/2.5"
-          }`}
-        >
-          <div className="flex aspect-video flex-col items-center justify-center px-6 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/8 bg-white/6">
-              <UploadIcon />
-            </div>
-            <p className="mt-4 text-[14px] font-medium text-white">
-              {isDragActive ? "Drop the ad here" : "Choose an ad video"}
-            </p>
-            <p className="mt-1.5 text-[12px] text-secondary">
-              MP4 or MOV · up to 60 seconds · 250 MB maximum
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <div className="overflow-hidden rounded-xl border border-white/8 bg-black">
-            <div className="aspect-video">
-              {previewUrl ? (
-                <video
-                  src={previewUrl}
-                  className="h-full w-full object-contain"
-                  controls
-                  muted
-                  playsInline
-                />
-              ) : null}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 rounded-lg border border-white/6 bg-white/2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="truncate text-[13px] font-medium text-white">
-                {file.name}
-              </p>
-              <p className="mt-0.5 text-[11px] text-secondary">
-                {(file.size / (1024 * 1024)).toFixed(2)} MB
-                {duration !== null ? ` · ${duration.toFixed(1)} seconds` : ""}
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                onClick={open}
-                disabled={busy}
-                className="rounded-md border border-white/10 px-3 py-1.5 text-[12px] text-secondary transition-colors hover:border-white/20 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Replace
-              </button>
-              <button
-                type="button"
-                onClick={analyze}
-                disabled={busy}
-                className="inline-flex min-w-35 items-center justify-center gap-2 rounded-md bg-brand px-4 py-1.5 text-[12px] font-medium text-white transition-[opacity,transform] hover:opacity-90 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-wait disabled:opacity-55"
-              >
-                {busy ? <Spinner /> : <BrainIcon />}
-                {phaseLabel(phase)}
-              </button>
-            </div>
-          </div>
-
-          {busy ? (
-            <AnalysisProgress
-              phase={phase}
-              uploadProgress={uploadProgress}
-              modelDownloadProgress={modelDownloadProgress}
-              analysisElapsedSeconds={analysisElapsedSeconds}
-            />
-          ) : null}
-        </div>
-      )}
+      <AnalysisDesk
+        file={file}
+        fileDuration={duration}
+        previewUrl={previewUrl}
+        result={result}
+        brainModel={brainModel}
+        modelError={modelError}
+        busy={busy}
+        phase={phase}
+        uploadProgress={uploadProgress}
+        modelDownloadProgress={modelDownloadProgress}
+        analysisElapsedSeconds={analysisElapsedSeconds}
+        isDragActive={isDragActive}
+        dropzoneProps={getRootProps()}
+        onReplace={open}
+        onAnalyze={analyze}
+      />
 
       {error ? (
         <div
@@ -420,16 +354,6 @@ export function BrainTab() {
           ) : null}
         </div>
       ) : null}
-
-      {result ? (
-        <ScoreResults
-          result={result}
-          brainModel={brainModel}
-          modelError={modelError}
-        />
-      ) : (
-        <EmptyResult />
-      )}
     </div>
   );
 }
@@ -491,7 +415,7 @@ function AnalysisProgress({
 
   return (
     <div
-      className="rounded-lg border border-white/[0.07] bg-white/[0.018] px-4 py-3"
+      className="rounded-lg border border-white/8 bg-white/2 px-3.5 py-3"
       aria-live="polite"
     >
       <div className="flex items-center justify-between gap-4">
@@ -504,7 +428,7 @@ function AnalysisProgress({
       </div>
 
       <div
-        className="relative mt-3 h-1 overflow-hidden rounded-full bg-white/[0.06]"
+        className="relative mt-3 h-1 overflow-hidden rounded-full bg-white/6"
         role="progressbar"
         aria-label={phaseLabel(phase)}
         aria-valuemin={determinateProgress === null ? undefined : 0}
@@ -516,10 +440,10 @@ function AnalysisProgress({
         }
       >
         {determinateProgress === null ? (
-          <div className="absolute inset-0 animate-[pulse_1.35s_ease-in-out_infinite] bg-[linear-gradient(90deg,transparent_0%,rgba(127,115,255,0.35)_26%,rgba(46,220,255,0.9)_52%,rgba(127,115,255,0.35)_74%,transparent_100%)]" />
+          <div className="absolute inset-0 animate-[pulse_1.35s_ease-in-out_infinite] bg-[linear-gradient(90deg,transparent_0%,rgba(94,106,210,0.35)_26%,rgba(113,112,255,0.9)_52%,rgba(94,106,210,0.35)_74%,transparent_100%)]" />
         ) : (
           <div
-            className="h-full rounded-full bg-[linear-gradient(90deg,#6e63e8,#2edcff)] transition-[width] duration-200"
+            className="h-full rounded-full bg-brand transition-[width] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]"
             style={{ width: `${Math.max(0, determinateProgress)}%` }}
           />
         )}
@@ -531,7 +455,7 @@ function AnalysisProgress({
             key={label}
             className={`flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-[0.11em] ${
               index < activeStep
-                ? "text-[#73dfef]"
+                ? "text-brand"
                 : index === activeStep
                   ? "text-white/75"
                   : "text-white/25"
@@ -540,9 +464,9 @@ function AnalysisProgress({
             <span
               className={`h-1.5 w-1.5 rounded-full ${
                 index < activeStep
-                  ? "bg-[#2edcff]"
+                  ? "bg-brand"
                   : index === activeStep
-                    ? "animate-pulse bg-[#8176ff]"
+                    ? "animate-pulse bg-accent"
                     : "bg-white/15"
               }`}
             />
@@ -554,239 +478,421 @@ function AnalysisProgress({
   );
 }
 
-function ScoreResults({
+function AnalysisDesk({
+  file,
+  fileDuration,
+  previewUrl,
   result,
   brainModel,
   modelError,
+  busy,
+  phase,
+  uploadProgress,
+  modelDownloadProgress,
+  analysisElapsedSeconds,
+  isDragActive,
+  dropzoneProps,
+  onReplace,
+  onAnalyze,
 }: {
-  result: ScoreResponse;
+  file: File | null;
+  fileDuration: number | null;
+  previewUrl: string | null;
+  result: ScoreResponse | null;
   brainModel: BrainModelPayload | null;
   modelError: string | null;
+  busy: boolean;
+  phase: AnalysisPhase;
+  uploadProgress: number;
+  modelDownloadProgress: number | null;
+  analysisElapsedSeconds: number;
+  isDragActive: boolean;
+  dropzoneProps: Record<string, unknown>;
+  onReplace: () => void;
+  onAnalyze: () => void;
 }) {
-  const response = result.brain_response;
+  const response = result?.brain_response ?? null;
+  const dominant = response?.top_regions[0] ?? null;
+  const regions = response?.top_regions ?? [];
+  const regionSlots = Array.from({ length: 5 }, (_, index) => regions[index] ?? null);
+  const clipDuration = Math.max(
+    response?.duration_seconds ?? fileDuration ?? 30,
+    0.001,
+  );
+
   return (
-    <section
-      aria-labelledby="analysis-result"
-      className="animate-[stagger-in_500ms_cubic-bezier(0.23,1,0.32,1)_both] space-y-5 border-t border-white/6 pt-7"
-    >
-      <div className="grid gap-5 dopa-panel bg-[linear-gradient(120deg,rgba(94,106,210,0.12),rgba(255,255,255,0.018)_55%)] p-5 sm:grid-cols-[1fr_auto] sm:items-end sm:p-6">
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#9298d7]">
-            Model output
+    <section aria-labelledby="analysis-result" className="space-y-4">
+      <div className="dopa-panel flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-tertiary">
+            Neural desk {result ? "· live" : "· ready"}
           </p>
           <h2
             id="analysis-result"
-            className="mt-3 text-[15px] font-medium text-white"
+            className="mt-1 truncate text-[14px] font-medium text-white"
           >
-            Predicted average CTR
+            {file?.name ?? "No creative selected"}
           </h2>
-          <p className="mt-1 max-w-130 text-[12px] leading-5 text-secondary">
-            Dopa&apos;s video-only model estimate for this creative—not a live
-            campaign result.
-          </p>
         </div>
-        <div className="font-mono text-[48px] font-medium leading-none tracking-[-0.06em] text-white sm:text-[58px]">
-          {result.score_percent.toFixed(2)}
-          <span className="ml-1 text-[24px] text-[#9298d7]">%</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-[5px] border border-brand/25 bg-brand/10 px-2 py-1 font-mono text-[11px] text-brand">
+            CTR{" "}
+            {result ? `${result.score_percent.toFixed(2)}%` : "—"}
+          </span>
+          <span className="rounded-[5px] border border-white/10 px-2 py-1 text-[10px] text-tertiary">
+            {result
+              ? `${regions.length} regions`
+              : "0 regions"}
+          </span>
+          <span className="rounded-[5px] border border-white/10 px-2 py-1 text-[10px] text-tertiary">
+            {result
+              ? `${response!.duration_seconds.toFixed(1)}s clip`
+              : fileDuration !== null
+                ? `${fileDuration.toFixed(1)}s clip`
+                : "— clip"}
+          </span>
+          <button
+            type="button"
+            onClick={onAnalyze}
+            disabled={busy || !file}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-[12px] font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.16)] transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55"
+          >
+            {busy ? <Spinner /> : <BrainIcon />}
+            {busy
+              ? phaseLabel(phase)
+              : result
+                ? "Re-run"
+                : "Analyze"}
+          </button>
+          <button
+            type="button"
+            onClick={onReplace}
+            disabled={busy}
+            className="rounded-lg border border-white/10 px-3 py-1.5 text-[12px] text-secondary transition-[border-color,color,transform] duration-150 hover:border-white/20 hover:text-white active:scale-[0.97] disabled:opacity-40"
+          >
+            {file ? "Replace" : "Upload"}
+          </button>
         </div>
       </div>
 
-      <div className="dopa-panel overflow-hidden bg-[#050506]">
-        <div className="flex items-center justify-between border-b border-white/6 px-4 py-3">
-          <div>
-            <h3 className="text-[13px] font-medium text-white">
-              Predicted cortical response
-            </h3>
-            <p className="mt-0.5 text-[10px] text-tertiary">
-              Average-subject fsaverage5 model · response changes over time
-            </p>
+      <div className="min-h-21">
+        {busy ? (
+          <AnalysisProgress
+            phase={phase}
+            uploadProgress={uploadProgress}
+            modelDownloadProgress={modelDownloadProgress}
+            analysisElapsedSeconds={analysisElapsedSeconds}
+          />
+        ) : (
+          <div className="rounded-lg border border-white/8 bg-white/2 px-3.5 py-3">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-[11px] font-medium text-tertiary">
+                {result ? "Analysis complete" : file ? "Ready to analyze" : "Waiting for creative"}
+              </p>
+              <p className="font-mono text-[9px] tabular-nums text-tertiary">
+                Upload · Inference · 3D model
+              </p>
+            </div>
+            <div className="relative mt-3 h-1 overflow-hidden rounded-full bg-white/6">
+              <div
+                className="h-full rounded-full bg-brand/40 transition-[width] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]"
+                style={{ width: result ? "100%" : "0%" }}
+              />
+            </div>
+            <div className="mt-2.5 grid grid-cols-3 gap-2">
+              {["Upload", "Inference", "3D model"].map((label) => (
+                <div
+                  key={label}
+                  className={`flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-[0.11em] ${
+                    result ? "text-brand" : "text-white/25"
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      result ? "bg-brand" : "bg-white/15"
+                    }`}
+                  />
+                  {label}
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.11em]">
-            <a
-              href="https://github.com/facebookresearch/tribev2"
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-full border border-[#7781ff]/20 bg-[#7781ff]/10 px-2 py-1 text-[#aeb4ff] transition-colors hover:border-[#7781ff]/35 hover:text-white"
-            >
-              TRIBE v2
-            </a>
-            <a
-              href="https://github.com/facebookresearch/tribev2/blob/main/LICENSE"
-              target="_blank"
-              rel="noreferrer"
-              className="text-white/35 transition-colors hover:text-white/65"
-            >
-              CC BY-NC 4.0
-            </a>
-          </div>
-        </div>
+        )}
+      </div>
 
-        <div>
-          {brainModel ? (
-            <CorticalModelViewer model={brainModel} />
-          ) : (
-            <div className="flex aspect-video items-center justify-center bg-[radial-gradient(circle_at_50%_45%,rgba(79,49,99,0.25),transparent_58%)] px-6 text-center">
-              {modelError ? (
-                <p className="max-w-105 text-[12px] leading-5 text-secondary">
-                  {modelError}
-                </p>
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(20rem,0.95fr)]">
+        <div className="space-y-4">
+          <div className="dopa-panel overflow-hidden">
+            <div className="relative bg-background">
+              {!file ? (
+                <div
+                  {...dropzoneProps}
+                  role="button"
+                  aria-label="Choose an ad video"
+                  className={`group flex aspect-video cursor-pointer flex-col items-center justify-center gap-3 border-b border-dashed px-6 text-center transition-[border-color,background-color] duration-200 ${
+                    isDragActive
+                      ? "border-brand bg-brand/8"
+                      : "border-transparent hover:bg-white/3"
+                  }`}
+                >
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-xl border transition-[border-color,background-color,box-shadow,transform] duration-200 ${
+                      isDragActive
+                        ? "scale-[0.97] border-brand/40 bg-brand/15 shadow-[0_0_28px_rgba(94,106,210,0.35)]"
+                        : "border-white/8 bg-white/4 group-hover:border-brand/30 group-hover:bg-brand/10"
+                    }`}
+                  >
+                    <UploadIcon active={isDragActive} />
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-medium text-white">
+                      {isDragActive ? "Drop the ad here" : "Choose an ad video"}
+                    </p>
+                    <p className="mt-1 text-[12px] text-secondary">
+                      MP4 or MOV · up to 60 seconds · 250 MB maximum
+                    </p>
+                  </div>
+                </div>
               ) : (
-                <div className="flex items-center gap-2 text-[12px] text-secondary">
-                  <Spinner />
-                  Loading the interactive cortex…
+                <div className="aspect-video">
+                  {previewUrl ? (
+                    <video
+                      src={previewUrl}
+                      className="h-full w-full object-contain"
+                      controls
+                      muted
+                      playsInline
+                    />
+                  ) : null}
                 </div>
               )}
+
+              <div
+                className={`pointer-events-none absolute bottom-3 right-3 max-w-[min(100%-1.5rem,18rem)] rounded-lg border border-white/10 bg-surface/90 px-3 py-2.5 backdrop-blur-md transition-opacity duration-200 ${
+                  dominant ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                <p className="text-[9px] font-medium uppercase tracking-[0.08em] text-brand">
+                  Peak · {dominant ? `${dominant.peak_second.toFixed(1)}s` : "—"}
+                </p>
+                <p className="mt-1 text-[13px] font-medium leading-snug text-white">
+                  {dominant?.name ?? "Dominant region"}
+                </p>
+                <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-secondary">
+                  {dominant?.description ??
+                    "Peak cortical response will appear after analysis."}
+                </p>
+              </div>
             </div>
-          )}
-        </div>
 
-        <p className="border-t border-white/6 bg-[#09090b] px-4 py-2.5 text-[10px] leading-4 text-tertiary">
-          Predicted average-subject cortical surface—not a scan or measured
-          nerve map. Animated signal traces are a visual guide to the strongest
-          modeled responses.
-        </p>
+            <div className="border-t border-white/6 px-4 py-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-tertiary">
+                  Peak response track ·{" "}
+                  {result ? `${regions.length} marks` : "awaiting"}
+                </p>
+                <p className="font-mono text-[10px] text-tertiary">
+                  0s → {clipDuration.toFixed(1)}s
+                </p>
+              </div>
+              <div className="relative h-9 overflow-hidden rounded-lg border border-white/8 bg-[#0c0d0e]">
+                <div
+                  className="absolute inset-0 opacity-40"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(90deg, transparent 0%, rgba(94,106,210,0.18) 50%, transparent 100%)",
+                  }}
+                />
+                {regions.map((region, index) => {
+                  const left = Math.min(
+                    96,
+                    Math.max(2, (region.peak_second / clipDuration) * 100),
+                  );
+                  const width = Math.max(
+                    4,
+                    Math.min(18, region.relative_response / 8),
+                  );
+                  return (
+                    <div
+                      key={region.region_id}
+                      title={`${region.name} · ${region.peak_second.toFixed(1)}s`}
+                      className="absolute top-1/2 h-5 -translate-y-1/2 rounded-sm border border-brand/40 bg-brand/35"
+                      style={{
+                        left: `${left}%`,
+                        width: `${width}%`,
+                        opacity: 0.55 + index * 0.08,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {Array.from({ length: 4 }, (_, index) => {
+                  const region = regions[index];
+                  return (
+                    <div
+                      key={region?.region_id ?? `placeholder-note-${index}`}
+                      className="rounded-lg border border-white/8 bg-white/2 px-3 py-2"
+                    >
+                      <p className="font-mono text-[9px] text-brand">
+                        {region
+                          ? `${region.peak_second.toFixed(1)}s · ${Math.round(region.relative_response)}`
+                          : "— · —"}
+                      </p>
+                      <p
+                        className={`mt-0.5 truncate text-[12px] font-medium ${
+                          region ? "text-white" : "text-tertiary"
+                        }`}
+                      >
+                        {region?.name ?? "Region pending"}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
 
-        <div className="grid gap-px border-t border-white/6 bg-white/6 sm:grid-cols-4">
-          <DataPoint
-            label="Clip"
-            value={`${response.duration_seconds.toFixed(1)}s`}
-          />
-          <DataPoint
-            label="Analysis"
-            value={`${result.processing_seconds.toFixed(1)}s`}
-          />
-          <DataPoint
-            label="Hemodynamic adjustment"
-            value={`${response.hemodynamic_lag_seconds.toFixed(0)}s`}
-          />
-          <DataPoint
-            label="Server copy expires"
-            value={
-              response.expires_at
-                ? new Date(response.expires_at).toLocaleTimeString([], {
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })
-                : "Unavailable"
-            }
-          />
-        </div>
-      </div>
-
-      <div>
-        <div className="mb-3 flex items-end justify-between gap-4">
-          <div>
-            <h3 className="text-[13px] font-medium text-white">
-              Most responsive cortical regions
-            </h3>
-            <p className="mt-1 text-[11px] text-tertiary">
-              Ranked within this clip; the scale is relative, not a probability.
-            </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <MetricTile
+              label="Predicted CTR"
+              value={
+                result ? `${result.score_percent.toFixed(2)}%` : "—"
+              }
+            />
+            <MetricTile
+              label="Analysis time"
+              value={
+                result ? `${result.processing_seconds.toFixed(1)}s` : "—"
+              }
+            />
+            <MetricTile
+              label="Hemodynamic lag"
+              value={
+                response
+                  ? `${response.hemodynamic_lag_seconds.toFixed(0)}s`
+                  : "—"
+              }
+            />
           </div>
         </div>
-        <div className="grid gap-2">
-          {response.top_regions.map((region, index) => (
-            <RegionCard key={region.region_id} region={region} rank={index + 1} />
-          ))}
-        </div>
-      </div>
 
-      <div className="rounded-lg border border-white/6 bg-white/1.5 px-4 py-3 text-[11px] leading-5 text-tertiary">
-        <p>
-          This is an in-silico prediction for an average subject. It is not an
-          individual brain scan, a medical result, or evidence that the ad
-          caused a behavior.
-        </p>
-        <p className="mt-2">
-          Powered by{" "}
-          <a
-            href="https://github.com/facebookresearch/tribev2"
-            target="_blank"
-            rel="noreferrer"
-            className="text-[#a9aff0] underline decoration-[#a9aff0]/30 underline-offset-2 hover:text-white"
-          >
-            Meta TRIBE v2
-          </a>{" "}
-          under{" "}
-          <a
-            href="https://github.com/facebookresearch/tribev2/blob/main/LICENSE"
-            target="_blank"
-            rel="noreferrer"
-            className="text-[#a9aff0] underline decoration-[#a9aff0]/30 underline-offset-2 hover:text-white"
-          >
-            CC BY-NC 4.0
-          </a>
-          . Non-commercial demo.
-        </p>
+        <aside className="space-y-4">
+          <div className="dopa-panel overflow-hidden">
+            <div className="flex items-center justify-between border-b border-white/6 px-4 py-3">
+              <div>
+                <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-tertiary">
+                  Brain sync
+                </p>
+                <p className="mt-0.5 text-[12px] text-secondary">
+                  Average-subject cortical model
+                </p>
+              </div>
+              <a
+                href="https://github.com/facebookresearch/tribev2"
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full border border-brand/25 bg-brand/10 px-2 py-1 text-[9px] font-medium text-brand transition-colors hover:text-white"
+              >
+                TRIBE v2
+              </a>
+            </div>
+
+            {brainModel ? (
+              <CorticalModelViewer model={brainModel} compact />
+            ) : (
+              <div className="flex aspect-5/4 flex-col items-center justify-center gap-2 bg-[radial-gradient(ellipse_at_50%_45%,rgba(94,106,210,0.18),transparent_58%)] px-6 text-center">
+                {modelError ? (
+                  <p className="max-w-70 text-[12px] leading-5 text-secondary">
+                    {modelError}
+                  </p>
+                ) : busy &&
+                  (phase === "analyzing" || phase === "loading-model") ? (
+                  <div className="flex items-center gap-2 text-[12px] text-secondary">
+                    <Spinner />
+                    Building cortex…
+                  </div>
+                ) : (
+                  <>
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/8 bg-white/4 text-tertiary">
+                      <BrainIcon />
+                    </span>
+                    <p className="text-[12px] text-secondary">
+                      Cortex appears after analysis
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
+
+            <div className="border-t border-white/6 px-4 py-4">
+              <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-tertiary">
+                Dominant ROI
+              </p>
+              <div className="mt-2 flex items-end justify-between gap-3">
+                <h3
+                  className={`min-w-0 text-[18px] font-medium leading-tight tracking-[-0.02em] ${
+                    dominant ? "text-white" : "text-tertiary"
+                  }`}
+                >
+                  {dominant?.name ?? "Awaiting response"}
+                </h3>
+                <span className="shrink-0 font-mono text-[28px] font-medium leading-none tracking-[-0.04em] text-white">
+                  {dominant
+                    ? Math.round(dominant.relative_response)
+                    : "—"}
+                </span>
+              </div>
+              <p className="mt-2 text-[12px] leading-5 text-secondary">
+                {dominant?.description ??
+                  "The strongest modeled cortical region will land here."}
+              </p>
+            </div>
+
+            <div className="space-y-2.5 border-t border-white/6 px-4 py-4">
+              {regionSlots.map((region, index) => (
+                <div key={region?.region_id ?? `placeholder-bar-${index}`}>
+                  <div className="mb-1 flex items-center justify-between gap-3">
+                    <p
+                      className={`truncate text-[12px] ${
+                        region ? "text-white" : "text-tertiary"
+                      }`}
+                    >
+                      {region?.name ?? `Region ${index + 1}`}
+                    </p>
+                    <span className="shrink-0 font-mono text-[10px] text-tertiary">
+                      {region
+                        ? (region.relative_response / 100).toFixed(2)
+                        : "0.00"}
+                    </span>
+                  </div>
+                  <div className="h-1 overflow-hidden rounded-full bg-white/6">
+                    <div
+                      className="h-full rounded-full bg-brand transition-[width] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]"
+                      style={{
+                        width: region ? `${region.relative_response}%` : "0%",
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </aside>
       </div>
     </section>
   );
 }
 
-function RegionCard({
-  region,
-  rank,
-}: {
-  region: BrainRegionResponse;
-  rank: number;
-}) {
+function MetricTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid gap-3 rounded-lg border border-white/6 bg-white/1.5 px-4 py-3 sm:grid-cols-[28px_180px_1fr_auto] sm:items-center">
-      <span className="font-mono text-[11px] text-tertiary">
-        {String(rank).padStart(2, "0")}
-      </span>
-      <div className="min-w-0">
-        <p className="truncate text-[12px] font-medium text-white">
-          {region.name}
-        </p>
-        <p className="mt-0.5 text-[9px] uppercase tracking-[0.12em] text-tertiary">
-          {region.hemisphere} hemisphere · peak {region.peak_second.toFixed(0)}s
-        </p>
-      </div>
-      <p className="text-[11px] leading-5 text-secondary">
-        {region.description}
-      </p>
-      <div className="min-w-23">
-        <div className="mb-1 flex items-center justify-between font-mono text-[9px] text-tertiary">
-          <span>Relative</span>
-          <span>{Math.round(region.relative_response)}/100</span>
-        </div>
-        <div className="h-1 overflow-hidden rounded-full bg-white/6">
-          <div
-            className="h-full rounded-full bg-[linear-gradient(90deg,#6f64bb,#f3a35b)]"
-            style={{ width: `${region.relative_response}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DataPoint({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-[#09090b] px-4 py-3">
-      <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-tertiary">
+    <div className="dopa-panel px-4 py-3">
+      <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-tertiary">
         {label}
       </p>
-      <p className="mt-1 text-[12px] text-white">{value}</p>
-    </div>
-  );
-}
-
-function EmptyResult() {
-  return (
-    <div className="border-t border-white/6 pt-7">
-      <div className="flex min-h-36 items-center justify-center rounded-xl border border-dashed border-white/8 bg-white/1 px-6 text-center">
-        <div>
-          <p className="text-[12px] font-medium text-white/70">
-            Your analysis will appear here
-          </p>
-          <p className="mt-1.5 text-[11px] leading-5 text-tertiary">
-            One real CTR prediction, an interactive cortical model, and the
-            strongest modeled regions.
-          </p>
-        </div>
-      </div>
+      <p className="mt-1.5 font-mono text-[18px] font-medium tracking-[-0.03em] text-white">
+        {value}
+      </p>
     </div>
   );
 }
@@ -797,10 +903,12 @@ function Spinner() {
   );
 }
 
-function UploadIcon() {
+function UploadIcon({ active = false }: { active?: boolean }) {
   return (
     <svg
-      className="h-5 w-5 text-white/45"
+      className={`h-5 w-5 transition-colors duration-200 ${
+        active ? "text-brand" : "text-secondary group-hover:text-brand"
+      }`}
       viewBox="0 0 16 16"
       fill="none"
       stroke="currentColor"
