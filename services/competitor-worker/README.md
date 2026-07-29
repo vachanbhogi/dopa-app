@@ -18,6 +18,8 @@ QWEN_RESPONSES_ENDPOINT=https://dashscope-us.aliyuncs.com/compatible-mode/v1/res
 QWEN_MODEL=qwen3.7-max-2026-06-08
 DOPA_CALLBACK_URL=https://itsdopa.vercel.app
 DOPA_RESEARCH_HMAC_SECRET=
+# Required only when the selected preview uses Vercel Deployment Protection.
+VERCEL_AUTOMATION_BYPASS_SECRET=
 DOPA_WORKER_ID=competitor-worker-us-virginia-1
 DOPA_WORKER_VERSION=1.0.0
 ```

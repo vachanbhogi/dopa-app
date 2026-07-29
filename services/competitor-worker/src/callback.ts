@@ -23,21 +23,25 @@ export async function postSigned(
   const nonce = randomUUID();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-dopa-timestamp": timestamp,
+    "x-dopa-nonce": nonce,
+    "x-dopa-signature": signature(
+      config.callbackSecret,
+      timestamp,
+      nonce,
+      body,
+    ),
+  };
+  if (config.callbackBypassSecret) {
+    headers["x-vercel-protection-bypass"] = config.callbackBypassSecret;
+  }
 
   try {
     const response = await fetch(`${config.callbackBaseUrl}${path}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-dopa-timestamp": timestamp,
-        "x-dopa-nonce": nonce,
-        "x-dopa-signature": signature(
-          config.callbackSecret,
-          timestamp,
-          nonce,
-          body,
-        ),
-      },
+      headers,
       body,
       signal: controller.signal,
     });

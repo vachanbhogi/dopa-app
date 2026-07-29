@@ -9,6 +9,7 @@ export type WorkerConfig = {
   queueName: string;
   callbackBaseUrl: string;
   callbackSecret: string;
+  callbackBypassSecret?: string;
   dashscopeApiKey: string;
   qwenEndpoint: string;
   qwenModel: string;
@@ -125,6 +126,8 @@ export async function loadConfig(): Promise<WorkerConfig> {
       "dopa-competitor-research-v1",
     callbackBaseUrl,
     callbackSecret: required("DOPA_RESEARCH_HMAC_SECRET"),
+    callbackBypassSecret:
+      process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim() || undefined,
     dashscopeApiKey: required("DASHSCOPE_API_KEY"),
     qwenEndpoint,
     qwenModel:
