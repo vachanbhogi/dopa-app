@@ -7,11 +7,13 @@ import { selectBusiness } from "@/app/dashboard/actions";
 import type { Business } from "@/lib/business-types";
 import { BrainTab } from "./BrainTab";
 import { GoogleAdsTab } from "./GoogleAdsTab";
+import { ProductsTab } from "./ProductsTab";
 import { SettingsTab } from "./SettingsTab";
 
 export type DashboardTab =
   | "keywords"
   | "competitors"
+  | "products"
   | "brain"
   | "googleAds"
   | "metrics"
@@ -20,6 +22,7 @@ export type DashboardTab =
 const tabs: { id: DashboardTab; label: string; icon: string }[] = [
   { id: "keywords", label: "Keywords", icon: "tag" },
   { id: "competitors", label: "Competitors", icon: "eye" },
+  { id: "products", label: "Products", icon: "box" },
   { id: "brain", label: "Brain", icon: "brain" },
   { id: "googleAds", label: "Google Ads", icon: "google" },
   { id: "metrics", label: "Metrics", icon: "chart" },
@@ -237,6 +240,9 @@ export function DashboardShell({
             )}
             {active === "keywords" && <PlaceholderPanel title="Keywords" body="Track trending ad keywords and messaging hooks across your campaigns." />}
             {active === "competitors" && <PlaceholderPanel title="Competitors" body="Scrape competitor ads from the open web and score them on the same brain → metric stack." />}
+            {active === "products" && selectedBusiness ? (
+              <ProductsTab businessId={selectedBusiness.id} business={selectedBusiness} />
+            ) : null}
             {active === "metrics" && <PlaceholderPanel title="Metrics" body="Predicted average CTR results and model runtime details across analyzed creatives." />}
             {active === "settings" && (
               <SettingsTab
@@ -298,6 +304,13 @@ function NavIcon({ name, active }: { name: string; active: boolean }) {
         <svg {...shared}>
           <path d="M2 8s2.5-4.5 6-4.5S14 8 14 8s-2.5 4.5-6 4.5S2 8 2 8Z" />
           <circle cx="8" cy="8" r="2" />
+        </svg>
+      );
+    case "box":
+      return (
+        <svg {...shared}>
+          <path d="M3 5.5 8 3l5 2.5V11L8 13.5 3 11V5.5Z" />
+          <path d="M8 3v10.5M3 5.5l5 2.5 5-2.5" />
         </svg>
       );
     case "brain":

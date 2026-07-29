@@ -4,18 +4,52 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { createBusiness } from "@/app/dashboard/actions";
+import { createProduct } from "@/app/dashboard/product-actions";
 import {
+  BRAND_TONES,
   CAMPAIGN_GOALS,
   emptyBusinessInput,
   INDUSTRIES,
+  PRICE_RANGES,
   type BusinessInput,
 } from "@/lib/business-types";
 
-const STEP_COUNT = 6;
+const STEP_COUNT = 8;
 
-type StepId = "welcome" | "name" | "product" | "industry" | "audience" | "goal";
+type StepId =
+  | "welcome"
+  | "name"
+  | "audience"
+  | "price"
+  | "tone"
+  | "industry"
+  | "goal"
+  | "first_product";
 
-const STEPS: StepId[] = ["welcome", "name", "product", "industry", "audience", "goal"];
+const STEPS: StepId[] = [
+  "welcome",
+  "name",
+  "audience",
+  "price",
+  "tone",
+  "industry",
+  "goal",
+  "first_product",
+];
+
+type FirstProductDraft = {
+  product_name: string;
+  value_prop: string;
+  price: string;
+  creative_hook: string;
+};
+
+const emptyFirstProduct = (): FirstProductDraft => ({
+  product_name: "",
+  value_prop: "",
+  price: "",
+  creative_hook: "",
+});
 
 const easeOut = [0.23, 1, 0.32, 1] as const;
 
@@ -25,6 +59,7 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [form, setForm] = useState<BusinessInput>(emptyBusinessInput());
+  const [firstProduct, setFirstProduct] = useState<FirstProductDraft>(emptyFirstProduct);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -44,16 +79,20 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
         setError("Enter a business name to continue");
         return;
       }
-      if (step === "product" && !form.description?.trim()) {
-        setError("Tell us what you sell — even a short line helps");
+      if (step === "audience" && !form.target_audience?.trim()) {
+        setError("Describe your default target demographic");
+        return;
+      }
+      if (step === "price" && !form.price_range) {
+        setError("Pick a price tier");
+        return;
+      }
+      if (step === "tone" && !form.brand_voice) {
+        setError("Pick a brand tone");
         return;
       }
       if (step === "industry" && !form.industry) {
         setError("Pick an industry");
-        return;
-      }
-      if (step === "audience" && !form.target_audience?.trim()) {
-        setError("Describe who your ads should reach");
         return;
       }
     }
@@ -73,6 +112,20 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
           setError(result.error);
           return;
         }
+
+        if (result.business && firstProduct.product_name.trim()) {
+          const productResult = await createProduct(result.business.id, {
+            product_name: firstProduct.product_name,
+            value_prop: firstProduct.value_prop,
+            price: firstProduct.price,
+            creative_hooks: firstProduct.creative_hook,
+          });
+          if (productResult.error) {
+            setError(productResult.error);
+            return;
+          }
+        }
+
         router.push("/dashboard");
       });
       return;
@@ -179,25 +232,43 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
                     value={form.name}
                     onChange={(e) => setField("name", e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && goNext()}
-                    placeholder="ActivePulse Pro"
+                    placeholder="Aura Beauty Co."
                     className={inputClass}
                   />
                 </TextStep>
               )}
-              {step === "product" && (
+              {step === "audience" && (
                 <TextStep
-                  title="What do you sell?"
-                  subtitle="A sentence is enough — Dopa uses this to score hooks and messaging."
+                  title="Who is your default audience?"
+                  subtitle="Brand-level demographic — products can narrow this later."
                 >
                   <textarea
                     autoFocus
-                    value={form.description}
-                    onChange={(e) => setField("description", e.target.value)}
+                    value={form.target_audience}
+                    onChange={(e) => setField("target_audience", e.target.value)}
                     rows={4}
-                    placeholder="A smartwatch that tracks recovery and coaches training load for runners."
+                    placeholder="Gen Z & Millennials (18–34), tech-savvy, eco-conscious shoppers."
                     className={`${inputClass} resize-none leading-relaxed`}
                   />
                 </TextStep>
+              )}
+              {step === "price" && (
+                <ChipStep
+                  title="What's your default price tier?"
+                  subtitle="Sets expectations for ad positioning and offers."
+                  options={PRICE_RANGES}
+                  value={form.price_range ?? ""}
+                  onChange={(v) => setField("price_range", v)}
+                />
+              )}
+              {step === "tone" && (
+                <ChipStep
+                  title="How should your brand sound?"
+                  subtitle="Dopa uses this tone when generating hooks and copy."
+                  options={BRAND_TONES}
+                  value={form.brand_voice ?? ""}
+                  onChange={(v) => setField("brand_voice", v)}
+                />
               )}
               {step === "industry" && (
                 <ChipStep
@@ -208,21 +279,6 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
                   onChange={(v) => setField("industry", v)}
                 />
               )}
-              {step === "audience" && (
-                <TextStep
-                  title="Who should your ads speak to?"
-                  subtitle="Be specific — age, interests, pain points, buying behavior."
-                >
-                  <textarea
-                    autoFocus
-                    value={form.target_audience}
-                    onChange={(e) => setField("target_audience", e.target.value)}
-                    rows={4}
-                    placeholder="Ambitious amateur runners 25–45 who invest in premium gear and follow training plans."
-                    className={`${inputClass} resize-none leading-relaxed`}
-                  />
-                </TextStep>
-              )}
               {step === "goal" && (
                 <ChipStep
                   title="What's your primary campaign goal?"
@@ -231,6 +287,49 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
                   value={form.campaign_goal ?? ""}
                   onChange={(v) => setField("campaign_goal", v)}
                 />
+              )}
+              {step === "first_product" && (
+                <TextStep
+                  title="Add your first product"
+                  subtitle="Optional — name, value prop, price, and a hook to seed creative generation."
+                >
+                  <div className="space-y-4">
+                    <input
+                      autoFocus
+                      value={firstProduct.product_name}
+                      onChange={(e) =>
+                        setFirstProduct((p) => ({ ...p, product_name: e.target.value }))
+                      }
+                      placeholder="Aura Glow Skin Serum"
+                      className={inputClass}
+                    />
+                    <textarea
+                      value={firstProduct.value_prop}
+                      onChange={(e) =>
+                        setFirstProduct((p) => ({ ...p, value_prop: e.target.value }))
+                      }
+                      rows={2}
+                      placeholder="Visible glow in 7 days without oiliness"
+                      className={`${inputClass} resize-none leading-relaxed`}
+                    />
+                    <input
+                      value={firstProduct.price}
+                      onChange={(e) =>
+                        setFirstProduct((p) => ({ ...p, price: e.target.value }))
+                      }
+                      placeholder="Price — e.g. 79"
+                      className={inputClass}
+                    />
+                    <input
+                      value={firstProduct.creative_hook}
+                      onChange={(e) =>
+                        setFirstProduct((p) => ({ ...p, creative_hook: e.target.value }))
+                      }
+                      placeholder="Primary hook — e.g. 7-day glow challenge"
+                      className={inputClass}
+                    />
+                  </div>
+                </TextStep>
               )}
             </motion.div>
           </AnimatePresence>
@@ -258,18 +357,18 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
             ) : step === "welcome" ? (
               "Get started"
             ) : isLast ? (
-              "Create business"
+              "Finish setup"
             ) : (
               "Continue"
             )}
           </button>
-          {step !== "welcome" && step !== "name" && !isLast ? (
+          {step === "first_product" || (step !== "welcome" && step !== "name" && !isLast) ? (
             <button
               type="button"
               onClick={() => goNext({ skip: true })}
               className="text-center text-[13px] text-tertiary transition-colors duration-150 hover:text-secondary"
             >
-              Skip for now
+              {step === "first_product" ? "Skip — add products later" : "Skip for now"}
             </button>
           ) : null}
         </div>
@@ -289,18 +388,18 @@ function WelcomeStep({ firstName }: { firstName: string }) {
       </div>
       <div className="space-y-3">
         <h1 className="text-[28px] font-semibold leading-[1.15] tracking-[-0.03em] sm:text-[32px]">
-          Hey {firstName}, let&apos;s set up your business
+          Hey {firstName}, let&apos;s set up your brand
         </h1>
         <p className="text-[15px] leading-relaxed text-secondary">
-          A few quick questions so Dopa can predict ROI, score your creatives with
-          TRIBE v2, and tailor recommendations to your brand.
+          Set your brand defaults first, then optionally add a product.
+          Dopa uses both to score creatives with TRIBE v2 and fuel ad generation.
         </p>
       </div>
       <ul className="space-y-3 text-left">
         {[
-          "Score ads before you spend",
-          "Second-by-second attention timelines",
-          "Brain-region insights per creative",
+          "Brand defaults for every campaign",
+          "Product profiles with hooks & features",
+          "TRIBE v2 pre-test before ad spend",
         ].map((item) => (
           <li key={item} className="flex items-center gap-3 text-[14px] text-secondary">
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">

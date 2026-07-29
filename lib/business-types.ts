@@ -10,6 +10,8 @@ export type Business = {
   competitors: string | null;
   markets: string | null;
   campaign_goal: string | null;
+  price_range: string | null;
+  target_keywords: string | null;
 };
 
 export type BusinessInput = {
@@ -23,10 +25,28 @@ export type BusinessInput = {
   competitors?: string;
   markets?: string;
   campaign_goal?: string;
+  price_range?: string;
+  target_keywords?: string;
 };
 
 export const BUSINESS_SELECT =
-  "id, name, website, industry, description, target_audience, brand_voice, value_proposition, competitors, markets, campaign_goal";
+  "id, name, website, industry, description, target_audience, brand_voice, value_proposition, competitors, markets, campaign_goal, price_range, target_keywords";
+
+export const PRICE_RANGES = [
+  "Budget (under $25)",
+  "Mid-range ($25–$100)",
+  "Premium ($100–$500)",
+  "Luxury ($500+)",
+] as const;
+
+export const BRAND_TONES = [
+  "Bold & direct",
+  "Minimalist & premium",
+  "Friendly & conversational",
+  "Technical & authoritative",
+  "Playful & energetic",
+  "UGC & authentic",
+] as const;
 
 export const CAMPAIGN_GOALS = [
   "Brand awareness",
@@ -63,6 +83,8 @@ export function emptyBusinessInput(): BusinessInput {
     competitors: "",
     markets: "",
     campaign_goal: "",
+    price_range: "",
+    target_keywords: "",
   };
 }
 
@@ -78,6 +100,8 @@ export function businessToInput(business: Business): BusinessInput {
     competitors: business.competitors ?? "",
     markets: business.markets ?? "",
     campaign_goal: business.campaign_goal ?? "",
+    price_range: business.price_range ?? "",
+    target_keywords: business.target_keywords ?? "",
   };
 }
 
@@ -99,6 +123,8 @@ export function normalizeBusinessInput(input: BusinessInput) {
       competitors: input.competitors?.trim() || null,
       markets: input.markets?.trim() || null,
       campaign_goal: input.campaign_goal?.trim() || null,
+      price_range: input.price_range?.trim() || null,
+      target_keywords: input.target_keywords?.trim() || null,
     },
   };
 }

@@ -9,9 +9,11 @@ import {
 } from "@/app/dashboard/actions";
 import {
   businessToInput,
+  BRAND_TONES,
   CAMPAIGN_GOALS,
   emptyBusinessInput,
   INDUSTRIES,
+  PRICE_RANGES,
   type Business,
   type BusinessInput,
 } from "@/lib/business-types";
@@ -194,6 +196,10 @@ function BusinessForm({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
+        <p className="sm:col-span-2 text-[11px] font-medium uppercase tracking-wider text-tertiary">
+          Brand defaults
+        </p>
+
         <Field label="Business name" required className="sm:col-span-2">
           <input
             value={form.name}
@@ -252,8 +258,65 @@ function BusinessForm({
         </Field>
 
         <Field
+          label="Default target demographic"
+          hint="Baseline audience for all campaigns"
+          className="sm:col-span-2"
+        >
+          <textarea
+            value={form.target_audience}
+            onChange={(e) => setField("target_audience", e.target.value)}
+            rows={2}
+            placeholder="Gen Z & Millennials (18–34), tech-savvy, eco-conscious"
+            className={`${inputClass} resize-y`}
+          />
+        </Field>
+
+        <Field label="Default price tier">
+          <select
+            value={form.price_range}
+            onChange={(e) => setField("price_range", e.target.value)}
+            className={inputClass}
+          >
+            <option value="">Select price tier</option>
+            {PRICE_RANGES.map((tier) => (
+              <option key={tier} value={tier}>
+                {tier}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Brand tone">
+          <select
+            value={form.brand_voice}
+            onChange={(e) => setField("brand_voice", e.target.value)}
+            className={inputClass}
+          >
+            <option value="">Select tone</option>
+            {BRAND_TONES.map((tone) => (
+              <option key={tone} value={tone}>
+                {tone}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Core keywords" hint="Comma-separated seed keywords" className="sm:col-span-2">
+          <input
+            value={form.target_keywords}
+            onChange={(e) => setField("target_keywords", e.target.value)}
+            placeholder="running watch, recovery tracker, training load"
+            className={inputClass}
+          />
+        </Field>
+
+        <p className="sm:col-span-2 pt-2 text-[11px] font-medium uppercase tracking-wider text-tertiary">
+          Campaign context
+        </p>
+
+        <Field
           label="What do you sell?"
-          hint="Product or service in 1–2 sentences"
+          hint="High-level business description"
           className="sm:col-span-2"
         >
           <textarea
@@ -261,20 +324,6 @@ function BusinessForm({
             onChange={(e) => setField("description", e.target.value)}
             rows={3}
             placeholder="Smartwatch that tracks recovery and coaches training load for runners."
-            className={`${inputClass} resize-y`}
-          />
-        </Field>
-
-        <Field
-          label="Target audience"
-          hint="Who should the ads speak to?"
-          className="sm:col-span-2"
-        >
-          <textarea
-            value={form.target_audience}
-            onChange={(e) => setField("target_audience", e.target.value)}
-            rows={2}
-            placeholder="Ambitious amateur runners 25–45 who buy premium training gear."
             className={`${inputClass} resize-y`}
           />
         </Field>
@@ -290,15 +339,6 @@ function BusinessForm({
             rows={2}
             placeholder="Clinically accurate recovery scores without a coach subscription."
             className={`${inputClass} resize-y`}
-          />
-        </Field>
-
-        <Field label="Brand voice" hint="Tone for creatives">
-          <input
-            value={form.brand_voice}
-            onChange={(e) => setField("brand_voice", e.target.value)}
-            placeholder="Confident, technical, encouraging"
-            className={inputClass}
           />
         </Field>
 

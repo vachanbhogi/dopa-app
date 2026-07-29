@@ -10,6 +10,7 @@ import { getBusinessesForUser } from "@/lib/businesses";
 const dashboardTabs = new Set<DashboardTab>([
   "keywords",
   "competitors",
+  "products",
   "brain",
   "googleAds",
   "metrics",
