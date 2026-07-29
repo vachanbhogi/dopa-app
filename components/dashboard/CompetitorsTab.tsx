@@ -82,13 +82,29 @@ const defaultSettings = (businessId: string): MonitorSettingsDto => ({
   next_run_at: null,
 });
 
-export function CompetitorsTab({ business }: { business: Business }) {
-  const [competitors, setCompetitors] = useState<CompetitorItem[]>([]);
-  const [run, setRun] = useState<ResearchRunDto | null>(null);
-  const [settings, setSettings] = useState<MonitorSettingsDto>(
-    defaultSettings(business.id),
+export function CompetitorsTab({
+  business,
+  demoMode = false,
+  initialCompetitors,
+  initialRun,
+  initialSettings,
+}: {
+  business: Business;
+  demoMode?: boolean;
+  initialCompetitors?: CompetitorItem[];
+  initialRun?: ResearchRunDto | null;
+  initialSettings?: MonitorSettingsDto;
+}) {
+  const [competitors, setCompetitors] = useState<CompetitorItem[]>(
+    () => initialCompetitors ?? [],
   );
-  const [loading, setLoading] = useState(true);
+  const [run, setRun] = useState<ResearchRunDto | null>(
+    () => initialRun ?? null,
+  );
+  const [settings, setSettings] = useState<MonitorSettingsDto>(
+    () => initialSettings ?? defaultSettings(business.id),
+  );
+  const [loading, setLoading] = useState(!demoMode);
   const [researching, setResearching] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,12 +116,23 @@ export function CompetitorsTab({ business }: { business: Business }) {
   const [manualWebsite, setManualWebsite] = useState("");
   const [manualAngle, setManualAngle] = useState("");
   const [selectedCompetitor, setSelectedCompetitor] =
-    useState<CompetitorItem | null>(null);
+    useState<CompetitorItem | null>(() => initialCompetitors?.[0] ?? null);
   const [signals, setSignals] = useState<CompetitorSignal[]>([]);
   const [loadingSignals, setLoadingSignals] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const loadCompetitors = useCallback(async () => {
+    if (demoMode) {
+      setCompetitors(initialCompetitors ?? []);
+      setSelectedCompetitor((current) =>
+        current
+          ? ((initialCompetitors ?? []).find((item) => item.id === current.id) ??
+            initialCompetitors?.[0] ??
+            null)
+          : (initialCompetitors?.[0] ?? null),
+      );
+      return;
+    }
     const response = await listCompetitors(business.id);
     if (response.error) throw new Error(response.error);
     const list = response.competitors ?? [];
@@ -115,9 +142,14 @@ export function CompetitorsTab({ business }: { business: Business }) {
         ? (list.find((item) => item.id === current.id) ?? list[0] ?? null)
         : (list[0] ?? null),
     );
-  }, [business.id]);
+  }, [business.id, demoMode, initialCompetitors]);
 
   const loadResearch = useCallback(async () => {
+    if (demoMode) {
+      setRun(initialRun ?? null);
+      setSettings(initialSettings ?? defaultSettings(business.id));
+      return;
+    }
     const response = await fetch(
       `/api/competitors/research?businessId=${encodeURIComponent(business.id)}`,
       { cache: "no-store" },
@@ -135,7 +167,7 @@ export function CompetitorsTab({ business }: { business: Business }) {
       (data.settings as MonitorSettingsDto | undefined) ??
         defaultSettings(business.id),
     );
-  }, [business.id]);
+  }, [business.id, demoMode, initialRun, initialSettings]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -154,14 +186,22 @@ export function CompetitorsTab({ business }: { business: Business }) {
   }, [loadAll]);
 
   useEffect(() => {
+    if (demoMode) return;
     if (run?.status !== "queued" && run?.status !== "running") return;
     const timer = window.setInterval(() => {
       void loadResearch().catch(() => undefined);
     }, 4_000);
     return () => window.clearInterval(timer);
-  }, [loadResearch, run?.status]);
+  }, [demoMode, loadResearch, run?.status]);
 
   useEffect(() => {
+    if (demoMode) {
+      queueMicrotask(() => {
+        setSignals([]);
+        setLoadingSignals(false);
+      });
+      return;
+    }
     if (!selectedCompetitor) {
       queueMicrotask(() => setSignals([]));
       return;
@@ -192,7 +232,7 @@ export function CompetitorsTab({ business }: { business: Business }) {
         if (!controller.signal.aborted) setLoadingSignals(false);
       });
     return () => controller.abort();
-  }, [selectedCompetitor]);
+  }, [demoMode, selectedCompetitor]);
 
   const candidates = useMemo(
     () =>
@@ -203,6 +243,10 @@ export function CompetitorsTab({ business }: { business: Business }) {
   );
 
   async function startResearch() {
+    if (demoMode) {
+      setNotice("Demo mode — sign up to run live competitor research.");
+      return;
+    }
     setResearching(true);
     setError(null);
     setNotice(null);
@@ -234,6 +278,10 @@ export function CompetitorsTab({ business }: { business: Business }) {
   }
 
   async function trackCandidate(candidate: ResearchCandidateDto) {
+    if (demoMode) {
+      setNotice("Demo mode — sign up to track competitors.");
+      return;
+    }
     setError(null);
     const response = await addCompetitor(business.id, {
       name: candidate.name,
@@ -249,6 +297,11 @@ export function CompetitorsTab({ business }: { business: Business }) {
 
   function saveManual() {
     if (!manualName.trim()) return;
+    if (demoMode) {
+      setNotice("Demo mode — sign up to add competitors.");
+      setModalOpen(false);
+      return;
+    }
     startTransition(async () => {
       const response = await addCompetitor(business.id, {
         name: manualName,
@@ -268,6 +321,10 @@ export function CompetitorsTab({ business }: { business: Business }) {
   }
 
   async function saveMonitoring() {
+    if (demoMode) {
+      setNotice("Demo mode — sign up to save monitoring preferences.");
+      return;
+    }
     setSavingSettings(true);
     setError(null);
     try {
@@ -309,7 +366,7 @@ export function CompetitorsTab({ business }: { business: Business }) {
   }
 
   return (
-    <div className="animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both] space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl">
           <h2 className="text-[15px] font-medium text-white">
@@ -516,7 +573,7 @@ function ResearchStatus({ run }: { run: ResearchRunDto | null }) {
       {active ? (
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/6 sm:w-48">
           <div
-            className="h-full rounded-full bg-brand transition-all"
+            className="h-full rounded-full bg-brand transition-[width] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]"
             style={{
               width:
                 run.stage === "searching"

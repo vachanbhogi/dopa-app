@@ -1,6 +1,6 @@
 /**
  * Static homepage mock of the authenticated Brain desk —
- * mirrors DashboardShell + BrainTab empty state, not a live workspace.
+ * scored climax (fixture CTR + cortical cue), not empty Operate.
  */
 
 const NAV = [
@@ -11,6 +11,37 @@ const NAV = [
   { label: "Brain", icon: "brain" as const, active: true },
   { label: "Google Ads", icon: "google" as const },
 ];
+
+const REGIONS = [
+  {
+    name: "V1 early visual",
+    peak: "7.2s",
+    score: 86,
+    bar: "86%",
+    description: "Strong early visual response at product reveal.",
+  },
+  {
+    name: "FFA face / form",
+    peak: "4.8s",
+    score: 72,
+    bar: "72%",
+    description: "Form-selective response during fabric close-up.",
+  },
+  {
+    name: "MT motion",
+    peak: "2.1s",
+    score: 64,
+    bar: "64%",
+    description: "Motion onset at hook.",
+  },
+  {
+    name: "PPA place",
+    peak: "9.5s",
+    score: 41,
+    bar: "41%",
+    description: "Mild place response on street cutaway.",
+  },
+] as const;
 
 export function HeroIssueDemo() {
   return (
@@ -30,10 +61,10 @@ export function HeroIssueDemo() {
           <div className="relative border-b border-white/6 px-3 py-3">
             <div className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand text-[11px] font-bold text-white">
-                D
+                N
               </span>
               <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-tight text-white">
-                Workspace
+                Northstar Apparel
               </span>
               <ChevronDown />
             </div>
@@ -70,9 +101,9 @@ export function HeroIssueDemo() {
         {/* Main column */}
         <div className="relative flex min-w-0 flex-1 flex-col">
           {/* Top bar */}
-          <header className="flex items-center gap-3 border-b border-white/6 px-4 py-2.5 sm:px-5">
+          <div className="flex items-center gap-3 border-b border-white/6 px-4 py-2.5 sm:px-5">
             <p className="hidden shrink-0 text-[12px] text-[#8a8f98] sm:block">
-              Workspace{" "}
+              Northstar{" "}
               <span className="text-[#62666d]">/</span>{" "}
               <span className="text-white">Brain</span>
             </p>
@@ -89,65 +120,65 @@ export function HeroIssueDemo() {
                 N
               </span>
             </div>
-          </header>
+          </div>
 
-          {/* Brain desk */}
+          {/* Brain desk — scored climax */}
           <div className="flex-1 space-y-3 overflow-hidden p-4 sm:space-y-4 sm:p-5">
             <p className="max-w-2xl text-[13px] leading-5 text-[#8a8f98] sm:text-[14px] sm:leading-6">
-              Upload an ad to predict its average click-through rate and see the
-              cortical response TRIBE v2 models for the clip.
+              Predicted average CTR with TRIBE v2 cortical evidence — review
+              before you spend.
             </p>
 
             {/* Neural desk bar */}
             <div className="dopa-panel flex flex-wrap items-center justify-between gap-3 px-3.5 py-2.5 sm:px-4 sm:py-3">
               <div className="min-w-0">
                 <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[#62666d] sm:text-[11px]">
-                  Neural desk · ready
+                  Neural desk · live
                 </p>
                 <p className="mt-0.5 truncate text-[13px] font-medium text-white sm:text-[14px]">
-                  No creative selected
+                  Summit Tee — UGC hook.mp4
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <span className="rounded-[5px] border border-brand/25 bg-brand/10 px-2 py-1 font-mono text-[10px] text-brand sm:text-[11px]">
-                  CTR —
+                  CTR 2.84%
                 </span>
-                <span className="rounded-[5px] border border-white/10 px-2 py-1 text-[10px] text-[#62666d]">
-                  0 regions
+                <span className="rounded-[5px] border border-white/10 px-2 py-1 text-[10px] text-[#8a8f98]">
+                  4 regions
                 </span>
-                <span className="hidden rounded-[5px] border border-white/10 px-2 py-1 text-[10px] text-[#62666d] sm:inline">
-                  — clip
+                <span className="hidden rounded-[5px] border border-white/10 px-2 py-1 text-[10px] text-[#8a8f98] sm:inline">
+                  12.0s clip
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-2.5 py-1.5 text-[11px] font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.16)] sm:px-3 sm:text-[12px]">
                   <BrainGlyph />
-                  Analyze
+                  Re-run
                 </span>
                 <span className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px] text-[#8a8f98] sm:px-3 sm:text-[12px]">
-                  Upload
+                  Replace
                 </span>
               </div>
             </div>
 
-            {/* Progress idle */}
+            {/* Progress complete */}
             <div className="rounded-lg border border-white/8 bg-white/2 px-3.5 py-2.5 sm:py-3">
               <div className="flex items-center justify-between gap-4">
-                <p className="text-[11px] font-medium text-[#62666d]">
-                  Waiting for creative
+                <p className="text-[11px] font-medium text-[#8a8f98]">
+                  Analysis complete
                 </p>
                 <p className="font-mono text-[9px] tabular-nums text-[#62666d]">
                   Upload · Inference · 3D model
                 </p>
               </div>
               <div className="relative mt-2.5 h-1 overflow-hidden rounded-full bg-white/6">
-                <div className="h-full w-0 rounded-full bg-brand/40" />
+                <div className="h-full w-full rounded-full bg-brand/70" />
               </div>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 {["Upload", "Inference", "3D model"].map((label) => (
                   <div
                     key={label}
-                    className="flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-[0.11em] text-white/25"
+                    className="flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-[0.11em] text-brand/80"
                   >
-                    <span className="h-1.5 w-1.5 rounded-full bg-white/15" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-brand" />
                     {label}
                   </div>
                 ))}
@@ -157,47 +188,60 @@ export function HeroIssueDemo() {
             {/* 60 / 40 desk */}
             <div className="grid items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(14rem,0.95fr)]">
               <div className="dopa-panel overflow-hidden">
-                <div className="relative flex aspect-video flex-col items-center justify-center gap-2.5 border-b border-dashed border-transparent bg-[#08090a] px-6 text-center sm:gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/8 bg-white/4 text-[#62666d] sm:h-12 sm:w-12">
-                    <UploadGlyph />
-                  </div>
-                  <div>
-                    <p className="text-[13px] font-medium text-white sm:text-[14px]">
-                      Choose an ad video
+                <div className="relative aspect-video overflow-hidden border-b border-white/6 bg-[#0c0d0e]">
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      backgroundImage:
+                        "radial-gradient(ellipse at 35% 40%, rgba(94,106,210,0.28), transparent 55%), linear-gradient(135deg, #12131a 0%, #08090a 55%, #0e1018 100%)",
+                    }}
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/70 to-transparent px-4 pb-3 pt-8">
+                    <p className="text-[12px] font-medium text-white">
+                      Summit Tee — fabric reveal
                     </p>
-                    <p className="mt-1 text-[11px] text-[#8a8f98] sm:text-[12px]">
-                      MP4 or MOV · up to 60 seconds · 250 MB maximum
+                    <p className="mt-0.5 font-mono text-[10px] text-[#8a8f98]">
+                      Peak attention · 7.2s
                     </p>
                   </div>
+                  <span className="absolute left-3 top-3 rounded-[5px] border border-brand/30 bg-brand/15 px-2 py-1 font-mono text-[10px] text-brand">
+                    Predicted CTR 2.84%
+                  </span>
                 </div>
 
                 <div className="border-t border-white/6 px-3.5 py-3 sm:px-4">
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#62666d]">
-                      Peak response track · awaiting
+                      Peak response track
                     </p>
-                    <p className="font-mono text-[10px] text-[#62666d]">
-                      0s → 30.0s
+                    <p className="font-mono text-[10px] text-[#8a8f98]">
+                      0s → 12.0s
                     </p>
                   </div>
                   <div className="relative h-8 overflow-hidden rounded-lg border border-white/8 bg-[#0c0d0e] sm:h-9">
                     <div
-                      className="absolute inset-0 opacity-40"
+                      className="absolute inset-0 opacity-70"
                       style={{
                         backgroundImage:
-                          "linear-gradient(90deg, transparent 0%, rgba(94,106,210,0.18) 50%, transparent 100%)",
+                          "linear-gradient(90deg, transparent 0%, rgba(94,106,210,0.15) 18%, rgba(94,106,210,0.55) 60%, rgba(94,106,210,0.22) 82%, transparent 100%)",
                       }}
+                    />
+                    <div
+                      className="absolute top-1 bottom-1 w-0.5 rounded-full bg-white/80"
+                      style={{ left: "60%" }}
                     />
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2">
-                    {Array.from({ length: 4 }, (_, i) => (
+                    {REGIONS.map((region) => (
                       <div
-                        key={i}
+                        key={region.name}
                         className="rounded-lg border border-white/8 bg-white/2 px-3 py-2"
                       >
-                        <p className="font-mono text-[9px] text-brand">— · —</p>
-                        <p className="mt-0.5 truncate text-[12px] font-medium text-[#62666d]">
-                          Region pending
+                        <p className="font-mono text-[9px] text-brand">
+                          {region.peak} · {region.score}
+                        </p>
+                        <p className="mt-0.5 truncate text-[12px] font-medium text-white">
+                          {region.name}
                         </p>
                       </div>
                     ))}
@@ -220,12 +264,21 @@ export function HeroIssueDemo() {
                   </span>
                 </div>
 
-                <div className="flex aspect-5/4 flex-col items-center justify-center gap-2 bg-[radial-gradient(ellipse_at_50%_45%,rgba(94,106,210,0.18),transparent_58%)] px-6 text-center">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/8 bg-white/4 text-[#62666d]">
-                    <BrainGlyph />
-                  </span>
-                  <p className="text-[12px] text-[#8a8f98]">
-                    Cortex appears after analysis
+                <div className="relative flex aspect-5/4 flex-col items-center justify-center gap-2 overflow-hidden bg-[radial-gradient(ellipse_at_50%_45%,rgba(94,106,210,0.32),transparent_58%)] px-6 text-center">
+                  <div
+                    className="pointer-events-none absolute inset-[18%] rounded-[42%_58%_48%_52%] border border-brand/35 bg-brand/10 shadow-[inset_0_0_40px_rgba(94,106,210,0.35)]"
+                    aria-hidden
+                  />
+                  <div
+                    className="pointer-events-none absolute left-[28%] top-[34%] h-3 w-3 rounded-full bg-brand shadow-[0_0_18px_rgba(94,106,210,0.9)]"
+                    aria-hidden
+                  />
+                  <div
+                    className="pointer-events-none absolute right-[32%] top-[42%] h-2 w-2 rounded-full bg-accent/80 shadow-[0_0_12px_rgba(113,112,255,0.7)]"
+                    aria-hidden
+                  />
+                  <p className="relative z-10 mt-auto mb-4 text-[11px] text-[#8a8f98]">
+                    Cortical cue · V1 peak
                   </p>
                 </div>
 
@@ -234,31 +287,34 @@ export function HeroIssueDemo() {
                     Dominant ROI
                   </p>
                   <div className="mt-2 flex items-end justify-between gap-3">
-                    <p className="min-w-0 text-[16px] font-medium leading-tight tracking-[-0.02em] text-[#62666d]">
-                      Awaiting response
+                    <p className="min-w-0 text-[16px] font-medium leading-tight tracking-[-0.02em] text-white">
+                      V1 early visual
                     </p>
                     <span className="shrink-0 font-mono text-[24px] font-medium leading-none tracking-[-0.04em] text-white">
-                      —
+                      86
                     </span>
                   </div>
                   <p className="mt-2 text-[12px] leading-5 text-[#8a8f98]">
-                    The strongest modeled cortical region will land here.
+                    Strong early visual response at product reveal.
                   </p>
                 </div>
 
                 <div className="space-y-2.5 border-t border-white/6 px-4 py-3.5">
-                  {[1, 2, 3].map((n) => (
-                    <div key={n}>
+                  {REGIONS.slice(0, 3).map((region) => (
+                    <div key={region.name}>
                       <div className="mb-1 flex items-center justify-between gap-3">
-                        <p className="truncate text-[12px] text-[#62666d]">
-                          Region {n}
+                        <p className="truncate text-[12px] text-[#8a8f98]">
+                          {region.name}
                         </p>
-                        <span className="shrink-0 font-mono text-[10px] text-[#62666d]">
-                          0.00
+                        <span className="shrink-0 font-mono text-[10px] text-white">
+                          {(region.score / 100).toFixed(2)}
                         </span>
                       </div>
                       <div className="h-1 overflow-hidden rounded-full bg-white/6">
-                        <div className="h-full w-0 rounded-full bg-brand" />
+                        <div
+                          className="h-full rounded-full bg-brand"
+                          style={{ width: region.bar }}
+                        />
                       </div>
                     </div>
                   ))}
@@ -316,24 +372,6 @@ function BrainGlyph() {
       strokeLinejoin="round"
     >
       <path d="M6.2 2.8c-1.5.1-2.7 1.4-2.7 3 0 .5.1 1 .4 1.4A2.4 2.4 0 0 0 2.5 9.4c0 1.3 1 2.4 2.3 2.5v1.3c0 .4.3.7.7.7h.8c.4 0 .7-.3.7-.7v-.7h.8v.7c0 .4.3.7.7.7h.8c.4 0 .7-.3.7-.7v-1.3c1.3-.1 2.3-1.2 2.3-2.5 0-1-.6-1.8-1.4-2.2.3-.4.4-.9.4-1.4 0-1.6-1.2-2.9-2.7-3-.5-.8-1.4-1.3-2.4-1.3S6.7 2 6.2 2.8Z" />
-    </svg>
-  );
-}
-
-function UploadGlyph() {
-  return (
-    <svg
-      className="h-5 w-5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 16V5" />
-      <path d="m8 9 4-4 4 4" />
-      <path d="M5 19h14" />
     </svg>
   );
 }

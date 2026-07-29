@@ -17,7 +17,8 @@
     "worker:build": "tsc -p services/competitor-worker/tsconfig.json",
     "worker:start": "node services/competitor-worker/dist/services/competitor-worker/src/index.js",
     "test:fc-sandbox": "bun tests/fc-sandbox.test.ts",
-    "test": "bun run test:denver && bun run test:dashboard-shell && bun run test:google-ads && bun run test:security && bun run test:fc-sandbox && bun run test:keywords",
+    "test:auto-campaign": "bun tests/auto-campaign.test.ts",
+    "test": "bun run test:denver && bun run test:dashboard-shell && bun run test:google-ads && bun run test:security && bun run test:fc-sandbox && bun run test:keywords && bun run test:auto-campaign",
     "verify:submission": "bun run test && bun run lint && bun run build",
     "verify:fc-sandbox": "bun scripts/verify-fc-sandbox.ts"
   },

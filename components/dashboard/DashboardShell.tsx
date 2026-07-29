@@ -15,6 +15,7 @@ import {
   navItemActive,
   navItemIdle,
 } from "@/lib/dashboard-ui";
+import { AutoCampaignTab } from "./AutoCampaignTab";
 import { BrainTab } from "./BrainTab";
 import { BusinessTab } from "./BusinessTab";
 import { CommandMenu } from "./CommandMenu";
@@ -30,6 +31,7 @@ export type DashboardTab =
   | "competitors"
   | "products"
   | "keywords"
+  | "autoCampaign"
   | "brain"
   | "googleAds"
   | "settings";
@@ -39,6 +41,7 @@ const tabs: { id: DashboardTab; label: string; icon: string }[] = [
   { id: "competitors", label: "Competitors", icon: "eye" },
   { id: "products", label: "Products", icon: "box" },
   { id: "keywords", label: "Keywords", icon: "tag" },
+  { id: "autoCampaign", label: "Auto Launcher", icon: "sparkles" },
   { id: "brain", label: "Brain", icon: "brain" },
   { id: "googleAds", label: "Google Ads", icon: "google" },
 ];
@@ -451,6 +454,9 @@ export function DashboardShell({
             {active === "keywords" && selectedBusiness ? (
               <KeywordsTab business={selectedBusiness} />
             ) : null}
+            {active === "autoCampaign" && selectedBusiness ? (
+              <AutoCampaignTab business={selectedBusiness} />
+            ) : null}
             {active === "brain" && <BrainTab />}
             {active === "googleAds" && (
               <GoogleAdsTab
@@ -509,6 +515,12 @@ export function NavIcon({ name, active }: { name: string; active?: boolean }) {
         <svg {...shared}>
           <path d="M2 8.5V3a1 1 0 011-1h5.5L14 7.5 8.5 13 2 8.5Z" />
           <circle cx="5.5" cy="5.5" r="1" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "sparkles":
+      return (
+        <svg {...shared}>
+          <path d="M8 1v4M8 11v4M1 8h4M11 8h4M3 3l3 3M10 10l3 3M13 3l-3 3M6 10l-3 3" />
         </svg>
       );
     case "eye":

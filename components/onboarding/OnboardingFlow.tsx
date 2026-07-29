@@ -16,6 +16,8 @@ import {
   PRICE_RANGES,
   type BusinessInput,
 } from "@/lib/business-types";
+import { ALIBABA_DEMO_URL } from "@/lib/demo/alibaba-profile";
+import { saveDemoWorkspace } from "@/lib/demo/workspace";
 import { errorMessage, isJsonObject, stringValue } from "@/lib/validation";
 
 type Step = "import" | "review" | "launch";
@@ -38,16 +40,27 @@ const emptyFirstProduct = (): FirstProductDraft => ({
 
 const easeOut = [0.23, 1, 0.32, 1] as const;
 
-export function OnboardingFlow({ firstName }: { firstName: string }) {
+export function OnboardingFlow({
+  firstName,
+  demoMode = false,
+}: {
+  firstName: string;
+  demoMode?: boolean;
+}) {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("import");
-  const [form, setForm] = useState<BusinessInput>(emptyBusinessInput());
+  const [form, setForm] = useState<BusinessInput>(() =>
+    demoMode
+      ? { ...emptyBusinessInput(), website: ALIBABA_DEMO_URL }
+      : emptyBusinessInput(),
+  );
   const [firstProduct, setFirstProduct] = useState<FirstProductDraft>(emptyFirstProduct);
   const [competitorsInput, setCompetitorsInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
+  const [showMoreDetails, setShowMoreDetails] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const stepIndex = STEPS.indexOf(step);
@@ -57,6 +70,45 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
     setError(null);
   };
 
+  function applyProfile(data: unknown) {
+    if (!isJsonObject(data) || !isJsonObject(data.profile)) return;
+    const p = data.profile;
+    setForm((prev) => ({
+      ...prev,
+      website: stringValue(data.websiteUrl, 2_048) ?? prev.website,
+      name: stringValue(p.name, 160) ?? prev.name,
+      industry: stringValue(p.industry, 120) ?? prev.industry,
+      target_audience:
+        stringValue(p.target_audience, 1_000) ?? prev.target_audience,
+      brand_voice: stringValue(p.brand_voice, 120) ?? prev.brand_voice,
+      value_proposition:
+        stringValue(p.value_proposition, 1_000) ?? prev.value_proposition,
+      price_range: stringValue(p.price_range, 120) ?? prev.price_range,
+      campaign_goal: stringValue(p.campaign_goal, 120) ?? prev.campaign_goal,
+    }));
+
+    if (Array.isArray(p.competitors)) {
+      setCompetitorsInput(
+        p.competitors
+          .map((competitor) => stringValue(competitor, 120))
+          .filter((competitor): competitor is string => Boolean(competitor))
+          .join(", "),
+      );
+    }
+
+    if (isJsonObject(p.first_product)) {
+      const fp = p.first_product;
+      setFirstProduct({
+        product_name: stringValue(fp.product_name, 160) ?? "",
+        value_prop: stringValue(fp.value_prop, 1_000) ?? "",
+        price: stringValue(fp.price, 60) ?? "",
+        creative_hook: stringValue(fp.creative_hook, 500) ?? "",
+      });
+    }
+    setScanned(true);
+    setShowMoreDetails(true);
+  }
+
   async function handleScan() {
     if (!form.website?.trim()) {
       setError("Enter a website URL");
@@ -65,7 +117,10 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
     setScanning(true);
     setError(null);
     try {
-      const res = await fetch("/api/business/auto-discover", {
+      const endpoint = demoMode
+        ? "/api/business/demo-discover"
+        : "/api/business/auto-discover";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ websiteUrl: form.website }),
@@ -78,48 +133,7 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
             : "Failed to scan website";
         throw new Error(message);
       }
-      if (isJsonObject(data) && isJsonObject(data.profile)) {
-        const p = data.profile;
-        setForm((prev) => ({
-          ...prev,
-          website: stringValue(data.websiteUrl, 2_048) ?? prev.website,
-          name: stringValue(p.name, 160) ?? prev.name,
-          industry: stringValue(p.industry, 120) ?? prev.industry,
-          target_audience:
-            stringValue(p.target_audience, 1_000) ?? prev.target_audience,
-          brand_voice:
-            stringValue(p.brand_voice, 120) ?? prev.brand_voice,
-          value_proposition:
-            stringValue(p.value_proposition, 1_000) ??
-            prev.value_proposition,
-          price_range:
-            stringValue(p.price_range, 120) ?? prev.price_range,
-          campaign_goal:
-            stringValue(p.campaign_goal, 120) ?? prev.campaign_goal,
-        }));
-
-        if (Array.isArray(p.competitors)) {
-          setCompetitorsInput(
-            p.competitors
-              .map((competitor) => stringValue(competitor, 120))
-              .filter((competitor): competitor is string =>
-                Boolean(competitor),
-              )
-              .join(", "),
-          );
-        }
-
-        if (isJsonObject(p.first_product)) {
-          const fp = p.first_product;
-          setFirstProduct({
-            product_name: stringValue(fp.product_name, 160) ?? "",
-            value_prop: stringValue(fp.value_prop, 1_000) ?? "",
-            price: stringValue(fp.price, 60) ?? "",
-            creative_hook: stringValue(fp.creative_hook, 500) ?? "",
-          });
-        }
-        setScanned(true);
-      }
+      applyProfile(data);
       setStep("review");
     } catch (error: unknown) {
       setError(
@@ -137,6 +151,16 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
     if (!form.name.trim()) {
       setError("Business name is required");
       setStep("review");
+      return;
+    }
+
+    if (demoMode) {
+      saveDemoWorkspace({
+        form,
+        competitorsInput,
+        firstProduct,
+      });
+      router.push("/demo/dashboard?tab=brain");
       return;
     }
 
@@ -200,6 +224,11 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
           <Link href="/" className="flex items-center gap-2 text-white">
             <DopaMark className="h-4.5 w-4.5" />
             <span className="text-[15px] font-[510] tracking-[-0.01em]">Dopa</span>
+            {demoMode ? (
+              <span className="ml-1 rounded border border-brand/30 bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-accent">
+                Demo
+              </span>
+            ) : null}
           </Link>
           <span className="font-mono text-[12px] tabular-nums text-tertiary">
             {stepIndex + 1} / {STEPS.length}
@@ -217,8 +246,10 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
                   <h1 className="text-[40px] font-semibold leading-[1.05] tracking-[-0.04em] text-white sm:text-[48px]">
                     Import your brand
                   </h1>
-                  <p className="mx-auto mt-4 max-w-xs text-[15px] leading-6 text-[#8a8f98]">
-                    Paste your website URL and we&apos;ll build a draft profile for review.
+                  <p className="mx-auto mt-4 max-w-sm text-[15px] leading-6 text-[#8a8f98]">
+                    {demoMode
+                      ? "Try the example site or paste your own — we’ll draft a brand profile in seconds."
+                      : "Paste your website URL and we’ll build a draft profile for review."}
                   </p>
                 </div>
 
@@ -228,9 +259,21 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
                     value={form.website ?? ""}
                     onChange={(e) => setField("website", e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleScan()}
-                    placeholder="aurabeauty.com"
+                    placeholder="https://www.alibaba.com/"
                     className={inputClassLg}
                   />
+                  {demoMode ? (
+                    <button
+                      type="button"
+                      onClick={() => setField("website", ALIBABA_DEMO_URL)}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[13px] text-secondary transition-[background-color,color,transform] duration-150 hover:bg-white/[0.06] hover:text-white active:scale-[0.98]"
+                    >
+                      <span className="text-tertiary">Example</span>
+                      <span className="font-mono text-[12px] text-foreground">
+                        alibaba.com
+                      </span>
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={handleScan}
@@ -304,49 +347,6 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
                     />
                   </Field>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Industry">
-                      <select
-                        value={form.industry}
-                        onChange={(e) => setField("industry", e.target.value)}
-                        className={inputClass}
-                      >
-                        <option value="">Select</option>
-                        {INDUSTRIES.map((i) => (
-                          <option key={i} value={i}>{i}</option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label="Campaign goal">
-                      <select
-                        value={form.campaign_goal}
-                        onChange={(e) => setField("campaign_goal", e.target.value)}
-                        className={inputClass}
-                      >
-                        <option value="">Select</option>
-                        {CAMPAIGN_GOALS.map((g) => (
-                          <option key={g} value={g}>{g}</option>
-                        ))}
-                      </select>
-                    </Field>
-                  </div>
-
-                  <Field label="Price tier">
-                    <ChipRow
-                      options={PRICE_RANGES}
-                      value={form.price_range ?? ""}
-                      onChange={(v) => setField("price_range", v)}
-                    />
-                  </Field>
-
-                  <Field label="Brand tone">
-                    <ChipRow
-                      options={BRAND_TONES}
-                      value={form.brand_voice ?? ""}
-                      onChange={(v) => setField("brand_voice", v)}
-                    />
-                  </Field>
-
                   <Field label="Competitors" hint="Comma-separated">
                     <input
                       value={competitorsInput}
@@ -355,6 +355,72 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
                       className={inputClass}
                     />
                   </Field>
+
+                  <div className="border-t border-white/[0.06] pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowMoreDetails((open) => !open)}
+                      aria-expanded={showMoreDetails}
+                      className="flex w-full items-center justify-between text-left text-[13px] font-medium text-secondary transition-colors hover:text-white"
+                    >
+                      More brand details
+                      <span
+                        className={`text-tertiary transition-transform duration-200 ${
+                          showMoreDetails ? "rotate-180" : ""
+                        }`}
+                        aria-hidden
+                      >
+                        ▾
+                      </span>
+                    </button>
+
+                    {showMoreDetails ? (
+                      <div className="mt-4 space-y-5">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <Field label="Industry">
+                            <select
+                              value={form.industry}
+                              onChange={(e) => setField("industry", e.target.value)}
+                              className={inputClass}
+                            >
+                              <option value="">Select</option>
+                              {INDUSTRIES.map((i) => (
+                                <option key={i} value={i}>{i}</option>
+                              ))}
+                            </select>
+                          </Field>
+                          <Field label="Campaign goal">
+                            <select
+                              value={form.campaign_goal}
+                              onChange={(e) => setField("campaign_goal", e.target.value)}
+                              className={inputClass}
+                            >
+                              <option value="">Select</option>
+                              {CAMPAIGN_GOALS.map((g) => (
+                                <option key={g} value={g}>{g}</option>
+                              ))}
+                            </select>
+                          </Field>
+                        </div>
+
+                        <Field label="Price tier">
+                          <ChipRow
+                            options={PRICE_RANGES}
+                            value={form.price_range ?? ""}
+                            onChange={(v) => setField("price_range", v)}
+                          />
+                        </Field>
+
+                        <Field label="Brand tone">
+                          <ChipRow
+                            options={BRAND_TONES}
+                            value={form.brand_voice ?? ""}
+                            onChange={(v) => setField("brand_voice", v)}
+                          />
+                        </Field>
+                      </div>
+                    ) : null}
+                  </div>
 
                   {error ? <p className="text-[12px] text-red-400">{error}</p> : null}
 
@@ -399,7 +465,9 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
                     Add your first product
                   </h1>
                   <p className="mx-auto mt-4 max-w-md text-[16px] leading-7 text-[#8a8f98]">
-                    Optional — seed hooks and TRIBE v2 scoring for {form.name || "your brand"}.
+                    {demoMode
+                      ? `Optional — preview a product for ${form.name || "your brand"}, then explore the live dashboard.`
+                      : `Optional — seed hooks and TRIBE v2 scoring for ${form.name || "your brand"}.`}
                   </p>
                 </div>
 
@@ -479,6 +547,8 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
                             <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                             Launching…
                           </>
+                        ) : demoMode ? (
+                          "Explore dashboard →"
                         ) : (
                           "Launch workspace →"
                         )}

@@ -33,10 +33,12 @@ export function BusinessTab({
   businesses,
   selectedBusinessId,
   onSelectBusiness,
+  demoMode = false,
 }: {
   businesses: Business[];
   selectedBusinessId: string | null;
   onSelectBusiness: (id: string) => void;
+  demoMode?: boolean;
 }) {
   const [creatingNew, setCreatingNew] = useState(false);
 
@@ -66,6 +68,7 @@ export function BusinessTab({
             onStartNew={() => setCreatingNew(true)}
             onCancelNew={() => setCreatingNew(false)}
             onCreated={() => setCreatingNew(false)}
+            demoMode={demoMode}
           />
         </motion.div>
       </AnimatePresence>
@@ -204,6 +207,7 @@ function BusinessForm({
   onStartNew,
   onCancelNew,
   onCreated,
+  demoMode = false,
 }: {
   businesses: Business[];
   editingId: string | "new" | null;
@@ -214,6 +218,7 @@ function BusinessForm({
   onStartNew: () => void;
   onCancelNew: () => void;
   onCreated: () => void;
+  demoMode?: boolean;
 }) {
   const [form, setForm] = useState<BusinessInput>(() =>
     currentBusiness ? businessToInput(currentBusiness) : emptyBusinessInput(),
@@ -233,6 +238,11 @@ function BusinessForm({
     startTransition(async () => {
       setError(null);
       setMessage(null);
+
+      if (demoMode) {
+        setMessage("Demo mode — sign up to save your brand profile.");
+        return;
+      }
 
       if (editingId === "new") {
         const result = await createBusiness(form);
@@ -262,6 +272,10 @@ function BusinessForm({
 
   const handleDelete = () => {
     if (!editingId || editingId === "new") return;
+    if (demoMode) {
+      setMessage("Demo mode — sign up to manage workspaces.");
+      return;
+    }
     if (!window.confirm("Delete this business? This cannot be undone.")) return;
 
     startTransition(async () => {
@@ -284,7 +298,7 @@ function BusinessForm({
   const displayName = creatingNew ? "New business" : (currentBusiness?.name ?? "Business");
 
   return (
-    <div className="animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both] space-y-6">
+    <div className="space-y-6">
       <p className="text-[14px] leading-6 text-secondary">
         {creatingNew
           ? "Create a new workspace for another brand."

@@ -102,13 +102,23 @@ function fileError(rejections: FileRejection[]): string {
   return "Upload an MP4 or QuickTime video.";
 }
 
-export function BrainTab() {
+export function BrainTab({
+  demoMode = false,
+  initialResult = null,
+}: {
+  demoMode?: boolean;
+  initialResult?: ScoreResponse | null;
+}) {
   const supabase = useMemo(() => createClient(), []);
   const [file, setFile] = useState<File | null>(null);
-  const [duration, setDuration] = useState<number | null>(null);
+  const [duration, setDuration] = useState<number | null>(
+    () => initialResult?.brain_response.duration_seconds ?? null,
+  );
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [brainModel, setBrainModel] = useState<BrainModelPayload | null>(null);
-  const [result, setResult] = useState<ScoreResponse | null>(null);
+  const [result, setResult] = useState<ScoreResponse | null>(
+    () => initialResult,
+  );
   const [phase, setPhase] = useState<AnalysisPhase>("idle");
   const [uploadProgress, setUploadProgress] = useState(0);
   const [modelDownloadProgress, setModelDownloadProgress] = useState<
@@ -209,7 +219,23 @@ export function BrainTab() {
   });
 
   const analyze = async () => {
-    if (!file || busy) return;
+    if (busy) return;
+    if (demoMode) {
+      setError(null);
+      setPhase("analyzing");
+      analysisStartedAtRef.current = performance.now();
+      window.setTimeout(() => {
+        setResult(initialResult);
+        setDuration(initialResult?.brain_response.duration_seconds ?? null);
+        setPhase("idle");
+        analysisStartedAtRef.current = null;
+        setError(
+          "Demo preview loaded. Sign up to score your own creatives with TRIBE v2.",
+        );
+      }, 900);
+      return;
+    }
+    if (!file) return;
     setError(null);
     setModelError(null);
     setUploadProgress(0);
@@ -418,7 +444,7 @@ export function BrainTab() {
   };
 
   return (
-    <div className="animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both] space-y-4">
+    <div className="space-y-4">
       <input {...getInputProps()} />
 
       <p className="max-w-2xl text-[14px] leading-6 text-secondary">
@@ -443,6 +469,7 @@ export function BrainTab() {
         dropzoneProps={getRootProps()}
         onReplace={open}
         onAnalyze={analyze}
+        canAnalyze={Boolean(file) || (demoMode && Boolean(initialResult))}
       />
 
       {error ? (
@@ -614,6 +641,7 @@ function AnalysisDesk({
   dropzoneProps,
   onReplace,
   onAnalyze,
+  canAnalyze = false,
 }: {
   file: File | null;
   fileDuration: number | null;
@@ -631,6 +659,7 @@ function AnalysisDesk({
   dropzoneProps: Record<string, unknown>;
   onReplace: () => void;
   onAnalyze: () => void;
+  canAnalyze?: boolean;
 }) {
   const response = result?.brain_response ?? null;
   const dominant = response?.top_regions[0] ?? null;
@@ -675,7 +704,7 @@ function AnalysisDesk({
           <button
             type="button"
             onClick={onAnalyze}
-            disabled={busy || !file}
+            disabled={busy || !canAnalyze}
             className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-[12px] font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.16)] transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-55"
           >
             {busy ? <Spinner /> : <BrainIcon />}
@@ -693,6 +722,26 @@ function AnalysisDesk({
           >
             {file ? "Replace" : "Upload"}
           </button>
+          {process.env.NODE_ENV === "development" && brainModel && (
+            <button
+              type="button"
+              onClick={() => {
+                const blob = new Blob(
+                  [JSON.stringify(brainModel)],
+                  { type: "application/json" },
+                );
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "brain-model.json";
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[12px] text-amber-300 transition-[border-color,color,transform] duration-150 hover:border-amber-500/50 hover:text-amber-200 active:scale-[0.97]"
+            >
+              Export Brain JSON
+            </button>
+          )}
         </div>
       </div>
 

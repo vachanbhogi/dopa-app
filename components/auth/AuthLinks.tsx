@@ -40,7 +40,7 @@ export async function AuthLinks() {
       </Link>
       <Link
         href="/?modal=signup"
-        className="ml-1 inline-flex h-7.5 items-center rounded-full bg-white px-3.5 text-[13px] font-medium text-black transition-opacity hover:opacity-90"
+        className="ml-1 inline-flex h-7.5 items-center rounded-full border border-white/15 bg-white/4 px-3.5 text-[13px] text-white transition-colors hover:bg-white/8"
       >
         Sign up
       </Link>

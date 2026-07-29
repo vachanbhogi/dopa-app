@@ -19,6 +19,7 @@ const navigationItems: { id: string; label: string; icon: string }[] = [
   { id: "competitors", label: "Competitors", icon: "eye" },
   { id: "products", label: "Products", icon: "box" },
   { id: "keywords", label: "Keywords", icon: "tag" },
+  { id: "autoCampaign", label: "Auto Launcher", icon: "sparkles" },
   { id: "brain", label: "Brain", icon: "brain" },
   { id: "googleAds", label: "Google Ads", icon: "google" },
   { id: "denver", label: "Denver AI", icon: "denver" },
@@ -83,7 +84,7 @@ export function CommandMenu({
       onClick={closeMenu}
     >
       <div
-        className="dopa-panel w-full max-w-xl overflow-hidden animate-fade-up"
+        className="dopa-panel w-full max-w-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <Command className="w-full">

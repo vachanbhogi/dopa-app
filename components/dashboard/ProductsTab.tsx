@@ -27,17 +27,28 @@ import { NavIcon } from "./DashboardShell";
 export function ProductsTab({
   businessId,
   business,
+  demoMode = false,
+  initialProducts,
 }: {
   businessId: string;
   business: Business;
+  demoMode?: boolean;
+  initialProducts?: Product[];
 }) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>(
+    () => initialProducts ?? [],
+  );
+  const [loading, setLoading] = useState(!demoMode);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const loadProducts = useCallback(async () => {
+    if (demoMode) {
+      setProducts(initialProducts ?? []);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     const result = await listProducts(businessId);
@@ -47,13 +58,17 @@ export function ProductsTab({
       return;
     }
     setProducts(result.products ?? []);
-  }, [businessId]);
+  }, [businessId, demoMode, initialProducts]);
 
   useEffect(() => {
     queueMicrotask(() => void loadProducts());
   }, [loadProducts]);
 
   const openCreate = () => {
+    if (demoMode) {
+      setError("Demo mode — sign up to add products.");
+      return;
+    }
     setEditingProduct(null);
     setModalOpen(true);
   };
@@ -64,7 +79,7 @@ export function ProductsTab({
   };
 
   return (
-    <div className="animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both] space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <p className="max-w-2xl text-[14px] leading-6 text-secondary">
           Product profiles power creative generation and TRIBE v2 pre-tests.
@@ -112,6 +127,10 @@ export function ProductsTab({
               product={product}
               onEdit={() => openEdit(product)}
               onDelete={async () => {
+                if (demoMode) {
+                  setError("Demo mode — sign up to manage products.");
+                  return;
+                }
                 const result = await deleteProduct(product.id);
                 if (result.error) {
                   setError(result.error);
@@ -133,6 +152,7 @@ export function ProductsTab({
             setModalOpen(false);
             await loadProducts();
           }}
+          demoMode={demoMode}
         />
       ) : null}
     </div>
@@ -250,11 +270,13 @@ function ProductModal({
   product,
   onClose,
   onSaved,
+  demoMode = false,
 }: {
   business: Business;
   product: Product | null;
   onClose: () => void;
   onSaved: () => void;
+  demoMode?: boolean;
 }) {
   const [form, setForm] = useState<ProductInput>(() =>
     product ? productToInput(product) : emptyProductInput(),
@@ -269,6 +291,10 @@ function ProductModal({
 
   const handleSave = () => {
     startTransition(async () => {
+      if (demoMode) {
+        setError("Demo mode — sign up to save products.");
+        return;
+      }
       const result = product
         ? await updateProduct(product.id, form)
         : await createProduct(business.id, form);

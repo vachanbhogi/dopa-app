@@ -1,6 +1,7 @@
 "use client";
 
 import { DopaMark } from "@/components/landing/icons";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type AssistantAction = {
@@ -105,8 +106,27 @@ function responseReply(value: unknown): DenverReply | null {
   };
 }
 
+const DENVER_HIDDEN_PREFIXES = [
+  "/",
+  "/login",
+  "/signup",
+  "/privacy",
+  "/terms",
+  "/fc-proof",
+] as const;
+
+function shouldHideDenver(pathname: string) {
+  if (pathname === "/") return true;
+  return DENVER_HIDDEN_PREFIXES.some(
+    (prefix) => prefix !== "/" && (pathname === prefix || pathname.startsWith(`${prefix}/`)),
+  );
+}
+
 export function Denver() {
-  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const hidden = shouldHideDenver(pathname);
+  const [panelMounted, setPanelMounted] = useState(false);
+  const [panelVisible, setPanelVisible] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +134,8 @@ export function Denver() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messageEndRef = useRef<HTMLDivElement>(null);
   const messageIdRef = useRef(0);
+  const closeTimerRef = useRef<number | null>(null);
+  const prefersReducedMotion = useSyncReducedMotion();
 
   function nextMessageId() {
     messageIdRef.current += 1;
@@ -186,46 +208,97 @@ export function Denver() {
     [messages, pending],
   );
 
+  const motionMs = prefersReducedMotion ? 150 : 220;
+  const panelEase = "cubic-bezier(0.23, 1, 0.32, 1)";
+
+  const openPanel = useCallback(() => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setPanelMounted(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setPanelVisible(true));
+    });
+  }, []);
+
+  const closePanel = useCallback(() => {
+    setPanelVisible(false);
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+    }
+    closeTimerRef.current = window.setTimeout(() => {
+      setPanelMounted(false);
+      closeTimerRef.current = null;
+    }, motionMs);
+  }, [motionMs]);
+
   useEffect(() => {
     const handleOpenDenver = (e: Event) => {
       const customEvent = e as CustomEvent<{ prompt?: string }>;
-      setOpen(true);
+      openPanel();
       if (customEvent.detail?.prompt?.trim()) {
         void sendMessage(customEvent.detail.prompt.trim());
       }
     };
     window.addEventListener("dopa:open-denver", handleOpenDenver);
     return () => window.removeEventListener("dopa:open-denver", handleOpenDenver);
-  }, [sendMessage]);
+  }, [openPanel, sendMessage]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!panelMounted) return;
 
     inputRef.current?.focus();
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") closePanel();
     };
 
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [open]);
+  }, [panelMounted, closePanel]);
 
   useEffect(() => {
-    if (open && (messages.length > 1 || pending)) {
+    if (panelVisible && (messages.length > 1 || pending)) {
       messageEndRef.current?.scrollIntoView({ block: "nearest" });
     }
-  }, [messages.length, pending, open]);
+  }, [messages.length, pending, panelVisible]);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, []);
+
+  if (hidden) return null;
+
+  const panelMotionClass = prefersReducedMotion
+    ? panelVisible
+      ? "opacity-100"
+      : "opacity-0"
+    : panelVisible
+      ? "opacity-100 scale-100 translate-y-0"
+      : "opacity-0 scale-[0.96] translate-y-2";
 
   return (
     <div
       data-denver-root
       className="fixed bottom-3 right-3 z-150 sm:bottom-6 sm:right-6"
     >
-      {open ? (
+      {panelMounted ? (
         <section
           role="dialog"
           aria-label="Denver"
-          className={`flex w-[min(360px,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-xl border border-white/8 bg-[#0f1011] shadow-[0_24px_80px_rgba(0,0,0,0.65)] animate-fade-up transition-[height] duration-200 ${
+          style={{
+            transformOrigin: "bottom right",
+            transitionProperty: prefersReducedMotion
+              ? "opacity"
+              : "opacity, transform",
+            transitionDuration: `${motionMs}ms`,
+            transitionTimingFunction: panelEase,
+          }}
+          className={`flex w-[min(360px,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-xl border border-white/8 bg-[#0f1011] shadow-[0_24px_80px_rgba(0,0,0,0.65)] ${panelMotionClass} ${
             messages.length === 1 && !pending
               ? "h-[min(560px,calc(100dvh-2rem))]"
               : "h-[min(680px,calc(100dvh-2rem))]"
@@ -242,7 +315,7 @@ export function Denver() {
             </div>
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={closePanel}
               aria-label="Close Denver"
               className="flex h-8 w-8 items-center justify-center rounded-lg text-tertiary transition-colors hover:bg-white/6 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             >
@@ -400,16 +473,28 @@ export function Denver() {
       ) : (
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={openPanel}
           aria-label="Open Denver AI"
           title="Ask Denver AI"
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#0b0c0e] shadow-[0_10px_35px_rgba(0,0,0,0.5)] transition-all hover:scale-105 hover:bg-white/90 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#0b0c0e] shadow-[0_10px_35px_rgba(0,0,0,0.5)] transition-[background-color,opacity] duration-150 hover:bg-white/90 active:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         >
           <DopaMark className="h-5 w-5" />
         </button>
       )}
     </div>
   );
+}
+
+function useSyncReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  return reduced;
 }
 
 function ArrowIcon({ className }: { className: string }) {

@@ -117,26 +117,10 @@ body:has(#fc-sandbox-surface) [data-denver-root] {
   animation: dopa-fade-up 900ms cubic-bezier(0.16, 1, 0.3, 1) 220ms both;
 }
 
-@keyframes stagger-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up,
   .animate-fade-up-delay,
   .animate-fade-up-delay-2 {
     animation: none;
-  }
-
-  [style*="stagger-in"] {
-    animation: none !important;
-    opacity: 1 !important;
   }
 }

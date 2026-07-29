@@ -56,22 +56,16 @@ export function FinalCta() {
         </h2>
         <div className="relative mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
-            href="/?modal=signup"
+            href="/demo"
             className="inline-flex h-10 items-center rounded-lg bg-white px-4 text-[14px] font-medium text-[#08090a] transition-[transform,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:opacity-90 active:scale-[0.97]"
           >
-            Get started
+            Try brand import demo
           </Link>
           <Link
-            href="/demo"
+            href="/?modal=signup"
             className="inline-flex h-10 items-center rounded-lg border border-white/10 px-4 text-[14px] text-foreground transition-[transform,background-color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-white/4 active:scale-[0.97]"
           >
-            Try the demo
-          </Link>
-          <Link
-            href="/dashboard"
-            className="inline-flex h-10 items-center rounded-lg border border-white/10 px-4 text-[14px] text-foreground transition-[transform,background-color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-white/4 active:scale-[0.97]"
-          >
-            Open dashboard
+            Sign up
           </Link>
         </div>
       </div>
@@ -89,8 +83,12 @@ export function Footer() {
           <span className="text-[12px] text-tertiary ml-2">© {new Date().getFullYear()} Dopa, Inc.</span>
         </div>
         <div className="flex flex-wrap items-center gap-6 text-[13px] text-secondary">
-          <Link href="/demo" className="transition-colors hover:text-white">Demo</Link>
-          <Link href="/dashboard" className="transition-colors hover:text-white">Dashboard</Link>
+          <Link href="/demo" className="font-medium text-white transition-colors hover:text-white/80">
+            Demo
+          </Link>
+          <Link href="/fc-proof" className="transition-colors hover:text-white">
+            Judges / Alibaba Cloud proof
+          </Link>
           <Link href="/privacy" className="transition-colors hover:text-white">Privacy</Link>
           <Link href="/terms" className="transition-colors hover:text-white">Terms</Link>
         </div>

@@ -1,3 +1,4 @@
+import { LandingBrainViewer } from "./LandingBrainViewer";
 import { ArrowRight } from "./icons";
 
 const pillars = [
@@ -559,20 +560,6 @@ export function Keywords() {
 }
 
 export function Brain() {
-  const peaks = [
-    { t: "2.1s", label: "Hook", h: 42 },
-    { t: "4.8s", label: "Product", h: 68 },
-    { t: "7.2s", label: "Peak", h: 92 },
-    { t: "9.5s", label: "CTA", h: 55 },
-    { t: "11.0s", label: "End", h: 38 },
-  ];
-  const rois = [
-    { name: "V1 early visual", pct: 86 },
-    { name: "FFA face / form", pct: 72 },
-    { name: "MT motion", pct: 64 },
-    { name: "PPA place", pct: 41 },
-  ];
-
   return (
     <section id="brain" className="border-t border-white/6">
       <div className="mx-auto max-w-300 px-5 py-24 md:px-8 md:py-28">
@@ -587,96 +574,16 @@ export function Brain() {
           </p>
         </div>
 
-        <div className="dopa-panel mt-12 overflow-hidden p-4 md:p-5">
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-brand/35 bg-brand/15 px-2.5 py-1 font-mono text-[12px] text-accent">
-              CTR 2.84%
-            </span>
-            <Chip label="Region · Peak ROI" active />
-            <Chip label="Clip · unbox.mp4" />
-            <span className="ml-auto text-[11px] text-tertiary">
-              Upload · Inference · 3D
-            </span>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-[1.35fr_0.85fr]">
-            <div className="space-y-4">
-              <div className="relative aspect-video overflow-hidden rounded-lg border border-white/8 bg-[#0b0c0d]">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_40%_35%,rgba(94,106,210,0.28),transparent_55%)]" />
-                <div className="absolute inset-0 opacity-30 dopa-grain" />
-                <div className="absolute bottom-3 left-3 right-3 flex items-end gap-1">
-                  {peaks.map((p) => (
-                    <div key={p.t} className="flex flex-1 flex-col items-center gap-1">
-                      <div
-                        className="w-full rounded-sm bg-brand/55"
-                        style={{ height: `${p.h * 0.45}px` }}
-                      />
-                      <span className="font-mono text-[9px] text-tertiary">
-                        {p.t}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div className="absolute left-3 top-3 rounded bg-black/50 px-2 py-1 text-[11px] text-secondary">
-                  Peak response · 7.2s
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { label: "Pred. CTR", value: "2.84%" },
-                  { label: "Analysis", value: "18s" },
-                  { label: "Hem. lag", value: "4.2s" },
-                ].map((m) => (
-                  <div
-                    key={m.label}
-                    className="rounded-lg border border-white/6 bg-white/2 px-3 py-2.5"
-                  >
-                    <div className="text-[10px] text-tertiary">{m.label}</div>
-                    <div className="mt-0.5 font-mono text-[16px] text-foreground">
-                      {m.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg border border-white/8 bg-[#0b0c0d]">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(113,112,255,0.35),transparent_58%)]" />
-                <div className="absolute inset-0 opacity-25 dopa-grain" />
-                <div className="relative h-28 w-28 rounded-full border border-brand/40 bg-brand/10 shadow-[0_0_40px_rgba(94,106,210,0.35)]" />
-                <div className="absolute bottom-3 left-3 text-[10px] uppercase tracking-[0.12em] text-tertiary">
-                  Cortical preview
-                </div>
-              </div>
-              <div className="space-y-2 rounded-lg border border-white/6 bg-white/2 p-3">
-                <div className="text-[11px] text-tertiary">Dominant parcels</div>
-                {rois.map((r) => (
-                  <div key={r.name}>
-                    <div className="mb-1 flex justify-between text-[11px]">
-                      <span className="text-secondary">{r.name}</span>
-                      <span className="font-mono text-foreground">{r.pct}%</span>
-                    </div>
-                    <div className="h-1 overflow-hidden rounded-full bg-white/6">
-                      <div
-                        className="h-full rounded-full bg-brand/70"
-                        style={{ width: `${r.pct}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        <div className="dopa-panel mt-12 overflow-hidden p-4 md:p-6">
+          <LandingBrainViewer />
         </div>
 
         <FeatureLinks
           items={[
-            { id: "5.1", label: "TRIBE v2" },
-            { id: "5.2", label: "Heatmap timeline" },
-            { id: "5.3", label: "Parcel ROI" },
-            { id: "5.4", label: "CTR scorecard" },
+            { id: "5.1", label: "Cortical heatmap" },
+            { id: "5.2", label: "fMRI visual encoding" },
+            { id: "5.3", label: "Hemodynamic lag" },
+            { id: "5.4", label: "Predicted CTR" },
           ]}
         />
       </div>

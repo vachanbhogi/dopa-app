@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
+import { DesktopOnly } from "@/components/DesktopOnly";
 import {
   DashboardShell,
   type DashboardTab,
@@ -46,14 +47,16 @@ export default async function DashboardPage({
   }
 
   return (
-    <DashboardShell
-      key={selectedBusinessId ?? "no-selected-business"}
-      displayName={displayName}
-      email={user.email ?? ""}
-      businesses={businesses}
-      initialSelectedBusinessId={selectedBusinessId}
-      initialTab={initialTab}
-      googleAdsResult={googleAds}
-    />
+    <DesktopOnly surface="dashboard">
+      <DashboardShell
+        key={selectedBusinessId ?? "no-selected-business"}
+        displayName={displayName}
+        email={user.email ?? ""}
+        businesses={businesses}
+        initialSelectedBusinessId={selectedBusinessId}
+        initialTab={initialTab}
+        googleAdsResult={googleAds}
+      />
+    </DesktopOnly>
   );
 }

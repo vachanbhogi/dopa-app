@@ -8,7 +8,7 @@ export function SettingsTab({
   email: string;
 }) {
   return (
-    <div className="animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both] space-y-6">
+    <div className="space-y-6">
       <div>
         <p className="text-[14px] leading-6 text-secondary">
           Manage your account and workspace preferences.

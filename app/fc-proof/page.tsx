@@ -15,7 +15,7 @@ const implementationMap = [
   {
     layer: "Judge surface",
     proof: "Anonymous golden-path demo, trace spine, exact evidence labels",
-    source: "/demo",
+    source: "/fc-proof",
   },
   {
     layer: "Lifecycle API",
@@ -168,10 +168,10 @@ export default async function FcProofPage() {
               </h2>
             </div>
             <Link
-              href="/demo"
+              href="/fc-proof#ledger"
               className="text-sm text-[#a9a2ff] transition-colors hover:text-white"
             >
-              Run the golden path →
+              Inspect evidence ledger →
             </Link>
           </div>
 
