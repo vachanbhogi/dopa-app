@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "sourceHash": "ea1241623de6fcac",
+  "sourceHash": "efb03eb3c03ba088",
   "routes": [
     "/",
     "/dashboard",
@@ -429,7 +429,6 @@
         "Businesses",
         "Manage businesses",
         "Dashboard",
-        "Ask Denver AI",
         "Account menu",
         "Account",
         "Settings",
