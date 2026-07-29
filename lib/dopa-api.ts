@@ -1,5 +1,6 @@
 import { isJsonObject, stringValue } from "@/lib/validation";
 import { resolveDopaApiBaseUrl } from "@/lib/dopa-api-config";
+import { buildTimelineCurve } from "@/lib/timeline-curve";
 
 export { normalizeDopaApiBaseUrl } from "@/lib/dopa-api-config";
 
@@ -55,6 +56,13 @@ export type ScoreResponse = {
   peak_vram_mib: number;
   model_version: string;
   brain_response: BrainResponse;
+  timeline_curve?: TimelineCurve;
+};
+
+export type TimelineCurve = {
+  seconds: number[];
+  y: number[];
+  drop_off_seconds: number[];
 };
 
 export class DopaApiError extends Error {
@@ -185,6 +193,14 @@ function parseScoreResponse(value: unknown): ScoreResponse {
     throw new DopaApiError("The scoring API returned values outside safe limits.");
   }
 
+  const timelineCurve =
+    parseTimelineCurve(value.timeline_curve) ??
+    buildTimelineCurve({
+      durationSeconds,
+      attentionScore: attentionFromRegions(topRegions) ?? 55,
+      loadScore: 45,
+    });
+
   return {
     metric: "predicted_average_ctr",
     score_percent: scorePercent,
@@ -201,7 +217,32 @@ function parseScoreResponse(value: unknown): ScoreResponse {
       hemodynamic_lag_seconds: lagSeconds,
       top_regions: topRegions,
     },
+    timeline_curve: timelineCurve,
   };
+}
+
+function parseTimelineCurve(value: unknown): TimelineCurve | undefined {
+  if (!isJsonObject(value)) return undefined;
+  if (!Array.isArray(value.seconds) || !Array.isArray(value.y)) return undefined;
+  const seconds = value.seconds
+    .map(finiteNumber)
+    .filter((n): n is number => n !== null);
+  const y = value.y.map(finiteNumber).filter((n): n is number => n !== null);
+  const dropOffs = Array.isArray(value.drop_off_seconds)
+    ? value.drop_off_seconds
+        .map(finiteNumber)
+        .filter((n): n is number => n !== null)
+    : [];
+  if (seconds.length === 0 || y.length === 0 || seconds.length !== y.length) {
+    return undefined;
+  }
+  return { seconds, y, drop_off_seconds: dropOffs };
+}
+
+function attentionFromRegions(regions: BrainRegionResponse[]): number | null {
+  const top = regions[0]?.relative_response;
+  if (typeof top !== "number" || !Number.isFinite(top)) return null;
+  return top <= 1.5 ? top * 100 : top;
 }
 
 function parseBrainModel(value: unknown): BrainModelPayload {

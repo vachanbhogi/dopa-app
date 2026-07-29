@@ -11,6 +11,7 @@ import {
   type ScoreResponse,
 } from "@/lib/dopa-api";
 import { createClient } from "@/utils/supabase/client";
+import { RetentionGraph } from "@/components/dashboard/RetentionGraph";
 
 const CorticalModelViewer = dynamic(
   () =>
@@ -775,6 +776,11 @@ function AnalysisDesk({
               }
             />
           </div>
+
+          <RetentionGraph
+            curve={result?.timeline_curve}
+            fileDuration={fileDuration}
+          />
         </div>
 
         <aside className="space-y-4">

@@ -47,6 +47,11 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@alicloud/mns"],
   poweredByHeader: false,
+  // Parent /dopa has a package-lock.json that otherwise becomes Turbopack's
+  // inferred root and breaks client-manifest resolution for next builtins.
+  turbopack: {
+    root: process.cwd(),
+  },
   experimental: {
     proxyClientMaxBodySize: "128kb",
     serverActions: {

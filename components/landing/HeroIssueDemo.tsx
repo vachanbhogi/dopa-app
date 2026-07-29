@@ -1,335 +1,388 @@
-import { PriorityHigh, StatusInProgress } from "./icons";
+/**
+ * Static homepage mock of the authenticated Brain desk —
+ * mirrors DashboardShell + BrainTab empty state, not a live workspace.
+ */
 
-function Avatar({
-  initials,
-  color,
-  size = 18,
-}: {
-  initials: string;
-  color: string;
-  size?: number;
-}) {
-  return (
-    <span
-      className="inline-flex shrink-0 items-center justify-center rounded-full text-[9px] font-medium text-white"
-      style={{ background: color, width: size, height: size }}
-    >
-      {initials}
-    </span>
-  );
-}
-
-function NavIcon({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="mr-2 inline-flex h-4 w-4 items-center justify-center text-[#62666d]">
-      {children}
-    </span>
-  );
-}
-
-function SidebarItem({
-  label,
-  active,
-  count,
-  icon,
-  starred,
-}: {
-  label: string;
-  active?: boolean;
-  count?: string;
-  icon?: React.ReactNode;
-  starred?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center rounded-md px-2 py-1.25 text-[12.5px] leading-none ${
-        active
-          ? "bg-white/[0.07] text-white"
-          : "text-[#8a8f98] hover:bg-white/[0.035] hover:text-[#d0d6e0]"
-      }`}
-    >
-      {icon ? <NavIcon>{icon}</NavIcon> : null}
-      {starred ? (
-        <span className="mr-2 text-[11px] text-[#f2c94c]">★</span>
-      ) : null}
-      <span className="truncate">{label}</span>
-      {count ? (
-        <span className="ml-auto pl-2 font-mono text-[11px] text-[#62666d]">
-          {count}
-        </span>
-      ) : null}
-    </div>
-  );
-}
+const NAV = [
+  { label: "Business", icon: "gear" as const },
+  { label: "Competitors", icon: "eye" as const },
+  { label: "Products", icon: "box" as const },
+  { label: "Keywords", icon: "tag" as const },
+  { label: "Brain", icon: "brain" as const, active: true },
+  { label: "Google Ads", icon: "google" as const },
+];
 
 export function HeroIssueDemo() {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-white/8 bg-[#0f1011] shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_30px_80px_rgba(0,0,0,0.55)]">
-      <div className="relative grid min-h-140 grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)_260px]">
-        <aside className="hidden border-r border-white/6 bg-[#0c0d0e] p-2.5 lg:block">
-          <div className="mb-3 flex items-center gap-2 px-2 py-1.5">
-            <span className="flex h-4.5 w-4.5 items-center justify-center rounded-sm bg-[#5e6ad2] text-[10px] font-semibold text-white">
-              A
-            </span>
-            <span className="text-[12.5px] font-medium text-[#d0d6e0]">Workspace</span>
-            <span className="ml-auto text-[10px] text-[#62666d]">▾</span>
+    <div
+      aria-hidden
+      className="relative overflow-hidden rounded-xl border border-white/8 bg-[#08090a] shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_30px_80px_rgba(0,0,0,0.55)]"
+    >
+      <div className="dopa-grain pointer-events-none absolute inset-0 opacity-30" />
+
+      <div className="relative flex min-h-[34rem] flex-col md:min-h-[38rem] md:flex-row">
+        {/* Sidebar */}
+        <aside className="relative hidden w-48 shrink-0 flex-col border-r border-white/6 bg-[#08090a] md:flex">
+          <div
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(88,92,140,0.08),transparent_55%)]"
+            aria-hidden
+          />
+          <div className="relative border-b border-white/6 px-3 py-3">
+            <div className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand text-[11px] font-bold text-white">
+                D
+              </span>
+              <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-tight text-white">
+                Workspace
+              </span>
+              <ChevronDown />
+            </div>
           </div>
 
-          <div className="space-y-0.5">
-            <SidebarItem
-              label="Inbox"
-              icon={
-                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="currentColor">
-                  <path d="M2 3.5h12v2.2L8.7 9.2a1.2 1.2 0 0 1-1.4 0L2 5.7V3.5Zm0 3.4 4.8 3.3a2.4 2.4 0 0 0 2.4 0L14 6.9V12a.75.75 0 0 1-.75.75H2.75A.75.75 0 0 1 2 12V6.9Z" />
-                </svg>
-              }
-            />
-            <SidebarItem
-              label="Creatives"
-              icon={
-                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="currentColor">
-                  <circle cx="8" cy="8" r="5.25" fill="none" stroke="currentColor" strokeWidth="1.4" />
-                </svg>
-              }
-            />
-            <SidebarItem
-              label="Scores"
-              icon={
-                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="currentColor">
-                  <path d="M3 4.5h10v1.2H3V4.5Zm0 3h7v1.2H3V7.5Zm0 3h9v1.2H3V10.5Z" />
-                </svg>
-              }
-            />
-            <SidebarItem
-              label="Brain"
-              icon={
-                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.4">
-                  <path d="M2 8h2.2l1.4-3 2.2 6 1.6-3H14" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              }
-            />
-          </div>
+          <nav className="relative flex flex-1 flex-col gap-0.5 px-2 py-3">
+            {NAV.map((item) => (
+              <div
+                key={item.label}
+                className={
+                  item.active
+                    ? "flex items-center gap-2.5 rounded-lg border border-brand/35 bg-brand/10 px-2.5 py-2 text-[12.5px] font-medium text-brand"
+                    : "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[12.5px] text-[#8a8f98]"
+                }
+              >
+                <NavGlyph name={item.icon} />
+                <span className="truncate">{item.label}</span>
+              </div>
+            ))}
+          </nav>
 
-          <div className="mt-5 px-2 text-[11px] font-medium text-[#62666d]">
-            Workspace
-          </div>
-          <div className="mt-1 space-y-0.5">
-            <SidebarItem label="Campaigns" />
-            <SidebarItem label="Variants" />
-            <SidebarItem label="More" />
-          </div>
-
-          <div className="mt-5 px-2 text-[11px] font-medium text-[#62666d]">
-            Favorites
-          </div>
-          <div className="mt-1 space-y-0.5">
-            <SidebarItem label="Summer drop · unbox" active starred count="05/12" />
-            <SidebarItem label="TRIBE queue" />
-            <SidebarItem label="A/B sims" />
-            <SidebarItem label="Competitors" />
+          <div className="relative border-t border-white/6 px-3 py-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/8 text-[10px] font-medium text-white">
+                N
+              </span>
+              <span className="min-w-0 truncate text-[11px] text-[#8a8f98]">
+                you@dopa.ai
+              </span>
+            </div>
           </div>
         </aside>
 
-        <section className="border-r border-white/6 p-6 md:p-8">
-          <h3 className="max-w-130 text-[28px] font-semibold leading-[1.15] tracking-[-0.03em] text-white md:text-[34px]">
-            Summer drop · unbox hook
-          </h3>
-          <p className="mt-4 max-w-130 text-[13.5px] leading-6 text-[#8a8f98]">
-            Run creative through{" "}
-            <code className="rounded-sm bg-white/6 px-1.5 py-px font-mono text-[12px] text-[#d0d6e0]">
-              TRIBE v2
-            </code>{" "}
-            cortical encoding, then dopa-model predicts average click-through
-            rate before spend.
-          </p>
+        {/* Main column */}
+        <div className="relative flex min-w-0 flex-1 flex-col">
+          {/* Top bar */}
+          <header className="flex items-center gap-3 border-b border-white/6 px-4 py-2.5 sm:px-5">
+            <p className="hidden shrink-0 text-[12px] text-[#8a8f98] sm:block">
+              Workspace{" "}
+              <span className="text-[#62666d]">/</span>{" "}
+              <span className="text-white">Brain</span>
+            </p>
+            <div className="mx-auto flex w-full max-w-xs items-center gap-2 rounded-full border border-white/8 bg-white/3 px-3 py-1.5 text-[12px] text-[#62666d]">
+              <SearchIcon />
+              <span className="flex-1 truncate">Search or command…</span>
+              <kbd className="hidden rounded border border-white/10 bg-white/4 px-1.5 py-px font-mono text-[10px] sm:inline">
+                ⌘K
+              </kbd>
+            </div>
+            <div className="hidden items-center gap-2 sm:flex">
+              <span className="text-[12px] text-[#8a8f98]">Home</span>
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/8 text-[10px] font-medium text-white">
+                N
+              </span>
+            </div>
+          </header>
 
-          <div className="mt-10">
-            <div className="mb-4 text-[13px] font-medium text-[#d0d6e0]">Activity</div>
-            <div className="space-y-5">
-              <Activity
-                avatar={<Avatar initials="D" color="#5e6ad2" />}
-                name="Dopa"
-                time="2min ago"
-                body={
-                  <>
-                    scored the creative via TRIBE v2 for{" "}
-                    <span className="text-[#d0d6e0]">maya</span>
-                  </>
-                }
-              />
-              <Activity
-                avatar={<Avatar initials="TI" color="#3d4450" />}
-                name="Dopa model"
-                time="2min ago"
-                body={
-                  <>
-                    returned <Chip>Predicted CTR 2.84%</Chip> with{" "}
-                    <Chip>interactive cortex</Chip>
-                  </>
-                }
-              />
-              <Activity
-                avatar={<Avatar initials="M" color="#7a5af8" />}
-                name="maya"
-                time="4 min ago"
-                body={
-                  <span>
-                    Live A/B is too slow — can we kill the weak cut before it burns
-                    budget?
-                  </span>
-                }
-              />
-              <Activity
-                avatar={<Avatar initials="A" color="#27a644" />}
-                name="alex"
-                time="just now"
-                body={
-                  <span>
-                    <span className="text-[#828fff]">@Dopa</span> score this cut and
-                    propose an A/B replacement
-                  </span>
-                }
-              />
-              <div className="rounded-lg border border-white/8 bg-white/2.5 p-3">
-                <div className="mb-2 flex flex-wrap items-center gap-2 text-[12px]">
-                  <Avatar initials="D" color="#5e6ad2" />
-                  <span className="font-medium text-white">Dopa</span>
-                  <span className="text-[#8a8f98]">
-                    connected by alex · 2 min ago
-                  </span>
-                </div>
-                <div className="text-[13px] text-[#8a8f98]">
-                  Ran cortical encode → CTR ·{" "}
-                  <span className="text-[#d0d6e0]">
-                    Average-subject prediction ready for review
-                  </span>
-                </div>
-                <div className="mt-2 text-[12px] text-[#62666d]">
-                  Dopa moved creative from Queue to Boost · just now
-                </div>
+          {/* Brain desk */}
+          <div className="flex-1 space-y-3 overflow-hidden p-4 sm:space-y-4 sm:p-5">
+            <p className="max-w-2xl text-[13px] leading-5 text-[#8a8f98] sm:text-[14px] sm:leading-6">
+              Upload an ad to predict its average click-through rate and see the
+              cortical response TRIBE v2 models for the clip.
+            </p>
+
+            {/* Neural desk bar */}
+            <div className="dopa-panel flex flex-wrap items-center justify-between gap-3 px-3.5 py-2.5 sm:px-4 sm:py-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-[#62666d] sm:text-[11px]">
+                  Neural desk · ready
+                </p>
+                <p className="mt-0.5 truncate text-[13px] font-medium text-white sm:text-[14px]">
+                  No creative selected
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="rounded-[5px] border border-brand/25 bg-brand/10 px-2 py-1 font-mono text-[10px] text-brand sm:text-[11px]">
+                  CTR —
+                </span>
+                <span className="rounded-[5px] border border-white/10 px-2 py-1 text-[10px] text-[#62666d]">
+                  0 regions
+                </span>
+                <span className="hidden rounded-[5px] border border-white/10 px-2 py-1 text-[10px] text-[#62666d] sm:inline">
+                  — clip
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-2.5 py-1.5 text-[11px] font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.16)] sm:px-3 sm:text-[12px]">
+                  <BrainGlyph />
+                  Analyze
+                </span>
+                <span className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px] text-[#8a8f98] sm:px-3 sm:text-[12px]">
+                  Upload
+                </span>
               </div>
             </div>
-          </div>
-        </section>
 
-        <aside className="hidden p-5 lg:block">
-          <div className="mb-5">
-            <div className="text-[12px] text-[#62666d]">AD-1942</div>
-          </div>
-          <div className="space-y-4 text-[12.5px]">
-            <Prop label="Status">
-              <span className="inline-flex items-center gap-1.5 text-[#d0d6e0]">
-                <StatusInProgress /> In Progress
-              </span>
-            </Prop>
-            <Prop label="Priority">
-              <span className="inline-flex items-center gap-1.5 text-[#d0d6e0]">
-                <PriorityHigh /> High
-              </span>
-            </Prop>
-            <Prop label="Assignee">
-              <span className="inline-flex items-center gap-1.5 text-[#d0d6e0]">
-                <Avatar initials="A" color="#27a644" size={16} /> alex
-              </span>
-            </Prop>
-            <Prop label="">
-              <span className="inline-flex items-center gap-1.5 text-[#d0d6e0]">
-                <Avatar initials="D" color="#5e6ad2" size={16} /> Dopa
-              </span>
-            </Prop>
-            <Prop label="Labels">
-              <span className="flex flex-wrap gap-1">
-                <Chip>Video</Chip>
-                <Chip>TRIBE</Chip>
-              </span>
-            </Prop>
-            <Prop label="Cycle">
-              <span className="text-[#d0d6e0]">Flight 12</span>
-            </Prop>
-            <Prop label="Project">
-              <span className="text-[#d0d6e0]">Summer Drop</span>
-            </Prop>
-          </div>
-        </aside>
-      </div>
+            {/* Progress idle */}
+            <div className="rounded-lg border border-white/8 bg-white/2 px-3.5 py-2.5 sm:py-3">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-[11px] font-medium text-[#62666d]">
+                  Waiting for creative
+                </p>
+                <p className="font-mono text-[9px] tabular-nums text-[#62666d]">
+                  Upload · Inference · 3D model
+                </p>
+              </div>
+              <div className="relative mt-2.5 h-1 overflow-hidden rounded-full bg-white/6">
+                <div className="h-full w-0 rounded-full bg-brand/40" />
+              </div>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {["Upload", "Inference", "3D model"].map((label) => (
+                  <div
+                    key={label}
+                    className="flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-[0.11em] text-white/25"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-white/15" />
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </div>
 
-      {/* Floating agent panel — matches Linear hero */}
-      <div className="absolute bottom-6 right-6 z-10 hidden w-[320px] overflow-hidden rounded-[10px] border border-white/10 bg-[#141516]/95 shadow-[0_20px_60px_rgba(0,0,0,0.65)] backdrop-blur-md md:block">
-        <div className="flex items-center gap-2 border-b border-white/6 px-3 py-2.5">
-          <Avatar initials="D" color="#5e6ad2" size={16} />
-          <span className="text-[12px] font-medium text-white">Dopa</span>
-          <span className="rounded bg-[#5e6ad2]/25 px-1.5 py-px text-[10px] text-[#828fff]">
-            TRIBE v2
-          </span>
-          <span className="ml-auto text-[11px] text-[#62666d]">AD-1942</span>
-        </div>
-        <div className="space-y-2 px-3 py-3 font-mono text-[11px] leading-5 text-[#8a8f98]">
-          <p>
-            alex connected Dopa to{" "}
-            <span className="text-[#d0d6e0]">AD-1942</span>
-          </p>
-          <p className="text-[#d0d6e0]">Running TRIBE v2 cortical encode...</p>
-          <p className="flex items-center gap-2 text-[#62666d]">
-            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[#828fff]" />
-            Thinking...
-          </p>
-          <div className="rounded-md border border-white/6 bg-black/30 px-2 py-1.5 text-[10px]">
-            <div className="text-[#62666d]">brain_video → mean CTR head</div>
-            <div className="text-emerald-400/90">
-              Predicted average CTR 2.84%
+            {/* 60 / 40 desk */}
+            <div className="grid items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(14rem,0.95fr)]">
+              <div className="dopa-panel overflow-hidden">
+                <div className="relative flex aspect-video flex-col items-center justify-center gap-2.5 border-b border-dashed border-transparent bg-[#08090a] px-6 text-center sm:gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/8 bg-white/4 text-[#62666d] sm:h-12 sm:w-12">
+                    <UploadGlyph />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-medium text-white sm:text-[14px]">
+                      Choose an ad video
+                    </p>
+                    <p className="mt-1 text-[11px] text-[#8a8f98] sm:text-[12px]">
+                      MP4 or MOV · up to 60 seconds · 250 MB maximum
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-white/6 px-3.5 py-3 sm:px-4">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#62666d]">
+                      Peak response track · awaiting
+                    </p>
+                    <p className="font-mono text-[10px] text-[#62666d]">
+                      0s → 30.0s
+                    </p>
+                  </div>
+                  <div className="relative h-8 overflow-hidden rounded-lg border border-white/8 bg-[#0c0d0e] sm:h-9">
+                    <div
+                      className="absolute inset-0 opacity-40"
+                      style={{
+                        backgroundImage:
+                          "linear-gradient(90deg, transparent 0%, rgba(94,106,210,0.18) 50%, transparent 100%)",
+                      }}
+                    />
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {Array.from({ length: 4 }, (_, i) => (
+                      <div
+                        key={i}
+                        className="rounded-lg border border-white/8 bg-white/2 px-3 py-2"
+                      >
+                        <p className="font-mono text-[9px] text-brand">— · —</p>
+                        <p className="mt-0.5 truncate text-[12px] font-medium text-[#62666d]">
+                          Region pending
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <aside className="dopa-panel hidden overflow-hidden lg:block">
+                <div className="flex items-center justify-between border-b border-white/6 px-4 py-3">
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#62666d]">
+                      Brain sync
+                    </p>
+                    <p className="mt-0.5 text-[12px] text-[#8a8f98]">
+                      Average-subject cortical model
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-brand/25 bg-brand/10 px-2 py-1 text-[9px] font-medium text-brand">
+                    TRIBE v2
+                  </span>
+                </div>
+
+                <div className="flex aspect-5/4 flex-col items-center justify-center gap-2 bg-[radial-gradient(ellipse_at_50%_45%,rgba(94,106,210,0.18),transparent_58%)] px-6 text-center">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/8 bg-white/4 text-[#62666d]">
+                    <BrainGlyph />
+                  </span>
+                  <p className="text-[12px] text-[#8a8f98]">
+                    Cortex appears after analysis
+                  </p>
+                </div>
+
+                <div className="border-t border-white/6 px-4 py-3.5">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#62666d]">
+                    Dominant ROI
+                  </p>
+                  <div className="mt-2 flex items-end justify-between gap-3">
+                    <p className="min-w-0 text-[16px] font-medium leading-tight tracking-[-0.02em] text-[#62666d]">
+                      Awaiting response
+                    </p>
+                    <span className="shrink-0 font-mono text-[24px] font-medium leading-none tracking-[-0.04em] text-white">
+                      —
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[12px] leading-5 text-[#8a8f98]">
+                    The strongest modeled cortical region will land here.
+                  </p>
+                </div>
+
+                <div className="space-y-2.5 border-t border-white/6 px-4 py-3.5">
+                  {[1, 2, 3].map((n) => (
+                    <div key={n}>
+                      <div className="mb-1 flex items-center justify-between gap-3">
+                        <p className="truncate text-[12px] text-[#62666d]">
+                          Region {n}
+                        </p>
+                        <span className="shrink-0 font-mono text-[10px] text-[#62666d]">
+                          0.00
+                        </span>
+                      </div>
+                      <div className="h-1 overflow-hidden rounded-full bg-white/6">
+                        <div className="h-full w-0 rounded-full bg-brand" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </aside>
             </div>
           </div>
-          <p className="text-[#62666d]">Worked for 7s</p>
         </div>
       </div>
     </div>
   );
 }
 
-function Chip({ children }: { children: React.ReactNode }) {
+function ChevronDown() {
   return (
-    <span className="inline-flex rounded-sm bg-white/6 px-1.5 py-0.5 text-[11px] text-[#8a8f98]">
-      {children}
-    </span>
+    <svg
+      className="h-3.5 w-3.5 shrink-0 text-[#8a8f98]"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 6l4 4 4-4" />
+    </svg>
   );
 }
 
-function Prop({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function SearchIcon() {
   return (
-    <div className="grid grid-cols-[84px_1fr] items-center gap-2">
-      <div className="text-[#62666d]">{label}</div>
-      <div>{children}</div>
-    </div>
+    <svg
+      className="h-3.5 w-3.5 shrink-0"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    >
+      <circle cx="7" cy="7" r="4.25" />
+      <path d="M10.5 10.5 13.5 13.5" />
+    </svg>
   );
 }
 
-function Activity({
-  avatar,
+function BrainGlyph() {
+  return (
+    <svg
+      className="h-3.5 w-3.5"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6.2 2.8c-1.5.1-2.7 1.4-2.7 3 0 .5.1 1 .4 1.4A2.4 2.4 0 0 0 2.5 9.4c0 1.3 1 2.4 2.3 2.5v1.3c0 .4.3.7.7.7h.8c.4 0 .7-.3.7-.7v-.7h.8v.7c0 .4.3.7.7.7h.8c.4 0 .7-.3.7-.7v-1.3c1.3-.1 2.3-1.2 2.3-2.5 0-1-.6-1.8-1.4-2.2.3-.4.4-.9.4-1.4 0-1.6-1.2-2.9-2.7-3-.5-.8-1.4-1.3-2.4-1.3S6.7 2 6.2 2.8Z" />
+    </svg>
+  );
+}
+
+function UploadGlyph() {
+  return (
+    <svg
+      className="h-5 w-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 16V5" />
+      <path d="m8 9 4-4 4 4" />
+      <path d="M5 19h14" />
+    </svg>
+  );
+}
+
+function NavGlyph({
   name,
-  time,
-  body,
 }: {
-  avatar: React.ReactNode;
-  name: string;
-  time: string;
-  body: React.ReactNode;
+  name: "gear" | "eye" | "box" | "tag" | "brain" | "google";
 }) {
-  return (
-    <div className="flex gap-2.5 text-[13px] leading-5">
-      <div className="mt-0.5">{avatar}</div>
-      <div>
-        <div className="flex flex-wrap items-baseline gap-x-2">
-          <span className="font-medium text-white">{name}</span>
-          <span className="text-[#62666d]">{time}</span>
-        </div>
-        <div className="mt-0.5 text-[#8a8f98]">{body}</div>
-      </div>
-    </div>
-  );
+  const className = "h-3.5 w-3.5 shrink-0";
+  switch (name) {
+    case "gear":
+      return (
+        <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+          <circle cx="8" cy="8" r="2.2" />
+          <path d="M8 1.8v1.4M8 12.8v1.4M1.8 8h1.4M12.8 8h1.4M3.4 3.4l1 1M11.6 11.6l1 1M12.6 3.4l-1 1M4.4 11.6l-1 1" strokeLinecap="round" />
+        </svg>
+      );
+    case "eye":
+      return (
+        <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+          <path d="M1.8 8s2.2-3.5 6.2-3.5S14.2 8 14.2 8s-2.2 3.5-6.2 3.5S1.8 8 1.8 8Z" />
+          <circle cx="8" cy="8" r="1.6" />
+        </svg>
+      );
+    case "box":
+      return (
+        <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+          <path d="M2.5 5.2 8 2.5l5.5 2.7v5.6L8 13.5 2.5 10.8V5.2Z" />
+          <path d="M2.5 5.2 8 8l5.5-2.8M8 8v5.5" />
+        </svg>
+      );
+    case "tag":
+      return (
+        <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
+          <path d="M2.5 8.8V3.5H7.8l5.7 5.7-4.3 4.3L2.5 8.8Z" />
+          <circle cx="5.5" cy="5.5" r="0.9" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "brain":
+      return <BrainGlyph />;
+    case "google":
+      return (
+        <svg className={className} viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8.2 7.3v1.7h3.1c-.1.8-.6 2-1.8 2.7l1.5 1.2c1.5-1.4 2.2-3.4 2.2-5.7 0-.5 0-.9-.1-1.2H8.2v1.3Z" opacity=".9" />
+          <path d="M4.6 9.5a4.4 4.4 0 0 1 0-3l-1.5-1.2a6.5 6.5 0 0 0 0 5.4l1.5-1.2Z" opacity=".7" />
+          <path d="M8.2 3.4c.9 0 1.7.3 2.3.9l1.3-1.3A5.3 5.3 0 0 0 3.1 5.3l1.5 1.2c.4-1.2 1.7-3.1 3.6-3.1Z" opacity=".8" />
+          <path d="M8.2 12.6c1.8 0 3.3-.6 4.3-1.7l-1.5-1.2c-.5.4-1.3.9-2.8.9-1.9 0-3.2-1.9-3.6-3.1l-1.5 1.2A5.4 5.4 0 0 0 8.2 12.6Z" />
+        </svg>
+      );
+  }
 }
