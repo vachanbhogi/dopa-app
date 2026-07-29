@@ -1,10 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { signOut } from "@/app/auth/actions";
+import { selectBusiness } from "@/app/dashboard/actions";
 import { BrainTab } from "./BrainTab";
 import { GoogleAdsTab } from "./GoogleAdsTab";
+
+type Business = {
+  id: string;
+  name: string;
+};
 
 type Tab = "keywords" | "competitors" | "brain" | "googleAds" | "metrics" | "settings";
 
@@ -20,11 +26,25 @@ const tabs: { id: Tab; label: string; icon: string }[] = [
 export function DashboardShell({
   displayName,
   email,
+  businesses,
+  initialSelectedBusinessId,
 }: {
   displayName: string;
   email: string;
+  businesses: Business[];
+  initialSelectedBusinessId: string | null;
 }) {
   const [active, setActive] = useState<Tab>("brain");
+  const [selectedBusinessId, setSelectedBusinessId] = useState(
+    initialSelectedBusinessId ?? businesses[0]?.id ?? "",
+  );
+  const [businessMenuOpen, setBusinessMenuOpen] = useState(false);
+  const businessMenuRef = useRef<HTMLDivElement>(null);
+  const [isSelectingBusiness, startSelectBusiness] = useTransition();
+
+  const selectedBusiness =
+    businesses.find((business) => business.id === selectedBusinessId) ?? businesses[0];
+  const businessInitial = selectedBusiness?.name[0]?.toUpperCase() ?? "B";
 
   const initials = displayName
     .split(" ")
@@ -33,19 +53,102 @@ export function DashboardShell({
     .slice(0, 2)
     .toUpperCase();
 
+  useEffect(() => {
+    setSelectedBusinessId(initialSelectedBusinessId ?? businesses[0]?.id ?? "");
+  }, [initialSelectedBusinessId, businesses]);
+
+  useEffect(() => {
+    if (!businessMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!businessMenuRef.current?.contains(event.target as Node)) {
+        setBusinessMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setBusinessMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [businessMenuOpen]);
+
   return (
     <div className="flex h-screen bg-background text-foreground">
       {/* ── Sidebar ── */}
       <aside className="flex w-55 shrink-0 flex-col border-r border-white/6 bg-[#09090b]">
-        <div className="flex h-13 items-center gap-2.5 border-b border-white/6 px-4">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-[11px] font-bold text-white">
-            {initials[0]}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[13px] font-medium leading-tight text-white">
-              {displayName}
+        <div className="relative border-b border-white/6 px-3 py-2.5" ref={businessMenuRef}>
+          <button
+            type="button"
+            onClick={() => setBusinessMenuOpen((open) => !open)}
+            disabled={!selectedBusiness || isSelectingBusiness}
+            aria-haspopup="listbox"
+            aria-expanded={businessMenuOpen}
+            aria-label="Select business"
+            className="flex w-full items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-[background-color] duration-150 hover:bg-white/4 active:scale-[0.99] disabled:opacity-60"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand text-[11px] font-bold text-white">
+              {businessInitial}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-[13px] font-medium leading-tight text-white">
+              {selectedBusiness?.name ?? "No business"}
+            </span>
+            <svg
+              className={`h-3.5 w-3.5 shrink-0 text-secondary transition-transform duration-150 ${businessMenuOpen ? "rotate-180" : ""}`}
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M4 6l4 4 4-4" />
+            </svg>
+          </button>
+
+          {businessMenuOpen ? (
+            <div
+              role="listbox"
+              aria-label="Businesses"
+              className="absolute left-3 right-3 top-[calc(100%+4px)] z-20 overflow-hidden rounded-lg border border-white/10 bg-[#111114] py-1 shadow-[0_12px_40px_rgba(0,0,0,0.45)]"
+            >
+              {businesses.map((business) => {
+                const isSelected = business.id === selectedBusinessId;
+                return (
+                  <button
+                    key={business.id}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    disabled={isSelectingBusiness}
+                    onClick={() => {
+                      setSelectedBusinessId(business.id);
+                      setBusinessMenuOpen(false);
+                      startSelectBusiness(async () => {
+                        await selectBusiness(business.id);
+                      });
+                    }}
+                    className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] transition-[background-color,color] duration-150 ${
+                      isSelected
+                        ? "bg-white/8 text-white"
+                        : "text-secondary hover:bg-white/4 hover:text-white"
+                    }`}
+                  >
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-brand/20 text-[10px] font-semibold text-brand">
+                      {business.name[0]?.toUpperCase()}
+                    </span>
+                    <span className="truncate">{business.name}</span>
+                  </button>
+                );
+              })}
             </div>
-          </div>
+          ) : null}
         </div>
 
         <nav className="flex-1 space-y-0.5 px-2 pt-3" aria-label="Dashboard">
