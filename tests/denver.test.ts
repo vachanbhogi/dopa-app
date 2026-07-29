@@ -63,6 +63,19 @@ await test("generated knowledge tracks current routes and dashboard sections", (
   assert.match(context, /Competitor research/i);
   assert.match(context, /source-backed market research/i);
   assert.match(context, /Revision:/);
+
+  const googleAdsContext = buildDenverKnowledgeContext(
+    [
+      {
+        content:
+          "Google sign-in worked but Ads denied access. What do I need to link?",
+      },
+    ],
+    "/dashboard?tab=googleAds",
+  );
+  assert.match(googleAdsContext, /customer account that owns your campaigns/i);
+  assert.match(googleAdsContext, /manager account Dopa uses for API access/i);
+  assert.match(googleAdsContext, /Test Account Access/i);
 });
 
 await test("accepts a bounded conversation and strips query injection", () => {

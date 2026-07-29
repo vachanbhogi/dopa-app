@@ -37,6 +37,7 @@ const visiblePropertyNames = new Set([
   "label",
   "message",
   "name",
+  "prompt",
   "quote",
   "role",
   "subtitle",

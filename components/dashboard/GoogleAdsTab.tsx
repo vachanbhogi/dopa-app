@@ -8,6 +8,7 @@ import type {
   LiveCampaignData,
 } from "@/utils/google-ads-client";
 import { isJsonObject } from "@/lib/validation";
+import { GoogleAdsOnboarding } from "./GoogleAdsOnboarding";
 
 type ConnectionState =
   | "loading"
@@ -60,10 +61,10 @@ function connectionStateFor(
 
 function oauthNotice(result: string | undefined): string | null {
   if (result === "connected") {
-    return "Google Ads connected successfully.";
+    return "Google sign-in completed. Campaign access is checked separately.";
   }
   if (result === "connected_temporary") {
-    return "Google Ads connected. Google did not provide long-lived access, so you may need to reconnect after this session expires.";
+    return "Google sign-in completed with temporary access. You may need to sign in again after this session expires.";
   }
   if (result === "configuration_required") {
     return "Google authorization succeeded, but secure token storage is not configured correctly.";
@@ -82,6 +83,20 @@ function isGoogleAdsErrorCode(value: unknown): value is GoogleAdsErrorCode {
     value === "google_ads_api_error" ||
     value === "network_error"
   );
+}
+
+function retryLabel(
+  code: GoogleAdsErrorCode | undefined,
+  detailed = false,
+): string {
+  if (code === "configuration_required") return "Check configuration";
+  if (code === "network_error" || code === "google_ads_api_error") {
+    return "Try again";
+  }
+  if (code === "access_denied" && detailed) {
+    return "I finished setup — check access";
+  }
+  return "Check access";
 }
 
 function isLiveCampaignData(value: unknown): value is LiveCampaignData {
@@ -170,6 +185,7 @@ export function GoogleAdsTab({
     useState<ConnectionState>("loading");
   const [isConnectingOAuth, setIsConnectingOAuth] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [apiErrorCode, setApiErrorCode] = useState<GoogleAdsErrorCode>();
   const [account, setAccount] =
     useState<GoogleAdsApiResponse["accountDetails"]>();
   const [campaigns, setCampaigns] = useState<LiveCampaignData[]>([]);
@@ -190,6 +206,7 @@ export function GoogleAdsTab({
         setCampaigns(data.campaigns);
         setAccount(data.accountDetails);
         setApiError(null);
+        setApiErrorCode(undefined);
         setConnectionState("connected");
         return;
       }
@@ -197,11 +214,13 @@ export function GoogleAdsTab({
       setCampaigns([]);
       setAccount(undefined);
       setApiError(data.error ?? "Google Ads could not be connected.");
+      setApiErrorCode(data.code);
       setConnectionState(connectionStateFor(data.code));
     } catch (error: unknown) {
       if (signal?.aborted) return;
       setCampaigns([]);
       setAccount(undefined);
+      setApiErrorCode("network_error");
       setApiError(
         error instanceof Error
           ? `Could not load Google Ads: ${error.message}`
@@ -220,6 +239,7 @@ export function GoogleAdsTab({
   const refreshGoogleAds = () => {
     setConnectionState("loading");
     setApiError(null);
+    setApiErrorCode(undefined);
     void fetchGoogleAds();
   };
 
@@ -269,6 +289,8 @@ export function GoogleAdsTab({
 
       setCampaigns([]);
       setAccount(undefined);
+      setApiError(null);
+      setApiErrorCode("oauth_required");
       setConnectionState("oauth_required");
       setNotice(
         "Google Ads disconnected. Your Dopa session is still active.",
@@ -329,7 +351,10 @@ export function GoogleAdsTab({
             <h2 className="text-[15px] font-medium text-white">
               Google Ads Integration
             </h2>
-            <ConnectionBadge state={connectionState} />
+            <ConnectionBadge
+              state={connectionState}
+              errorCode={apiErrorCode}
+            />
           </div>
           <p className="mt-1 text-[13px] text-secondary">
             Live campaign performance from the last 30 days.
@@ -354,7 +379,7 @@ export function GoogleAdsTab({
                 Disconnect Ads
               </button>
             </>
-          ) : connectionState !== "configuration_required" ? (
+          ) : connectionState === "oauth_required" ? (
             <ConnectButton
               isConnecting={isConnectingOAuth}
               onClick={() => void handleOAuthConnect()}
@@ -365,7 +390,7 @@ export function GoogleAdsTab({
               onClick={refreshGoogleAds}
               className="rounded-lg border border-white/10 px-3 py-1.5 text-[12px] text-secondary transition-colors hover:border-white/20 hover:text-white"
             >
-              Check configuration
+              {retryLabel(apiErrorCode)}
             </button>
           )}
         </div>
@@ -390,40 +415,27 @@ export function GoogleAdsTab({
 
       {connectionState === "loading" ? (
         <LoadingState />
-      ) : connectionState === "configuration_required" ? (
-        <EmptyState
-          title="Google Ads configuration required"
-          body={
-            apiError ??
-            "Add the server-side Google Ads credentials, then check again."
-          }
-          action={
-            <button
-              type="button"
-              onClick={refreshGoogleAds}
-              className="mt-6 rounded-lg bg-white px-5 py-2.5 text-[14px] font-medium text-black transition-transform hover:scale-[1.02] active:scale-[0.98]"
-            >
-              Check again
-            </button>
-          }
-        />
       ) : connectionState !== "connected" ? (
-        <EmptyState
-          title={
-            connectionState === "oauth_required"
-              ? "Connect your Google Ads account"
-              : "Google Ads needs attention"
-          }
-          body={
-            apiError ??
-            "Authorize Dopa to read campaign performance from Google Ads."
-          }
-          action={
-            <ConnectButton
-              isConnecting={isConnectingOAuth}
-              onClick={() => void handleOAuthConnect()}
-              large
-            />
+        <GoogleAdsOnboarding
+          error={apiError}
+          errorCode={apiErrorCode}
+          oauthResult={oauthResult}
+          primaryAction={
+            connectionState === "oauth_required" ? (
+              <ConnectButton
+                isConnecting={isConnectingOAuth}
+                onClick={() => void handleOAuthConnect()}
+                large
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={refreshGoogleAds}
+                className="rounded-lg bg-white px-4 py-2.5 text-[13px] font-medium text-black transition-[background-color,transform] hover:bg-white/90 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              >
+                {retryLabel(apiErrorCode, true)}
+              </button>
+            )
           }
         />
       ) : (
@@ -598,7 +610,13 @@ function GoogleMark() {
   );
 }
 
-function ConnectionBadge({ state }: { state: ConnectionState }) {
+function ConnectionBadge({
+  state,
+  errorCode,
+}: {
+  state: ConnectionState;
+  errorCode?: GoogleAdsErrorCode;
+}) {
   const connected = state === "connected";
   const label =
     state === "loading"
@@ -607,6 +625,8 @@ function ConnectionBadge({ state }: { state: ConnectionState }) {
         ? "Campaign data connected"
         : state === "configuration_required"
           ? "Configuration needed"
+          : errorCode === "access_denied"
+            ? "Account setup needed"
           : "Not connected";
 
   return (
@@ -643,7 +663,7 @@ function ConnectButton({
       onClick={onClick}
       disabled={isConnecting}
       className={`inline-flex items-center gap-2.5 rounded-lg bg-white font-medium text-black shadow-lg transition-all hover:bg-white/90 active:scale-[0.97] disabled:cursor-wait disabled:opacity-70 ${
-        large ? "mt-6 px-5 py-2.5 text-[14px]" : "px-4 py-2 text-[13px]"
+        large ? "px-4 py-2.5 text-[13px]" : "px-4 py-2 text-[13px]"
       }`}
     >
       {isConnecting ? (
@@ -671,29 +691,6 @@ function LoadingState() {
       <p className="mt-4 text-[13px] text-secondary">
         Checking Google Ads authorization and campaign data…
       </p>
-    </div>
-  );
-}
-
-function EmptyState({
-  title,
-  body,
-  action,
-}: {
-  title: string;
-  body: string;
-  action: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.01] px-6 py-16 text-center animate-fade-in">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400">
-        <GoogleMark />
-      </div>
-      <h3 className="mt-4 text-[16px] font-medium text-white">{title}</h3>
-      <p className="mt-1.5 max-w-[480px] text-[13px] leading-relaxed text-secondary">
-        {body}
-      </p>
-      {action}
     </div>
   );
 }

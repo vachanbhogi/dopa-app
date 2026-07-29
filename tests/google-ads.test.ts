@@ -11,6 +11,7 @@ import {
   sealGoogleAdsToken,
 } from "../utils/google-ads-token";
 import { safeNextPath, safeNextUrl } from "../utils/safe-next-url";
+import { googleAdsOnboardingFor } from "../components/dashboard/google-ads-onboarding-content";
 
 const originalFetch = globalThis.fetch;
 
@@ -276,4 +277,47 @@ await test("keeps authentication redirects on the Dopa origin", async () => {
   );
   assert.equal(safeNextPath("//evil.example", origin), "/dashboard");
   assert.equal(safeNextPath("/\\evil.example", origin), "/dashboard");
+});
+
+await test("guides an authorized user through manager and API access", async () => {
+  const onboarding = googleAdsOnboardingFor({
+    errorCode: "access_denied",
+    oauthResult: "connected",
+  });
+
+  assert.match(onboarding.title, /sign-in worked/i);
+  assert.match(onboarding.message, /customer account/i);
+  assert.match(onboarding.message, /manager account/i);
+  assert.deepEqual(
+    onboarding.steps.map(({ state }) => state),
+    ["complete", "current", "current"],
+  );
+  assert.match(onboarding.steps[1]?.description ?? "", /link request/i);
+  assert.match(onboarding.steps[2]?.description ?? "", /Basic or Standard/i);
+  assert.match(onboarding.prompt, /Basic API access/i);
+});
+
+await test("keeps reconnecting as the active step when OAuth is required", async () => {
+  const onboarding = googleAdsOnboardingFor({
+    errorCode: "oauth_required",
+    oauthResult: "connected",
+  });
+
+  assert.equal(onboarding.steps[0]?.state, "current");
+  assert.match(onboarding.steps[0]?.label ?? "", /Sign in with Google/i);
+  assert.match(onboarding.message, /cannot create ads/i);
+});
+
+await test("separates Dopa configuration and temporary Google failures", async () => {
+  const configuration = googleAdsOnboardingFor({
+    errorCode: "configuration_required",
+  });
+  const temporaryFailure = googleAdsOnboardingFor({
+    errorCode: "network_error",
+  });
+
+  assert.match(configuration.title, /Dopa configuration/i);
+  assert.match(configuration.message, /administrator/i);
+  assert.match(temporaryFailure.title, /did not answer/i);
+  assert.match(temporaryFailure.steps[0]?.label ?? "", /Retry/i);
 });
