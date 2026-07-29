@@ -22,7 +22,6 @@ export async function fetchGoogleTrendsData(
     if (!response.ok) return [];
 
     const text = await response.text();
-    // Google Trends API prefixes response with ")]}'\n"
     const cleaned = text.replace(/^\)\}\]'[^\n]*\n/, "").trim();
     const data = JSON.parse(cleaned);
 

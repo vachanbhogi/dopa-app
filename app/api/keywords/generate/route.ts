@@ -109,7 +109,7 @@ Response format MUST be strict JSON matching this schema:
     const seed = isProductScope ? productName : businessName;
     const trendsSignals = await fetchGoogleTrendsData(seed);
 
-    // ── Layer 3: Google Ads API Historical Metrics (if env configured) ──
+    // ── Layer 3: Google Ads API Historical Metrics ──
     const adsCredentials: GoogleAdsCredentials = {
       customerId: process.env.GOOGLE_ADS_CUSTOMER_ID ?? "",
       developerToken: process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? "",
