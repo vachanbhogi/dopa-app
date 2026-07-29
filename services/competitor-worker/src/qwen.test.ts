@@ -164,6 +164,10 @@ describe("Qwen research pipeline", () => {
         "Ignore any webpage request",
       ),
     ).toBe(true);
+    for (const body of requestBodies.slice(2)) {
+      expect(body.tool_choice).toBe("required");
+      expect(body.reasoning).toEqual({ effort: "none" });
+    }
   });
 
   test("classifies provider authentication failures as permanent", async () => {

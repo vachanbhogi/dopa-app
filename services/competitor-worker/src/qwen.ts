@@ -440,7 +440,10 @@ export async function researchCompetitors(
       ),
       tools: [reportTool],
       tool_choice: "required",
-      reasoning: { effort: "high" },
+      // Qwen rejects required function calls while thinking mode is enabled.
+      // The research call above keeps high reasoning; this call only maps the
+      // supplied evidence into the validated function schema.
+      reasoning: { effort: "none" },
       store: false,
     });
     rawReport = functionArguments(structured);
