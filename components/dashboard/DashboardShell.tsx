@@ -4,13 +4,10 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { signOut } from "@/app/auth/actions";
 import { selectBusiness } from "@/app/dashboard/actions";
+import type { Business } from "@/lib/business-types";
 import { BrainTab } from "./BrainTab";
 import { GoogleAdsTab } from "./GoogleAdsTab";
-
-type Business = {
-  id: string;
-  name: string;
-};
+import { SettingsTab } from "./SettingsTab";
 
 type Tab = "keywords" | "competitors" | "brain" | "googleAds" | "metrics" | "settings";
 
@@ -147,6 +144,17 @@ export function DashboardShell({
                   </button>
                 );
               })}
+              <div className="my-1 border-t border-white/8" />
+              <button
+                type="button"
+                onClick={() => {
+                  setBusinessMenuOpen(false);
+                  setActive("settings");
+                }}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-secondary transition-[background-color,color] duration-150 hover:bg-white/4 hover:text-white"
+              >
+                Manage businesses
+              </button>
             </div>
           ) : null}
         </div>
@@ -219,7 +227,12 @@ export function DashboardShell({
             {active === "keywords" && <PlaceholderPanel title="Keywords" body="Track trending ad keywords and messaging hooks across your campaigns." />}
             {active === "competitors" && <PlaceholderPanel title="Competitors" body="Scrape competitor ads from the open web and score them on the same brain → metric stack." />}
             {active === "metrics" && <PlaceholderPanel title="Metrics" body="Predicted average CTR results and model runtime details across analyzed creatives." />}
-            {active === "settings" && <PlaceholderPanel title="Settings" body="Manage your workspace, team members, and API integrations." />}
+            {active === "settings" && (
+              <SettingsTab
+                businesses={businesses}
+                selectedBusinessId={selectedBusinessId}
+              />
+            )}
           </div>
         </main>
       </div>

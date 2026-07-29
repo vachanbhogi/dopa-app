@@ -1,10 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
-
-export type Business = {
-  id: string;
-  name: string;
-};
+import { BUSINESS_SELECT, type Business } from "@/lib/business-types";
 
 function defaultBusinessName(fullName?: string | null, email?: string | null): string {
   if (fullName?.trim()) return fullName.trim();
@@ -29,7 +25,7 @@ export async function getBusinessesForUser(
 
   const { data: businesses, error } = await supabase
     .from("businesses")
-    .select("id, name")
+    .select(BUSINESS_SELECT)
     .eq("owner_id", userId)
     .order("created_at", { ascending: true });
 
@@ -37,7 +33,7 @@ export async function getBusinessesForUser(
     throw new Error(error.message);
   }
 
-  let list = businesses ?? [];
+  let list = (businesses ?? []) as Business[];
 
   if (list.length === 0) {
     const { data: created, error: insertError } = await supabase
@@ -46,14 +42,14 @@ export async function getBusinessesForUser(
         owner_id: userId,
         name: defaultBusinessName(options?.fullName, options?.email),
       })
-      .select("id, name")
+      .select(BUSINESS_SELECT)
       .single();
 
     if (insertError) {
       throw new Error(insertError.message);
     }
 
-    list = [created];
+    list = [created as Business];
   }
 
   const { data: prefs, error: prefsError } = await supabase
