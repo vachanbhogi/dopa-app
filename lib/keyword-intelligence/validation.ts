@@ -1,7 +1,7 @@
 import {
   normalizeHttpUrl,
-} from "@/lib/competitor-intelligence/validation";
-import { isJsonObject, isUuid, stringValue } from "@/lib/validation";
+} from "../competitor-intelligence/validation";
+import { isJsonObject, isUuid, stringValue } from "../validation";
 import {
   KEYWORD_RESEARCH_CONTRACT_VERSION,
   KEYWORD_RESEARCH_JOB_TYPE,
