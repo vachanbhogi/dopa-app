@@ -17,6 +17,7 @@ import {
 } from "@/lib/dashboard-ui";
 import { BrainTab } from "./BrainTab";
 import { BusinessTab } from "./BusinessTab";
+import { CommandMenu } from "./CommandMenu";
 import { CompetitorsTab } from "./CompetitorsTab";
 import { GoogleAdsTab } from "./GoogleAdsTab";
 import { KeywordsTab } from "./KeywordsTab";
@@ -62,6 +63,7 @@ export function DashboardShell({
   );
   const [businessMenuOpen, setBusinessMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [commandMenuOpen, setCommandMenuOpen] = useState(false);
   const businessMenuRef = useRef<HTMLDivElement>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const [isSelectingBusiness, startSelectBusiness] = useTransition();
@@ -318,7 +320,12 @@ export function DashboardShell({
           </div>
 
           <div className="pointer-events-none absolute inset-x-4 flex justify-center sm:inset-x-6">
-            <button type="button" className={commandBar} aria-label="Open command menu">
+            <button
+              type="button"
+              onClick={() => setCommandMenuOpen(true)}
+              className={`${commandBar} pointer-events-auto cursor-pointer`}
+              aria-label="Open command menu"
+            >
               <svg
                 className="h-3.5 w-3.5 shrink-0 text-tertiary"
                 viewBox="0 0 16 16"
@@ -338,7 +345,7 @@ export function DashboardShell({
             </button>
           </div>
 
-          <div className="z-10 ml-auto flex shrink-0 items-center gap-1">
+          <div className="z-10 ml-auto flex items-center justify-end gap-1">
             <Link href="/" className={headerLink}>
               Home
             </Link>
@@ -385,6 +392,20 @@ export function DashboardShell({
           </div>
         </main>
       </div>
+
+      <CommandMenu
+        open={commandMenuOpen}
+        onOpenChange={setCommandMenuOpen}
+        onSelectTab={setActive}
+        businesses={businesses}
+        selectedBusinessId={selectedBusinessId}
+        onSelectBusiness={(id) => {
+          setSelectedBusinessId(id);
+          startSelectBusiness(async () => {
+            await selectBusiness(id);
+          });
+        }}
+      />
     </div>
   );
 }
@@ -409,7 +430,7 @@ function PlaceholderPanel({ title, body }: { title: string; body: string }) {
 }
 
 /* ── Nav icons ── */
-function NavIcon({ name, active }: { name: string; active: boolean }) {
+export function NavIcon({ name, active }: { name: string; active?: boolean }) {
   const cls = `h-[16px] w-[16px] shrink-0 transition-colors duration-150 ${
     active ? "text-white" : "text-[#62666d] group-hover:text-[#8a8f98]"
   }`;
