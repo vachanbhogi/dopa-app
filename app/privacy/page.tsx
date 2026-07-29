@@ -63,8 +63,15 @@ export default function PrivacyPage() {
               <li>
                 <span className="text-white">AI request data:</span> prompts and
                 relevant workspace or page context sent for Denver responses,
-                business discovery, competitor suggestions, planning
-                scenarios, and keyword generation.
+                business discovery, public-web competitor research, and keyword
+                generation. Competitor research stores source URLs, short
+                paraphrased evidence, scores, and observation dates rather than
+                full scraped pages.
+              </li>
+              <li>
+                <span className="text-white">Notification information:</span>{" "}
+                browser push endpoints and device-generated encryption keys
+                when you explicitly enable browser notifications.
               </li>
               <li>
                 <span className="text-white">Technical information:</span> IP
@@ -96,8 +103,8 @@ export default function PrivacyPage() {
                 cortical-response visualizations.
               </li>
               <li>
-                Generate requested AI responses, research suggestions, and
-                keyword ideas.
+                Generate requested AI responses, source-backed competitor
+                research, monitoring alerts, and keyword ideas.
               </li>
               <li>
                 Display reporting from connected accounts and refresh
@@ -114,12 +121,14 @@ export default function PrivacyPage() {
             <p>
               We disclose information as needed to providers that support
               authentication and database hosting (Supabase), AI processing
-              (Groq), ad scoring and cortical modeling, infrastructure and
-              hosting, and services you connect (including Google). These
-              providers process information under their own terms and our
-              arrangements with them. We may also disclose information when
-              required by law, to protect users or the Service, or as part of a
-              merger, financing, acquisition, or sale of assets.
+              (Groq and Alibaba Cloud Model Studio), competitor-research
+              infrastructure (Alibaba Cloud), ad scoring and cortical modeling,
+              infrastructure and hosting, browser push delivery, and services
+              you connect (including Google). These providers process
+              information under their own terms and our arrangements with them.
+              We may also disclose information when required by law, to protect
+              users or the Service, or as part of a merger, financing,
+              acquisition, or sale of assets.
             </p>
             <p className="mt-3">
               Dopa does not sell personal information or use it for
@@ -144,11 +153,13 @@ export default function PrivacyPage() {
             <p>
               We retain information for as long as reasonably needed to provide
               the Service, secure it, resolve disputes, and meet legal
-              obligations. Retention varies by data type and provider. Uploaded
-              media and generated model assets may be retained temporarily by
-              the scoring service to complete and deliver an analysis. Some
-              records may remain in backups or fraud-prevention logs for a
-              limited period after deletion.
+              obligations. Structured competitor evidence is normally retained
+              for 90 days; minimal research input snapshots and provider request
+              metadata are normally removed after 30 days. Uploaded media and
+              generated model assets may be retained temporarily by the scoring
+              service to complete and deliver an analysis. Some records may
+              remain in backups or fraud-prevention logs for a limited period
+              after deletion.
             </p>
           </PolicySection>
 
@@ -167,11 +178,13 @@ export default function PrivacyPage() {
           <PolicySection title="9. Your choices and privacy rights">
             <p>
               You can update workspace data in the dashboard and disconnect
-              Google Ads from its integration page. Depending on where you live,
-              you may also have rights to request access, correction, deletion,
-              or a copy of personal information, to object to or restrict
-              certain processing, and to appeal a denied request. We will not
-              discriminate against you for exercising a privacy right.
+              Google Ads from its integration page. You can also disable daily
+              competitor monitoring, in-app alerts, or browser push at any time.
+              Depending on where you live, you may also have rights to request
+              access, correction, deletion, or a copy of personal information,
+              to object to or restrict certain processing, and to appeal a
+              denied request. We will not discriminate against you for
+              exercising a privacy right.
             </p>
             <p className="mt-3">
               Submit a request through the Dopa support channel available to

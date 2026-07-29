@@ -1,0 +1,9 @@
+{
+  "QueueName": "dopa-competitor-research-v1",
+  "DelaySeconds": 0,
+  "MaximumMessageSize": 65536,
+  "MessageRetentionPeriod": 604800,
+  "VisibilityTimeout": 900,
+  "PollingWaitSeconds": 30,
+  "LoggingEnabled": true
+}

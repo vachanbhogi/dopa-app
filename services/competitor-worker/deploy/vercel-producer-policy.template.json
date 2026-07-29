@@ -1,0 +1,10 @@
+{
+  "Version": "1",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "mns:SendMessage",
+      "Resource": "acs:mns:us-east-1:<account-id>:/queues/dopa-competitor-research-v1/messages"
+    }
+  ]
+}

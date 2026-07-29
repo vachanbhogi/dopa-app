@@ -1,0 +1,19 @@
+[Unit]
+Description=Dopa competitor intelligence worker
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/dopa/competitor-worker.env
+ExecStartPre=-/usr/bin/docker rm -f dopa-competitor-worker
+ExecStart=/usr/bin/docker run --rm --name dopa-competitor-worker --env-file /etc/dopa/competitor-worker.env ${DOPA_WORKER_IMAGE}
+ExecStop=/usr/bin/docker stop -t 45 dopa-competitor-worker
+Restart=always
+RestartSec=5
+TimeoutStartSec=0
+TimeoutStopSec=50
+
+[Install]
+WantedBy=multi-user.target

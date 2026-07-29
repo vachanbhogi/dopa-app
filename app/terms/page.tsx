@@ -54,10 +54,11 @@ export default function TermsPage() {
           <TermsSection title="3. The Service and AI outputs">
             <p>
               Dopa provides advertising analysis, predicted performance
-              metrics, modeled cortical responses, research suggestions, and
-              connected-account reporting. Predictions and AI-generated
-              content are probabilistic estimates. They may be incomplete,
-              inaccurate, outdated, or unsuitable for your campaign.
+              metrics, modeled cortical responses, source-backed public-web
+              competitor research, and connected-account reporting. Predictions
+              and AI-generated analysis remain probabilistic. Sources may
+              change, disappear, or contain errors, so you must review the
+              evidence before acting.
             </p>
             <p className="mt-3">
               Modeled cortical responses are not measurements of a particular
@@ -114,12 +115,12 @@ export default function TermsPage() {
           <TermsSection title="6. Connected and third-party services">
             <p>
               The Service may interoperate with Supabase, Groq, Google Ads,
-              model-hosting infrastructure, and other third parties. Their
-              services are governed by their own terms and policies. You
-              authorize Dopa to exchange the information necessary to perform
-              actions you request. The current Google Ads integration is
-              read-only and does not authorize Dopa to create campaigns or
-              spend funds.
+              Alibaba Cloud, browser push services, model-hosting
+              infrastructure, and other third parties. Their services are
+              governed by their own terms and policies. You authorize Dopa to
+              exchange the information necessary to perform actions you
+              request. The current Google Ads integration is read-only and does
+              not authorize Dopa to create campaigns or spend funds.
             </p>
           </TermsSection>
 

@@ -18,6 +18,7 @@ import {
 import { BrainTab } from "./BrainTab";
 import { BusinessTab } from "./BusinessTab";
 import { CommandMenu } from "./CommandMenu";
+import { CompetitorAlertsButton } from "./CompetitorAlertsButton";
 import { CompetitorsTab } from "./CompetitorsTab";
 import { GoogleAdsTab } from "./GoogleAdsTab";
 import { KeywordsTab } from "./KeywordsTab";
@@ -394,6 +395,12 @@ export function DashboardShell({
           </div>
 
           <div className="z-10 ml-auto flex items-center justify-end gap-1">
+            {selectedBusiness ? (
+              <CompetitorAlertsButton
+                businessId={selectedBusiness.id}
+                onOpenCompetitors={() => selectTab("competitors")}
+              />
+            ) : null}
             <Link href="/" className={headerLink}>
               Home
             </Link>

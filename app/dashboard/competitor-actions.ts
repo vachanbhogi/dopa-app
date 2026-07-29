@@ -3,6 +3,8 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { normalizedDomain } from "@/lib/competitor-intelligence/validation";
+import { isUuid } from "@/lib/validation";
 
 export type CompetitorItem = {
   id: string;
@@ -11,9 +13,29 @@ export type CompetitorItem = {
   website_url: string | null;
   logo_url: string | null;
   primary_angle: string | null;
-  predicted_ctr: number | null;
+  candidate_id: string | null;
+  normalized_domain: string | null;
+  relationship: "direct" | "indirect" | "emerging" | null;
+  threat_score: number | null;
+  confidence: number | null;
+  threat_horizon: "now" | "next_6_months" | "next_12_months" | null;
+  why_now: string | null;
   status: string;
   created_at: string;
+};
+
+type CandidateRecord = {
+  id: string;
+  business_id: string;
+  name: string;
+  website_url: string;
+  normalized_domain: string;
+  relationship: "direct" | "indirect" | "emerging";
+  threat_score: number;
+  confidence: number;
+  threat_horizon: "now" | "next_6_months" | "next_12_months";
+  why_competitor: string;
+  why_now: string;
 };
 
 async function requireUser() {
@@ -43,6 +65,7 @@ async function assertBusinessOwner(
 }
 
 export async function listCompetitors(businessId: string) {
+  if (!isUuid(businessId)) return { error: "Invalid business" };
   const auth = await requireUser();
   if (auth.error || !auth.user) return { error: auth.error ?? "Not authenticated" };
 
@@ -69,9 +92,10 @@ export async function addCompetitor(
     name: string;
     website_url?: string;
     primary_angle?: string;
-    predicted_ctr?: number;
+    candidateId?: string;
   }
 ) {
+  if (!isUuid(businessId)) return { error: "Invalid business" };
   const auth = await requireUser();
   if (auth.error || !auth.user) return { error: auth.error ?? "Not authenticated" };
 
@@ -85,14 +109,42 @@ export async function addCompetitor(
   );
   if ("error" in owned) return { error: owned.error };
 
+  let candidate: CandidateRecord | null = null;
+  if (input.candidateId && !isUuid(input.candidateId)) {
+    return { error: "Invalid research candidate" };
+  }
+  if (input.candidateId) {
+    const { data: found, error: candidateError } = await auth.supabase
+      .from("competitor_candidates")
+      .select(
+        "id, business_id, name, website_url, normalized_domain, relationship, threat_score, confidence, threat_horizon, why_competitor, why_now",
+      )
+      .eq("id", input.candidateId)
+      .eq("business_id", businessId)
+      .maybeSingle();
+    if (candidateError) return { error: candidateError.message };
+    if (!found) return { error: "Research candidate not found" };
+    candidate = found as CandidateRecord;
+  }
+
+  const websiteUrl =
+    candidate?.website_url ?? (input.website_url?.trim() || null);
   const { data, error } = await auth.supabase
     .from("competitors")
     .insert({
       business_id: businessId,
-      name,
-      website_url: input.website_url?.trim() || null,
-      primary_angle: input.primary_angle?.trim() || null,
-      predicted_ctr: input.predicted_ctr ?? null,
+      name: candidate?.name ?? name,
+      website_url: websiteUrl,
+      primary_angle:
+        candidate?.why_competitor ?? (input.primary_angle?.trim() || null),
+      candidate_id: candidate?.id ?? null,
+      normalized_domain:
+        candidate?.normalized_domain ?? normalizedDomain(websiteUrl),
+      relationship: candidate?.relationship ?? null,
+      threat_score: candidate?.threat_score ?? null,
+      confidence: candidate?.confidence ?? null,
+      threat_horizon: candidate?.threat_horizon ?? null,
+      why_now: candidate?.why_now ?? null,
       status: "tracking",
     })
     .select()
@@ -105,6 +157,7 @@ export async function addCompetitor(
 }
 
 export async function deleteCompetitor(competitorId: string) {
+  if (!isUuid(competitorId)) return { error: "Invalid competitor" };
   const auth = await requireUser();
   if (auth.error || !auth.user) return { error: auth.error ?? "Not authenticated" };
 

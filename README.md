@@ -19,6 +19,26 @@ sends the current Supabase access token to the API; no service-role key or JWT
 signing secret belongs in this app.
 
 Set `GROQ_API_KEY` in `.env.local` to enable Denver, Dopa's website agent.
+
+## Competitor intelligence
+
+The Competitors tab uses an Alibaba Cloud worker rather than generating
+unsourced competitor guesses inside the web request. Configure the server-only
+Supabase secret, MNS send-only credentials, callback HMAC secret, and VAPID
+keys shown in `.env.example`. The same HMAC secret must be installed on the
+worker.
+
+The worker is in `services/competitor-worker`. It long-polls
+`dopa-competitor-research-v1`, calls the Qwen Responses API in US Virginia, and
+posts signed results back to Dopa. It exposes no public port. See the worker
+README for its environment and Docker/systemd deployment.
+
+Run the focused checks with:
+
+```bash
+bun run test:competitors
+bun run worker:build
+```
 Denver's safe website knowledge is regenerated from current pages and
 components before every `bun run dev` and `bun run build`. The development
 command also watches interface files and refreshes Denver's knowledge while

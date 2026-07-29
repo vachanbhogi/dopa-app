@@ -61,7 +61,7 @@ await test("generated knowledge tracks current routes and dashboard sections", (
     "/dashboard?tab=competitors",
   );
   assert.match(context, /Competitor Research/);
-  assert.match(context, /Auto-[Dd]iscover/);
+  assert.match(context, /source-backed market research/);
   assert.match(context, /Revision:/);
 });
 
@@ -301,7 +301,7 @@ await test("guards input, retrieves website knowledge, and asks Groq", async () 
           message: {
             content: JSON.stringify({
               answer:
-                "Open Competitors to review AI-assisted rival suggestions and planning scenarios.",
+                "Open Competitors to run source-backed market research and review the evidence.",
               actionLabel: "Open Competitors",
               actionHref: "/dashboard?tab=competitors",
             }),
@@ -325,7 +325,7 @@ await test("guards input, retrieves website knowledge, and asks Groq", async () 
     assert.deepEqual(await response.json(), {
       reply: {
         answer:
-          "Open Competitors to review AI-assisted rival suggestions and planning scenarios.",
+          "Open Competitors to run source-backed market research and review the evidence.",
         action: {
           label: "Open Competitors",
           href: "/dashboard?tab=competitors",

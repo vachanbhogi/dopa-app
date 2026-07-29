@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "isolatedModules": false,
+    "lib": ["ES2023", "DOM"],
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": false,
+    "outDir": "./dist",
+    "rootDir": "../..",
+    "target": "ES2022"
+  },
+  "include": [
+    "src/**/*.ts",
+    "../../lib/competitor-intelligence/**/*.ts",
+    "../../lib/validation.ts",
+    "../../types/alicloud-mns.d.ts"
+  ],
+  "exclude": ["src/**/*.test.ts"]
+}
