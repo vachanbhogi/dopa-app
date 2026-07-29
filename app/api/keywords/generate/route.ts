@@ -110,6 +110,14 @@ export async function POST(req: Request) {
       typeof body.price === "number" && Number.isFinite(body.price)
         ? String(body.price)
         : stringValue(body.price, 60);
+    const excludeKeywords = Array.isArray(body.excludeKeywords)
+      ? body.excludeKeywords
+          .flatMap((value) => {
+            const keyword = stringValue(value, 120);
+            return keyword ? [keyword] : [];
+          })
+          .slice(0, 48)
+      : [];
     if (!businessName) {
       return NextResponse.json(
         { error: "Business name is required." },
@@ -146,7 +154,14 @@ Each keyword object MUST have:
 - "intentDescription": brief 1-sentence explanation of why searchers type this query
 - "estimatedSearchVolume": realistic monthly volume range string (e.g., "1K - 10K", "10K - 50K")
 - "suggestedAdHeadline": high-converting Google RSA ad headline (max 30 chars)
-
+${
+  excludeKeywords.length > 0
+    ? `
+IMPORTANT: Do NOT repeat or lightly rephrase any of these already-suggested keywords:
+${excludeKeywords.map((keyword) => `- ${keyword}`).join("\n")}
+Generate 12 completely NEW keyword ideas with different angles and search intents.`
+    : ""
+}
 Response format MUST be strict JSON matching this schema:
 {
   "keywords": [
@@ -175,7 +190,7 @@ Response format MUST be strict JSON matching this schema:
             { role: "system", content: systemPrompt },
             { role: "user", content: prompt },
           ],
-          temperature: 0.7,
+          temperature: excludeKeywords.length > 0 ? 0.85 : 0.7,
         }),
         signal: AbortSignal.timeout(20_000),
       },

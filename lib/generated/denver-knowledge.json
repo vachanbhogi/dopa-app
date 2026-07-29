@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "sourceHash": "e0b46446a9cf7d9a",
+  "sourceHash": "ea1241623de6fcac",
   "routes": [
     "/",
     "/dashboard",
@@ -484,18 +484,24 @@
       "area": "Keywords Tab",
       "source": "components/dashboard/KeywordsTab.tsx",
       "text": [
+        "No new unique keywords came back — try Regenerate for a fresh set.",
         "Your browser blocked clipboard access.",
-        "Multi-Source Keyword Intelligence",
-        "Multi-Engine",
-        "AI keyword ideas enriched with live Google Ads history and related Google Trends topics when those sources are available.",
-        "Brand Level",
-        "Product Level",
-        "Gathering Signals...",
-        "Analyze Keywords",
-        "CPC:",
-        "Multi-Source Keywords Ready",
-        "Select",
-        "above and click \"Analyze Keywords\". Live metrics appear only when the corresponding source is connected and returns data."
+        "Keyword intelligence for",
+        ". Live volume and CPC when Google Ads is connected.",
+        "Keywords",
+        "Brand",
+        "Product",
+        "Analyzing…",
+        "keyword",
+        "Scope changed — regenerate to refresh this list.",
+        "Regenerating…",
+        "Adding more…",
+        "Keyword",
+        "Volume",
+        "CPC",
+        "Ad headline",
+        "No keywords yet",
+        "Choose scope above and run analysis. Not happy with the set? Regenerate or add more without losing what you keep."
       ]
     },
     {
