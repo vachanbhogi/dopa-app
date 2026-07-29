@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchLiveGoogleAdsData, GoogleAdsCredentials } from "@/utils/google-ads-client";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   // Read credentials from environment variables first if available
   const envCreds: GoogleAdsCredentials = {
     customerId: process.env.GOOGLE_ADS_CUSTOMER_ID || "",

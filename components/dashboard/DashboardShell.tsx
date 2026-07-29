@@ -51,10 +51,6 @@ export function DashboardShell({
     .toUpperCase();
 
   useEffect(() => {
-    setSelectedBusinessId(initialSelectedBusinessId ?? businesses[0]?.id ?? "");
-  }, [initialSelectedBusinessId, businesses]);
-
-  useEffect(() => {
     if (!businessMenuOpen) return;
 
     const handlePointerDown = (event: MouseEvent) => {

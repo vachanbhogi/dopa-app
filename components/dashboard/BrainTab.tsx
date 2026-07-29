@@ -380,37 +380,12 @@ export function BrainTab() {
           </div>
 
           {busy ? (
-<<<<<<< HEAD
-            <div
-              className="overflow-hidden rounded-full bg-white/6"
-              aria-label={phaseLabel(phase)}
-            >
-              <div
-                className={`h-1 bg-brand transition-[width] duration-300 ${
-                  phase === "analyzing" || phase === "loading-animation"
-                    ? "animate-pulse"
-                    : ""
-                }`}
-                style={{
-                  width:
-                    phase === "uploading"
-                      ? `${Math.max(uploadProgress, 4)}%`
-                      : phase === "validating"
-                        ? "12%"
-                        : phase === "analyzing"
-                          ? "72%"
-                          : "92%",
-                }}
-              />
-            </div>
-=======
             <AnalysisProgress
               phase={phase}
               uploadProgress={uploadProgress}
               modelDownloadProgress={modelDownloadProgress}
               analysisElapsedSeconds={analysisElapsedSeconds}
             />
->>>>>>> ef46602 (Add interactive cortical response viewer)
           ) : null}
         </div>
       )}
@@ -637,17 +612,10 @@ function ScoreResults({
           {brainModel ? (
             <CorticalModelViewer model={brainModel} />
           ) : (
-<<<<<<< HEAD
-            <div className="flex h-full items-center justify-center px-6 text-center">
-              {animationError ? (
-                <p className="max-w-105 text-[12px] leading-5 text-secondary">
-                  {animationError}
-=======
-            <div className="flex aspect-[16/9] items-center justify-center bg-[radial-gradient(circle_at_50%_45%,rgba(79,49,99,0.25),transparent_58%)] px-6 text-center">
+            <div className="flex aspect-video items-center justify-center bg-[radial-gradient(circle_at_50%_45%,rgba(79,49,99,0.25),transparent_58%)] px-6 text-center">
               {modelError ? (
-                <p className="max-w-[420px] text-[12px] leading-5 text-secondary">
+                <p className="max-w-105 text-[12px] leading-5 text-secondary">
                   {modelError}
->>>>>>> ef46602 (Add interactive cortical response viewer)
                 </p>
               ) : (
                 <div className="flex items-center gap-2 text-[12px] text-secondary">
@@ -659,17 +627,13 @@ function ScoreResults({
           )}
         </div>
 
-<<<<<<< HEAD
-        <div className="grid gap-px border-t border-white/6 bg-white/6 sm:grid-cols-4">
-=======
-        <p className="border-t border-white/[0.07] bg-[#09090b] px-4 py-2.5 text-[10px] leading-4 text-tertiary">
+        <p className="border-t border-white/6 bg-[#09090b] px-4 py-2.5 text-[10px] leading-4 text-tertiary">
           Predicted average-subject cortical surface—not a scan or measured
           nerve map. Animated signal traces are a visual guide to the strongest
           modeled responses.
         </p>
 
-        <div className="grid gap-px border-t border-white/[0.07] bg-white/[0.07] sm:grid-cols-4">
->>>>>>> ef46602 (Add interactive cortical response viewer)
+        <div className="grid gap-px border-t border-white/6 bg-white/6 sm:grid-cols-4">
           <DataPoint
             label="Clip"
             value={`${response.duration_seconds.toFixed(1)}s`}
@@ -714,37 +678,6 @@ function ScoreResults({
         </div>
       </div>
 
-<<<<<<< HEAD
-      <div className="rounded-lg border border-white/6 bg-white/1.5 px-4 py-3 text-[11px] leading-5 text-tertiary">
-        <p>
-          This is an in-silico prediction for an average subject. It is not an
-          individual brain scan, a medical result, or evidence that the ad
-          caused a behavior.
-        </p>
-        <p className="mt-2">
-          Powered by{" "}
-          <a
-            href="https://github.com/facebookresearch/tribev2"
-            target="_blank"
-            rel="noreferrer"
-            className="text-[#a9aff0] underline decoration-[#a9aff0]/30 underline-offset-2 hover:text-white"
-          >
-            Meta TRIBE v2
-          </a>{" "}
-          under{" "}
-          <a
-            href="https://github.com/facebookresearch/tribev2/blob/main/LICENSE"
-            target="_blank"
-            rel="noreferrer"
-            className="text-[#a9aff0] underline decoration-[#a9aff0]/30 underline-offset-2 hover:text-white"
-          >
-            CC BY-NC 4.0
-          </a>
-          . Non-commercial demo.
-        </p>
-      </div>
-=======
->>>>>>> ef46602 (Add interactive cortical response viewer)
     </section>
   );
 }
