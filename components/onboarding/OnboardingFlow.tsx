@@ -18,6 +18,7 @@ const STEP_COUNT = 8;
 
 type StepId =
   | "welcome"
+  | "website"
   | "name"
   | "audience"
   | "price"
@@ -28,6 +29,7 @@ type StepId =
 
 const STEPS: StepId[] = [
   "welcome",
+  "website",
   "name",
   "audience",
   "price",
@@ -61,7 +63,56 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
   const [form, setForm] = useState<BusinessInput>(emptyBusinessInput());
   const [firstProduct, setFirstProduct] = useState<FirstProductDraft>(emptyFirstProduct);
   const [error, setError] = useState<string | null>(null);
+  const [autoScanning, setAutoScanning] = useState(false);
   const [pending, startTransition] = useTransition();
+
+  async function handleAutoDiscover() {
+    if (!form.website?.trim()) {
+      setError("Enter a website URL to discover");
+      return;
+    }
+    setAutoScanning(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/business/auto-discover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ websiteUrl: form.website }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to scan website");
+      }
+      if (data.profile) {
+        const p = data.profile;
+        setForm((prev) => ({
+          ...prev,
+          name: p.name || prev.name,
+          industry: p.industry || prev.industry,
+          target_audience: p.target_audience || prev.target_audience,
+          brand_voice: p.brand_voice || prev.brand_voice,
+          value_proposition: p.value_proposition || prev.value_proposition,
+          price_range: p.price_range || prev.price_range,
+          campaign_goal: p.campaign_goal || prev.campaign_goal,
+        }));
+        if (p.first_product) {
+          const fp = p.first_product;
+          setFirstProduct({
+            product_name: fp.product_name || "",
+            value_prop: fp.value_prop || "",
+            price: fp.price || "",
+            creative_hook: fp.creative_hook || "",
+          });
+        }
+        // Advance to next step once populated!
+        goNext({ skip: true });
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to scan website. You can enter details manually.");
+    } finally {
+      setAutoScanning(false);
+    }
+  }
 
   const step = STEPS[stepIndex];
   const isLast = stepIndex === STEPS.length - 1;
@@ -221,6 +272,40 @@ export function OnboardingFlow({ firstName }: { firstName: string }) {
             >
               {step === "welcome" && (
                 <WelcomeStep firstName={firstName} />
+              )}
+              {step === "website" && (
+                <TextStep
+                  title="What's your website URL?"
+                  subtitle="Groq AI will scan your site and automatically populate your business details."
+                >
+                  <div className="space-y-4">
+                    <input
+                      autoFocus
+                      value={form.website ?? ""}
+                      onChange={(e) => setField("website", e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAutoDiscover()}
+                      placeholder="https://aurabeauty.com"
+                      className={inputClass}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAutoDiscover}
+                      disabled={autoScanning || !form.website?.trim()}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand/20 py-3 text-[14px] font-medium text-brand border border-brand/30 transition-colors hover:bg-brand/30 disabled:opacity-40"
+                    >
+                      {autoScanning ? (
+                        <>
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
+                          <span>Scanning Website with Groq AI...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>✨ Auto-Discover with Groq AI</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </TextStep>
               )}
               {step === "name" && (
                 <TextStep
