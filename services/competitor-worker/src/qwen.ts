@@ -60,6 +60,13 @@ async function callQwen(
   config: WorkerConfig,
   body: Record<string, unknown>,
 ): Promise<QwenResponse> {
+  if (Date.now() >= config.qwenKeyExpiresAt) {
+    throw new QwenRequestError(
+      "Qwen API key use expired for this worker.",
+      403,
+      true,
+    );
+  }
   let lastError: QwenRequestError | null = null;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const controller = new AbortController();

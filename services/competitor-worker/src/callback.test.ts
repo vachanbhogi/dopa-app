@@ -26,6 +26,7 @@ test("signed callbacks include the optional Vercel automation bypass", async () 
     callbackSecret: "a".repeat(64),
     callbackBypassSecret: "preview-bypass",
     dashscopeApiKey: "test-dashscope-key",
+    qwenKeyExpiresAt: Date.now() + 60_000,
     qwenEndpoint:
       "https://dashscope-us.aliyuncs.com/compatible-mode/v1/responses",
     qwenModel: "qwen3.7-max-2026-06-08",

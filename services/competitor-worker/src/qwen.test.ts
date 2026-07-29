@@ -18,6 +18,7 @@ const config: WorkerConfig = {
   callbackBaseUrl: "https://itsdopa.vercel.app",
   callbackSecret: "callback",
   dashscopeApiKey: "dashscope",
+  qwenKeyExpiresAt: Date.now() + 60_000,
   qwenEndpoint:
     "https://dashscope-us.aliyuncs.com/compatible-mode/v1/responses",
   qwenModel: "qwen3.7-max-2026-06-08",
@@ -175,5 +176,26 @@ describe("Qwen research pipeline", () => {
       name: "QwenRequestError",
       permanent: true,
     } satisfies Partial<QwenRequestError>);
+  });
+
+  test("refuses every model call after the configured key deadline", async () => {
+    let called = false;
+    globalThis.fetch = (async () => {
+      called = true;
+      return Response.json({});
+    }) as typeof fetch;
+
+    await expect(
+      researchCompetitors(
+        { ...config, qwenKeyExpiresAt: Date.now() - 1 },
+        job,
+        async () => undefined,
+      ),
+    ).rejects.toMatchObject({
+      name: "QwenRequestError",
+      permanent: true,
+      status: 403,
+    } satisfies Partial<QwenRequestError>);
+    expect(called).toBe(false);
   });
 });

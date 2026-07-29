@@ -11,6 +11,7 @@ export type WorkerConfig = {
   callbackSecret: string;
   callbackBypassSecret?: string;
   dashscopeApiKey: string;
+  qwenKeyExpiresAt: number;
   qwenEndpoint: string;
   qwenModel: string;
   workerId: string;
@@ -26,6 +27,14 @@ type TemporaryCredentials = {
 function required(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) throw new Error(`${name} is required.`);
+  return value;
+}
+
+function requiredTimestamp(name: string): number {
+  const value = Date.parse(required(name));
+  if (!Number.isFinite(value)) {
+    throw new Error(`${name} must be a valid ISO 8601 timestamp.`);
+  }
   return value;
 }
 
@@ -129,6 +138,7 @@ export async function loadConfig(): Promise<WorkerConfig> {
     callbackBypassSecret:
       process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim() || undefined,
     dashscopeApiKey: required("DASHSCOPE_API_KEY"),
+    qwenKeyExpiresAt: requiredTimestamp("QWEN_KEY_EXPIRES_AT"),
     qwenEndpoint,
     qwenModel:
       process.env.QWEN_MODEL?.trim() || "qwen3.7-max-2026-06-08",

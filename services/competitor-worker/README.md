@@ -14,6 +14,7 @@ ALIBABA_MNS_QUEUE=dopa-competitor-research-v1
 # Recommended on ECS. The worker uses IMDSv2 and refreshes STS credentials.
 ALIBABA_ECS_RAM_ROLE_NAME=dopa-competitor-worker
 DASHSCOPE_API_KEY=
+QWEN_KEY_EXPIRES_AT=2026-08-19T17:09:02Z
 QWEN_RESPONSES_ENDPOINT=https://dashscope-us.aliyuncs.com/compatible-mode/v1/responses
 QWEN_MODEL=qwen3.7-max-2026-06-08
 DOPA_CALLBACK_URL=https://itsdopa.vercel.app
