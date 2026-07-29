@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "knowledge:denver": "bun scripts/generate-denver-knowledge.ts",
+    "dev": "bun run knowledge:denver && bun scripts/dev.ts",
+    "build": "bun run knowledge:denver && next build",
     "start": "next start",
     "lint": "eslint",
+    "test:denver": "bun tests/denver.test.ts",
     "test:google-ads": "bun tests/google-ads.test.ts"
   },
   "dependencies": {
