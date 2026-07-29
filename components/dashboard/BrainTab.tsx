@@ -612,9 +612,9 @@ function ScoreResults({
           {brainModel ? (
             <CorticalModelViewer model={brainModel} />
           ) : (
-            <div className="flex aspect-[16/9] items-center justify-center bg-[radial-gradient(circle_at_50%_45%,rgba(79,49,99,0.25),transparent_58%)] px-6 text-center">
+            <div className="flex aspect-video items-center justify-center bg-[radial-gradient(circle_at_50%_45%,rgba(79,49,99,0.25),transparent_58%)] px-6 text-center">
               {modelError ? (
-                <p className="max-w-[420px] text-[12px] leading-5 text-secondary">
+                <p className="max-w-105 text-[12px] leading-5 text-secondary">
                   {modelError}
                 </p>
               ) : (
@@ -627,13 +627,13 @@ function ScoreResults({
           )}
         </div>
 
-        <p className="border-t border-white/[0.07] bg-[#09090b] px-4 py-2.5 text-[10px] leading-4 text-tertiary">
+        <p className="border-t border-white/6 bg-[#09090b] px-4 py-2.5 text-[10px] leading-4 text-tertiary">
           Predicted average-subject cortical surface—not a scan or measured
           nerve map. Animated signal traces are a visual guide to the strongest
           modeled responses.
         </p>
 
-        <div className="grid gap-px border-t border-white/[0.07] bg-white/[0.07] sm:grid-cols-4">
+        <div className="grid gap-px border-t border-white/6 bg-white/6 sm:grid-cols-4">
           <DataPoint
             label="Clip"
             value={`${response.duration_seconds.toFixed(1)}s`}

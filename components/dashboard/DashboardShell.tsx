@@ -7,6 +7,7 @@ import { selectBusiness } from "@/app/dashboard/actions";
 import type { Business } from "@/lib/business-types";
 import { BrainTab } from "./BrainTab";
 import { GoogleAdsTab } from "./GoogleAdsTab";
+import { KeywordsTab } from "./KeywordsTab";
 import { ProductsTab } from "./ProductsTab";
 import { SettingsTab } from "./SettingsTab";
 
@@ -238,7 +239,9 @@ export function DashboardShell({
                 oauthResult={googleAdsResult}
               />
             )}
-            {active === "keywords" && <PlaceholderPanel title="Keywords" body="Track trending ad keywords and messaging hooks across your campaigns." />}
+            {active === "keywords" && selectedBusiness ? (
+              <KeywordsTab business={selectedBusiness} />
+            ) : null}
             {active === "competitors" && <PlaceholderPanel title="Competitors" body="Scrape competitor ads from the open web and score them on the same brain → metric stack." />}
             {active === "products" && selectedBusiness ? (
               <ProductsTab businessId={selectedBusiness.id} business={selectedBusiness} />

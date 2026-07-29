@@ -325,3 +325,78 @@ export async function fetchLiveGoogleAdsData(
     };
   }
 }
+
+export interface KeywordMetricsData {
+  keyword: string;
+  avgMonthlySearches: number;
+  lowTopOfWeekBidMicros?: number;
+  highTopOfWeekBidMicros?: number;
+  cpcFormatted?: string;
+}
+
+export async function fetchKeywordMetrics(
+  credentials: GoogleAdsCredentials,
+  keywords: string[]
+): Promise<Record<string, KeywordMetricsData>> {
+  const customerId = cleanCustomerId(credentials.customerId);
+  const developerToken = credentials.developerToken.trim();
+  const accessToken = credentials.accessToken?.trim();
+
+  if (!customerId || !developerToken || !accessToken || keywords.length === 0) {
+    return {};
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+    "developer-token": developerToken,
+  };
+  if (credentials.loginCustomerId) {
+    headers["login-customer-id"] = cleanCustomerId(credentials.loginCustomerId);
+  }
+
+  try {
+    const url = `${GOOGLE_ADS_API_ORIGIN}/${GOOGLE_ADS_API_VERSION}/customers/${customerId}:generateKeywordHistoricalMetrics`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        keywords,
+        historicalMetricsOptions: {
+          yearMonthRange: {
+            start: { year: 2025, month: 1 },
+            end: { year: 2025, month: 12 },
+          },
+        },
+      }),
+      cache: "no-store",
+    });
+
+    if (!response.ok) return {};
+
+    const data = await response.json();
+    const results: Record<string, KeywordMetricsData> = {};
+    if (Array.isArray(data.results)) {
+      for (const res of data.results) {
+        const text = res.text || res.searchQuery;
+        const metrics = res.keywordMetrics || {};
+        const searches = Number(metrics.avgMonthlySearches || 0);
+        const lowBid = Number(metrics.lowTopOfPageBidMicros || 0) / 1_000_000;
+        const highBid = Number(metrics.highTopOfPageBidMicros || 0) / 1_000_000;
+        const avgCpc = ((lowBid + highBid) / 2 || 1.25).toFixed(2);
+
+        if (text) {
+          results[text.toLowerCase()] = {
+            keyword: text,
+            avgMonthlySearches: searches,
+            cpcFormatted: `$${avgCpc}`,
+          };
+        }
+      }
+    }
+    return results;
+  } catch {
+    return {};
+  }
+}
+
