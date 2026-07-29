@@ -32,7 +32,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-[16px] font-medium text-white mb-2">3. How We Use Data</h2>
             <p>
-              Your data is strictly utilized to deliver ad performance predictions, generate cortical response telemetry, improve model accuracy, and provide customer support. Denver messages and page context are processed by Groq for safety classification and response generation. We do not sell your creative assets or personal information to third parties.
+              Your data is strictly utilized to deliver ad performance predictions, generate cortical response telemetry, improve model accuracy, and provide customer support. Denver messages and page context are processed by third-party AI infrastructure for safety classification and response generation. We do not sell your creative assets or personal information to third parties.
             </p>
           </section>
 

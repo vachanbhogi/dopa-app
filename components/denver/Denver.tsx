@@ -210,7 +210,7 @@ export function Denver() {
             <GuideMark />
             <div className="min-w-0 flex-1">
               <h2 className="text-[13px] font-medium text-white">Denver</h2>
-              <p className="text-[11px] text-[#777c86]">Dopa product agent · powered by Groq</p>
+              <p className="text-[11px] text-[#777c86]">Dopa product agent</p>
             </div>
             <button
               type="button"
@@ -374,7 +374,7 @@ export function Denver() {
               </button>
             </div>
             <p className="mt-2 px-1 text-[10px] leading-4 text-[#62666d]">
-              Messages are processed by Groq. Don&apos;t share passwords, keys, or tokens.
+              AI responses can be wrong. Don&apos;t share passwords, keys, or tokens.
             </p>
           </form>
         </section>

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "sourceHash": "6fc71b0eb5eddeec",
+  "sourceHash": "e4de28574a055015",
   "routes": [
     "/",
     "/dashboard",
@@ -73,7 +73,7 @@
         "Uploaded ad assets are analyzed to produce a predicted average click-through rate and modeled cortical response.",
         "3. How We Use Data",
         "Your data is strictly utilized to deliver ad performance predictions, generate cortical response telemetry, improve model accuracy, and provide customer support.",
-        "Denver messages and page context are processed by Groq for safety classification and response generation.",
+        "Denver messages and page context are processed by third-party AI infrastructure for safety classification and response generation.",
         "We do not sell your creative assets or personal information to third parties.",
         "4. Data Security & Retention",
         "We employ enterprise-grade encryption for data in transit and at rest. Uploaded creative assets remain isolated to your organization workspace.",

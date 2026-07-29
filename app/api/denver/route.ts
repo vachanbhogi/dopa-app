@@ -401,7 +401,7 @@ export async function POST(request: Request) {
     });
   } catch {
     return json(
-      { error: "Denver could not reach Groq. Try again." },
+      { error: "Denver could not reach the AI service. Try again." },
       502,
     );
   }
@@ -409,19 +409,19 @@ export async function POST(request: Request) {
   if (!groqResponse.ok) return groqError(groqResponse);
   const content = await completionContent(groqResponse);
   if (!content) {
-    return json({ error: "Groq returned an empty response." }, 502);
+    return json({ error: "Denver returned an empty response." }, 502);
   }
 
   let structuredReply: unknown;
   try {
     structuredReply = JSON.parse(content);
   } catch {
-    return json({ error: "Groq returned an unreadable answer." }, 502);
+    return json({ error: "Denver returned an unreadable answer." }, 502);
   }
 
   const parsedReply = parseDenverReply(structuredReply);
   if (!parsedReply.success) {
-    return json({ error: "Groq returned an invalid answer." }, 502);
+    return json({ error: "Denver returned an invalid answer." }, 502);
   }
 
   return json({ reply: parsedReply.data });
