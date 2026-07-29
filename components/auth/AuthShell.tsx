@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DopaMark } from "@/components/dopa/icons";
+import { DopaMark } from "@/components/landing/icons";
 
 export function AuthShell({
   title,

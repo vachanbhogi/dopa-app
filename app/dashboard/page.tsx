@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOut } from "@/app/auth/actions";
-import { DopaMark } from "@/components/dopa/icons";
+import { DopaMark } from "@/components/landing/icons";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 

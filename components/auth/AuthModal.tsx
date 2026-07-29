@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { login, signup } from "@/app/auth/actions";
-import { DopaMark } from "@/components/dopa/icons";
+import { DopaMark } from "@/components/landing/icons";
 
 type AuthModalProps = {
   mode: "login" | "signup";

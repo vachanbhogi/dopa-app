@@ -1,4 +1,4 @@
-import { DopaLanding } from "@/components/dopa/DopaLanding";
+import { DopaLanding } from "@/components/landing/DopaLanding";
 import { AuthModal } from "@/components/auth/AuthModal";
 
 export default async function Home({
