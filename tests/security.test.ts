@@ -13,7 +13,10 @@ import {
   normalizeOptionalHttpUrl,
 } from "../lib/validation";
 import { enforceApiQuota } from "../utils/api-quota";
-import { normalizeDopaApiBaseUrl } from "../lib/dopa-api";
+import {
+  normalizeDopaApiBaseUrl,
+  parseScoreJobResponse,
+} from "../lib/dopa-api";
 import { contentSecurityPolicy, requiresSessionRefresh } from "../proxy";
 import { isCronAuthorized } from "../utils/cron-security";
 
@@ -128,6 +131,35 @@ test("allows the default local Dopa API in the content security policy", () => {
       process.env.NEXT_PUBLIC_DOPA_API_URL = configuredApiUrl;
     }
   }
+});
+
+test("validates queued GPU job positions", () => {
+  const queued = parseScoreJobResponse({
+    job_id: "safe-job-id",
+    status: "queued",
+    position: 2,
+    queued_at: "2026-07-29T22:00:00Z",
+    started_at: null,
+    completed_at: null,
+    poll_after_seconds: 2,
+    result: null,
+    error: null,
+  });
+
+  assert.equal(queued.position, 2);
+  assert.throws(() =>
+    parseScoreJobResponse({
+      ...queued,
+      position: 0,
+    }),
+  );
+  assert.throws(() =>
+    parseScoreJobResponse({
+      ...queued,
+      status: "succeeded",
+      position: null,
+    }),
+  );
 });
 
 test("keeps the anonymous FC judge path independent from login refresh", () => {

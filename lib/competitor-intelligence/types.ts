@@ -168,6 +168,7 @@ export type ResearchRunDto = {
   queued_at: string;
   started_at: string | null;
   completed_at: string | null;
+  queue_position: number | null;
   candidates: ResearchCandidateDto[];
 };
 

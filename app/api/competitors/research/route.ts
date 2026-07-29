@@ -1,4 +1,7 @@
-import { createAndEnqueueResearchRun } from "@/lib/server/competitor-research";
+import {
+  createAndEnqueueResearchRun,
+  getResearchQueuePosition,
+} from "@/lib/server/competitor-research";
 import type {
   MonitorSettingsDto,
   ResearchCandidateDto,
@@ -98,6 +101,10 @@ export async function GET(request: Request) {
 
   let runDto: ResearchRunDto | null = null;
   if (run) {
+    const queuePosition =
+      run.status === "queued"
+        ? await getResearchQueuePosition(run.id, run.queued_at)
+        : null;
     const { data: candidates, error: candidateError } = await supabase
       .from("competitor_candidates")
       .select(
@@ -137,6 +144,7 @@ export async function GET(request: Request) {
 
     runDto = {
       ...run,
+      queue_position: queuePosition,
       candidates: (candidates ?? []).map((candidate) => ({
         ...candidate,
         evidence: evidenceByCandidate.get(candidate.id) ?? [],

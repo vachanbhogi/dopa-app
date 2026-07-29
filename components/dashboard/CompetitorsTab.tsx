@@ -16,6 +16,10 @@ import type {
 } from "@/lib/competitor-intelligence/types";
 import { errorMessage, isJsonObject } from "@/lib/validation";
 import {
+  queueAutoStartCopy,
+  queuePositionLabel,
+} from "@/lib/queue-position";
+import {
   DopaModal,
   dopaInputClass,
   dopaPrimaryButtonClass,
@@ -482,6 +486,10 @@ export function CompetitorsTab({ business }: { business: Business }) {
 function ResearchStatus({ run }: { run: ResearchRunDto | null }) {
   if (!run) return null;
   const active = run.status === "queued" || run.status === "running";
+  const title =
+    run.status === "queued"
+      ? queuePositionLabel(run.queue_position)
+      : stageCopy[run.stage];
   return (
     <div className="dopa-panel flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
@@ -494,10 +502,12 @@ function ResearchStatus({ run }: { run: ResearchRunDto | null }) {
         </span>
         <div>
           <h2 className="text-[14px] font-medium text-white">
-            {stageCopy[run.stage]}
+            {title}
           </h2>
           <p className="mt-0.5 text-[11px] text-tertiary">
-            {run.completed_at
+            {run.status === "queued"
+              ? queueAutoStartCopy("research worker")
+              : run.completed_at
               ? `${formatDate(run.completed_at)} · ${run.source_count} sources`
               : `Started ${formatDate(run.queued_at)}`}
           </p>

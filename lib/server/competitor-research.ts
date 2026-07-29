@@ -3,27 +3,38 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { RESEARCH_CONTRACT_VERSION, type BusinessResearchSnapshot, type CompetitorResearchJob, type ResearchTrigger } from "@/lib/competitor-intelligence/types";
 import { enqueueCompetitorResearch } from "@/lib/server/mns";
+import { queuePositionFromAheadCounts } from "@/lib/queue-position";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 type BusinessRow = BusinessResearchSnapshot & {
   id: string;
 };
 
+type ActiveResearchRun = {
+  runId: string;
+  status: "queued" | "running";
+  existing: boolean;
+};
+
 export async function createAndEnqueueResearchRun(
   business: BusinessRow,
   trigger: ResearchTrigger,
-): Promise<{ runId: string; status: "queued"; existing: boolean }> {
+): Promise<ActiveResearchRun> {
   const admin = createAdminClient();
 
   const { data: active, error: activeError } = await admin
     .from("competitor_research_runs")
-    .select("id")
+    .select("id, status")
     .eq("business_id", business.id)
     .in("status", ["queued", "running"])
     .maybeSingle();
   if (activeError) throw new Error(activeError.message);
   if (active) {
-    return { runId: active.id, status: "queued", existing: true };
+    return {
+      runId: active.id,
+      status: active.status === "running" ? "running" : "queued",
+      existing: true,
+    };
   }
 
   const snapshot: BusinessResearchSnapshot = {
@@ -59,12 +70,16 @@ export async function createAndEnqueueResearchRun(
   if (runError?.code === "23505") {
     const { data: concurrent } = await admin
       .from("competitor_research_runs")
-      .select("id")
+      .select("id, status")
       .eq("business_id", business.id)
       .in("status", ["queued", "running"])
       .maybeSingle();
     if (concurrent) {
-      return { runId: concurrent.id, status: "queued", existing: true };
+      return {
+        runId: concurrent.id,
+        status: concurrent.status === "running" ? "running" : "queued",
+        existing: true,
+      };
     }
   }
   if (runError || !run) {
@@ -98,6 +113,44 @@ export async function createAndEnqueueResearchRun(
   }
 
   return { runId: run.id, status: "queued", existing: false };
+}
+
+export async function getResearchQueuePosition(
+  runId: string,
+  queuedAt: string,
+): Promise<number | null> {
+  const admin = createAdminClient();
+  const [earlier, sameTime, current] = await Promise.all([
+    admin
+      .from("competitor_research_runs")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "queued")
+      .lt("queued_at", queuedAt),
+    admin
+      .from("competitor_research_runs")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "queued")
+      .eq("queued_at", queuedAt)
+      .lt("id", runId),
+    admin
+      .from("competitor_research_runs")
+      .select("status")
+      .eq("id", runId)
+      .maybeSingle(),
+  ]);
+  if (earlier.error || sameTime.error || current.error) {
+    throw new Error(
+      earlier.error?.message ??
+        sameTime.error?.message ??
+        current.error?.message ??
+        "Could not load research queue position.",
+    );
+  }
+  if (current.data?.status !== "queued") return null;
+  return queuePositionFromAheadCounts(
+    earlier.count ?? 0,
+    sameTime.count ?? 0,
+  );
 }
 
 export async function markRunFailed(

@@ -10,7 +10,25 @@ import {
   normalizeSignal,
 } from "@/lib/competitor-intelligence/validation";
 import { nextDailyRun } from "@/lib/competitor-intelligence/schedule";
+import {
+  queueAutoStartCopy,
+  queuePositionFromAheadCounts,
+  queuePositionLabel,
+} from "@/lib/queue-position";
 import { isUuid } from "@/lib/validation";
+
+describe("shared worker queue copy", () => {
+  test("reports the next and later positions consistently", () => {
+    expect(queuePositionLabel(1)).toBe("Next in line");
+    expect(queuePositionLabel(4)).toBe("#4 in line");
+    expect(queuePositionLabel(null)).toBe("Waiting in line");
+    expect(queueAutoStartCopy("research worker")).toBe(
+      "Starts automatically when the research worker is available",
+    );
+    expect(queuePositionFromAheadCounts(2, 1)).toBe(4);
+    expect(() => queuePositionFromAheadCounts(-1, 0)).toThrow();
+  });
+});
 
 describe("competitor threat scoring", () => {
   test("uses the locked deterministic weights", () => {

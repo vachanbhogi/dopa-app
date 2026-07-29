@@ -59,6 +59,24 @@ export type ScoreResponse = {
   timeline_curve?: TimelineCurve;
 };
 
+export type ScoreJobStatus =
+  | "queued"
+  | "processing"
+  | "succeeded"
+  | "failed";
+
+export type ScoreJobResponse = {
+  job_id: string;
+  status: ScoreJobStatus;
+  position: number | null;
+  queued_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  poll_after_seconds: number;
+  result: ScoreResponse | null;
+  error: string | null;
+};
+
 export type TimelineCurve = {
   seconds: number[];
   y: number[];
@@ -221,6 +239,74 @@ function parseScoreResponse(value: unknown): ScoreResponse {
   };
 }
 
+export function parseScoreJobResponse(value: unknown): ScoreJobResponse {
+  if (!isJsonObject(value)) {
+    throw new DopaApiError("The analysis queue returned an invalid response.");
+  }
+
+  const jobId = stringValue(value.job_id, 128);
+  const jobStatus =
+    value.status === "queued" ||
+    value.status === "processing" ||
+    value.status === "succeeded" ||
+    value.status === "failed"
+      ? value.status
+      : null;
+  const position =
+    value.position === null ? null : finiteNumber(value.position);
+  const queuedAt = stringValue(value.queued_at, 120);
+  const startedAt =
+    value.started_at === null ? null : stringValue(value.started_at, 120);
+  const completedAt =
+    value.completed_at === null ? null : stringValue(value.completed_at, 120);
+  const pollAfterSeconds = finiteNumber(value.poll_after_seconds);
+  const error =
+    value.error === null ? null : stringValue(value.error, 500);
+
+  if (
+    !jobId ||
+    !jobStatus ||
+    !queuedAt ||
+    pollAfterSeconds === null ||
+    !Number.isInteger(pollAfterSeconds) ||
+    pollAfterSeconds < 1 ||
+    pollAfterSeconds > 10 ||
+    (value.started_at !== null && !startedAt) ||
+    (value.completed_at !== null && !completedAt) ||
+    (value.error !== null && !error) ||
+    (jobStatus === "queued" &&
+      (position === null ||
+        !Number.isInteger(position) ||
+        position < 1 ||
+        position > 10_000)) ||
+    (jobStatus !== "queued" && position !== null)
+  ) {
+    throw new DopaApiError("The analysis queue returned an invalid response.");
+  }
+
+  const result =
+    value.result === null ? null : parseScoreResponse(value.result);
+  if (
+    (jobStatus === "succeeded" && result === null) ||
+    (jobStatus !== "succeeded" && result !== null) ||
+    (jobStatus === "failed" && !error)
+  ) {
+    throw new DopaApiError("The analysis queue returned an invalid response.");
+  }
+
+  return {
+    job_id: jobId,
+    status: jobStatus,
+    position,
+    queued_at: queuedAt,
+    started_at: startedAt ?? null,
+    completed_at: completedAt ?? null,
+    poll_after_seconds: pollAfterSeconds,
+    result,
+    error: error ?? null,
+  };
+}
+
 function parseTimelineCurve(value: unknown): TimelineCurve | undefined {
   if (!isJsonObject(value)) return undefined;
   if (!Array.isArray(value.seconds) || !Array.isArray(value.y)) return undefined;
@@ -328,7 +414,7 @@ function parseBrainModel(value: unknown): BrainModelPayload {
   };
 }
 
-export function scoreAd({
+export function enqueueScoreAd({
   file,
   accessToken,
   signal,
@@ -338,7 +424,7 @@ export function scoreAd({
   accessToken: string;
   signal: AbortSignal;
   onUploadProgress: (percentage: number) => void;
-}): Promise<ScoreResponse> {
+}): Promise<ScoreJobResponse> {
   return new Promise((resolve, reject) => {
     if (signal.aborted) {
       reject(new DOMException("Analysis cancelled.", "AbortError"));
@@ -348,7 +434,7 @@ export function scoreAd({
     const abortRequest = () => request.abort();
     let responseTooLarge = false;
 
-    request.open("POST", apiUrl("/v1/score"));
+    request.open("POST", apiUrl("/v1/score/jobs"));
     request.setRequestHeader("Authorization", `Bearer ${accessToken}`);
     request.timeout = 10 * 60 * 1000;
     request.upload.onprogress = (event) => {
@@ -375,7 +461,7 @@ export function scoreAd({
           return;
         }
         try {
-          resolve(parseScoreResponse(JSON.parse(request.responseText)));
+          resolve(parseScoreJobResponse(JSON.parse(request.responseText)));
         } catch (error: unknown) {
           reject(
             error instanceof DopaApiError
@@ -429,6 +515,64 @@ export function scoreAd({
     body.append("file", file);
     request.send(body);
   });
+}
+
+export async function fetchScoreJob({
+  jobId,
+  accessToken,
+  signal,
+}: {
+  jobId: string;
+  accessToken: string;
+  signal: AbortSignal;
+}): Promise<ScoreJobResponse> {
+  const response = await fetch(
+    apiUrl(`/v1/score/jobs/${encodeURIComponent(jobId)}`),
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+      signal,
+    },
+  );
+  const declaredLength = Number.parseInt(
+    response.headers.get("Content-Length") ?? "",
+    10,
+  );
+  if (
+    Number.isFinite(declaredLength) &&
+    declaredLength > MAX_SCORE_RESPONSE_BYTES
+  ) {
+    throw new DopaApiError(
+      "The analysis queue response exceeded the safe size limit.",
+    );
+  }
+
+  const body = await response.text();
+  if (body.length > MAX_SCORE_RESPONSE_BYTES) {
+    throw new DopaApiError(
+      "The analysis queue response exceeded the safe size limit.",
+    );
+  }
+  if (!response.ok) {
+    const retryHeader = response.headers.get("Retry-After");
+    const retryAfter = retryHeader
+      ? Number.parseInt(retryHeader, 10)
+      : null;
+    throw new DopaApiError(
+      responseDetail(body, "The analysis queue could not be checked."),
+      response.status,
+      retryAfter !== null && Number.isFinite(retryAfter) ? retryAfter : null,
+    );
+  }
+
+  try {
+    return parseScoreJobResponse(JSON.parse(body));
+  } catch (error: unknown) {
+    throw error instanceof DopaApiError
+      ? error
+      : new DopaApiError("The analysis queue returned an invalid response.");
+  }
 }
 
 export function fetchBrainModel({

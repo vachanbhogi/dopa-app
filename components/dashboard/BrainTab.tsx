@@ -5,13 +5,19 @@ import dynamic from "next/dynamic";
 import { useDropzone, type FileRejection } from "react-dropzone";
 import {
   DopaApiError,
+  enqueueScoreAd,
   fetchBrainModel,
-  scoreAd,
+  fetchScoreJob,
   type BrainModelPayload,
+  type ScoreJobResponse,
   type ScoreResponse,
 } from "@/lib/dopa-api";
 import { createClient } from "@/utils/supabase/client";
 import { RetentionGraph } from "@/components/dashboard/RetentionGraph";
+import {
+  queueAutoStartCopy,
+  queuePositionLabel,
+} from "@/lib/queue-position";
 
 const CorticalModelViewer = dynamic(
   () =>
@@ -36,8 +42,30 @@ type AnalysisPhase =
   | "idle"
   | "validating"
   | "uploading"
+  | "queued"
   | "analyzing"
   | "loading-model";
+
+function waitForQueuePoll(
+  milliseconds: number,
+  signal: AbortSignal,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException("Analysis cancelled.", "AbortError"));
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      signal.removeEventListener("abort", abort);
+      resolve();
+    }, milliseconds);
+    const abort = () => {
+      window.clearTimeout(timeout);
+      reject(new DOMException("Analysis cancelled.", "AbortError"));
+    };
+    signal.addEventListener("abort", abort, { once: true });
+  });
+}
 
 async function readVideoDuration(file: File): Promise<number | null> {
   const source = URL.createObjectURL(file);
@@ -87,6 +115,7 @@ export function BrainTab() {
     number | null
   >(null);
   const [analysisElapsedSeconds, setAnalysisElapsedSeconds] = useState(0);
+  const [queuePosition, setQueuePosition] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [modelError, setModelError] = useState<string | null>(null);
   const requestRef = useRef<AbortController | null>(null);
@@ -137,6 +166,7 @@ export function BrainTab() {
     setUploadProgress(0);
     setModelDownloadProgress(null);
     setAnalysisElapsedSeconds(0);
+    setQueuePosition(null);
     setPhase("idle");
   }, []);
 
@@ -185,6 +215,7 @@ export function BrainTab() {
     setUploadProgress(0);
     setModelDownloadProgress(null);
     setAnalysisElapsedSeconds(0);
+    setQueuePosition(null);
     analysisStartedAtRef.current = null;
     setBrainModel(null);
     setResult(null);
@@ -203,19 +234,11 @@ export function BrainTab() {
       }
 
       const submit = (accessToken: string) =>
-        scoreAd({
+        enqueueScoreAd({
           file,
           accessToken,
           signal: controller.signal,
-          onUploadProgress: (percentage) => {
-            setUploadProgress(percentage);
-            if (percentage >= 100) {
-              if (analysisStartedAtRef.current === null) {
-                analysisStartedAtRef.current = performance.now();
-              }
-              setPhase("analyzing");
-            }
-          },
+          onUploadProgress: setUploadProgress,
         });
 
       let accessToken = session.access_token;
@@ -227,9 +250,9 @@ export function BrainTab() {
         }
         return data.session.access_token;
       };
-      let score: ScoreResponse;
+      let job: ScoreJobResponse;
       try {
-        score = await submit(accessToken);
+        job = await submit(accessToken);
       } catch (requestError) {
         if (
           requestError instanceof DopaApiError &&
@@ -239,12 +262,95 @@ export function BrainTab() {
           setUploadProgress(0);
           analysisStartedAtRef.current = null;
           setPhase("uploading");
-          score = await submit(accessToken);
+          job = await submit(accessToken);
         } else {
           throw requestError;
         }
       }
 
+      const applyQueueState = (current: ScoreJobResponse) => {
+        if (current.status === "queued") {
+          analysisStartedAtRef.current = null;
+          setAnalysisElapsedSeconds(0);
+          setQueuePosition(current.position);
+          setPhase("queued");
+          return;
+        }
+        if (current.status === "processing") {
+          setQueuePosition(null);
+          if (analysisStartedAtRef.current === null) {
+            const startedAt = current.started_at
+              ? Date.parse(current.started_at)
+              : Number.NaN;
+            const elapsedBeforePoll = Number.isFinite(startedAt)
+              ? Math.max(0, Date.now() - startedAt)
+              : 0;
+            analysisStartedAtRef.current =
+              performance.now() - elapsedBeforePoll;
+          }
+          setPhase("analyzing");
+        }
+      };
+      const loadJob = async () => {
+        try {
+          return await fetchScoreJob({
+            jobId: job.job_id,
+            accessToken,
+            signal: controller.signal,
+          });
+        } catch (pollError) {
+          if (
+            pollError instanceof DopaApiError &&
+            pollError.status === 401
+          ) {
+            accessToken = await refreshAccessToken();
+            return fetchScoreJob({
+              jobId: job.job_id,
+              accessToken,
+              signal: controller.signal,
+            });
+          }
+          throw pollError;
+        }
+      };
+
+      applyQueueState(job);
+      while (job.status === "queued" || job.status === "processing") {
+        await waitForQueuePoll(
+          job.poll_after_seconds * 1_000,
+          controller.signal,
+        );
+        try {
+          job = await loadJob();
+        } catch (pollError) {
+          if (
+            pollError instanceof DopaApiError &&
+            (pollError.status === 0 || pollError.status >= 500)
+          ) {
+            await waitForQueuePoll(
+              (pollError.retryAfter ?? 2) * 1_000,
+              controller.signal,
+            );
+            continue;
+          }
+          throw pollError;
+        }
+        applyQueueState(job);
+      }
+      if (job.status === "failed") {
+        throw new DopaApiError(
+          job.error ?? "The ad could not be scored.",
+          500,
+        );
+      }
+      if (!job.result) {
+        throw new DopaApiError(
+          "The analysis queue finished without a score.",
+        );
+      }
+
+      const score = job.result;
+      setQueuePosition(null);
       setResult(score);
       const modelPath = score.brain_response.model_path;
       if (score.brain_response.status === "ready" && modelPath) {
@@ -332,6 +438,7 @@ export function BrainTab() {
         uploadProgress={uploadProgress}
         modelDownloadProgress={modelDownloadProgress}
         analysisElapsedSeconds={analysisElapsedSeconds}
+        queuePosition={queuePosition}
         isDragActive={isDragActive}
         dropzoneProps={getRootProps()}
         onReplace={open}
@@ -359,12 +466,17 @@ export function BrainTab() {
   );
 }
 
-function phaseLabel(phase: AnalysisPhase): string {
+function phaseLabel(
+  phase: AnalysisPhase,
+  queuePosition: number | null = null,
+): string {
   switch (phase) {
     case "validating":
       return "Checking video…";
     case "uploading":
       return "Uploading…";
+    case "queued":
+      return queuePositionLabel(queuePosition);
     case "analyzing":
       return "Analyzing…";
     case "loading-model":
@@ -385,11 +497,13 @@ function AnalysisProgress({
   uploadProgress,
   modelDownloadProgress,
   analysisElapsedSeconds,
+  queuePosition,
 }: {
   phase: AnalysisPhase;
   uploadProgress: number;
   modelDownloadProgress: number | null;
   analysisElapsedSeconds: number;
+  queuePosition: number | null;
 }) {
   const determinateProgress =
     phase === "uploading"
@@ -402,17 +516,21 @@ function AnalysisProgress({
       ? "Reading the video metadata"
       : phase === "uploading"
         ? `${Math.round(uploadProgress)}% sent`
-        : phase === "analyzing"
-          ? `Cortical inference · ${formatElapsed(analysisElapsedSeconds)} elapsed`
-          : modelDownloadProgress === null
-            ? "Downloading the cortical surface"
-            : `${Math.round(modelDownloadProgress)}% downloaded`;
+        : phase === "queued"
+          ? queueAutoStartCopy("GPU")
+          : phase === "analyzing"
+            ? `Cortical inference · ${formatElapsed(analysisElapsedSeconds)} elapsed`
+            : modelDownloadProgress === null
+              ? "Downloading the cortical surface"
+              : `${Math.round(modelDownloadProgress)}% downloaded`;
   const activeStep =
     phase === "validating" || phase === "uploading"
       ? 0
-      : phase === "analyzing"
+      : phase === "queued"
         ? 1
-        : 2;
+        : phase === "analyzing"
+          ? 2
+          : 3;
 
   return (
     <div
@@ -421,7 +539,7 @@ function AnalysisProgress({
     >
       <div className="flex items-center justify-between gap-4">
         <p className="text-[11px] font-medium text-white">
-          {phaseLabel(phase)}
+          {phaseLabel(phase, queuePosition)}
         </p>
         <p className="font-mono text-[9px] tabular-nums text-tertiary">
           {detail}
@@ -431,7 +549,7 @@ function AnalysisProgress({
       <div
         className="relative mt-3 h-1 overflow-hidden rounded-full bg-white/6"
         role="progressbar"
-        aria-label={phaseLabel(phase)}
+        aria-label={phaseLabel(phase, queuePosition)}
         aria-valuemin={determinateProgress === null ? undefined : 0}
         aria-valuemax={determinateProgress === null ? undefined : 100}
         aria-valuenow={
@@ -450,8 +568,8 @@ function AnalysisProgress({
         )}
       </div>
 
-      <div className="mt-2.5 grid grid-cols-3 gap-2">
-        {["Upload", "Inference", "3D model"].map((label, index) => (
+      <div className="mt-2.5 grid grid-cols-4 gap-2">
+        {["Upload", "Queue", "Inference", "3D model"].map((label, index) => (
           <div
             key={label}
             className={`flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-[0.11em] ${
@@ -491,6 +609,7 @@ function AnalysisDesk({
   uploadProgress,
   modelDownloadProgress,
   analysisElapsedSeconds,
+  queuePosition,
   isDragActive,
   dropzoneProps,
   onReplace,
@@ -507,6 +626,7 @@ function AnalysisDesk({
   uploadProgress: number;
   modelDownloadProgress: number | null;
   analysisElapsedSeconds: number;
+  queuePosition: number | null;
   isDragActive: boolean;
   dropzoneProps: Record<string, unknown>;
   onReplace: () => void;
@@ -560,7 +680,7 @@ function AnalysisDesk({
           >
             {busy ? <Spinner /> : <BrainIcon />}
             {busy
-              ? phaseLabel(phase)
+              ? phaseLabel(phase, queuePosition)
               : result
                 ? "Re-run"
                 : "Analyze"}
@@ -583,6 +703,7 @@ function AnalysisDesk({
             uploadProgress={uploadProgress}
             modelDownloadProgress={modelDownloadProgress}
             analysisElapsedSeconds={analysisElapsedSeconds}
+            queuePosition={queuePosition}
           />
         ) : (
           <div className="rounded-lg border border-white/8 bg-white/2 px-3.5 py-3">
@@ -591,7 +712,7 @@ function AnalysisDesk({
                 {result ? "Analysis complete" : file ? "Ready to analyze" : "Waiting for creative"}
               </p>
               <p className="font-mono text-[9px] tabular-nums text-tertiary">
-                Upload · Inference · 3D model
+                Upload · Queue · Inference · 3D model
               </p>
             </div>
             <div className="relative mt-3 h-1 overflow-hidden rounded-full bg-white/6">
@@ -600,8 +721,8 @@ function AnalysisDesk({
                 style={{ width: result ? "100%" : "0%" }}
               />
             </div>
-            <div className="mt-2.5 grid grid-cols-3 gap-2">
-              {["Upload", "Inference", "3D model"].map((label) => (
+            <div className="mt-2.5 grid grid-cols-4 gap-2">
+              {["Upload", "Queue", "Inference", "3D model"].map((label) => (
                 <div
                   key={label}
                   className={`flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-[0.11em] ${
