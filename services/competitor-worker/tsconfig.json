@@ -14,6 +14,7 @@
   "include": [
     "src/**/*.ts",
     "../../lib/competitor-intelligence/**/*.ts",
+    "../../lib/keyword-intelligence/**/*.ts",
     "../../lib/validation.ts",
     "../../types/alicloud-mns.d.ts"
   ],

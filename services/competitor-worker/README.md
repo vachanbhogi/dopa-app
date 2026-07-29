@@ -1,9 +1,10 @@
-# Dopa competitor worker
+# Dopa research worker
 
-Always-on Node 24 worker for evidence-backed competitor research. It has no
-inbound HTTP port. The process long-polls one Alibaba MNS queue, calls Qwen in
-US Virginia, and posts HMAC-signed progress/results to the configured Dopa
-origin.
+Always-on Node 24 worker for evidence-backed competitor and keyword research.
+It has no inbound HTTP port. The process long-polls one Alibaba MNS queue,
+calls Qwen in US Virginia, and posts HMAC-signed progress/results to the
+configured Dopa origin. Keyword jobs use the same queue and provider client,
+then return through their own signed callback routes.
 
 ## Required environment
 

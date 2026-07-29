@@ -8,16 +8,26 @@ import {
   type ResearchProgressPayload,
   type WorkerHeartbeatPayload,
 } from "../../../lib/competitor-intelligence/types";
+import {
+  isKeywordResearchJob,
+} from "../../../lib/keyword-intelligence/validation";
+import {
+  KEYWORD_RESEARCH_CONTRACT_VERSION,
+  KEYWORD_RESEARCH_JOB_TYPE,
+  type KeywordResearchJob,
+  type KeywordResearchProgressPayload,
+} from "../../../lib/keyword-intelligence/types";
 import { isJsonObject, stringValue } from "../../../lib/validation";
 import { isPermanentCallbackError, postSigned } from "./callback";
 import type { WorkerConfig } from "./config";
+import { researchKeywords } from "./keyword-qwen";
 import { QwenRequestError, researchCompetitors } from "./qwen";
 
 const VISIBILITY_SECONDS = 15 * 60;
 const VISIBILITY_REFRESH_MS = 5 * 60_000;
 
 type ReceivedMessage = {
-  job: CompetitorResearchJob;
+  job: CompetitorResearchJob | KeywordResearchJob;
   receiptHandle: string;
   dequeueCount: number;
 };
@@ -157,7 +167,10 @@ export class CompetitorWorker {
         await this.mns.deleteMessage(this.config.queueName, receiptHandle);
         return null;
       }
-      if (!isCompetitorResearchJob(decoded)) {
+      if (
+        !isCompetitorResearchJob(decoded) &&
+        !isKeywordResearchJob(decoded)
+      ) {
         await this.mns.deleteMessage(this.config.queueName, receiptHandle);
         return null;
       }
@@ -170,6 +183,10 @@ export class CompetitorWorker {
   }
 
   private async process(message: ReceivedMessage) {
+    const keywordJob = isKeywordResearchJob(message.job);
+    const callbackPrefix = keywordJob
+      ? "/api/internal/keywords"
+      : "/api/internal/competitors";
     const receipt = { value: message.receiptHandle, extending: false };
     const visibilityTimer = setInterval(async () => {
       if (receipt.extending) return;
@@ -193,32 +210,42 @@ export class CompetitorWorker {
     }, this.visibilityRefreshMs);
 
     try {
-      const result = await researchCompetitors(
-        this.config,
-        message.job,
-        async (stage) => {
-          const progress: ResearchProgressPayload = {
-            version: RESEARCH_CONTRACT_VERSION,
-            run_id: message.job.run_id,
-            worker_id: this.config.workerId,
-            stage,
-          };
-          try {
-            await postSigned(
-              this.config,
-              "/api/internal/competitors/progress",
-              progress,
-            );
-          } catch (error) {
-            if (isPermanentCallbackError(error)) throw error;
-            console.error("Progress callback error:", safeError(error));
-          }
-        },
-      );
+      const onStage = async (
+        stage: "searching" | "synthesizing" | "finalizing",
+      ) => {
+        const progress: ResearchProgressPayload | KeywordResearchProgressPayload =
+          keywordJob
+            ? {
+                version: KEYWORD_RESEARCH_CONTRACT_VERSION,
+                job_type: KEYWORD_RESEARCH_JOB_TYPE,
+                run_id: message.job.run_id,
+                worker_id: this.config.workerId,
+                stage,
+              }
+            : {
+                version: RESEARCH_CONTRACT_VERSION,
+                run_id: message.job.run_id,
+                worker_id: this.config.workerId,
+                stage,
+              };
+        try {
+          await postSigned(
+            this.config,
+            `${callbackPrefix}/progress`,
+            progress,
+          );
+        } catch (error) {
+          if (isPermanentCallbackError(error)) throw error;
+          console.error("Progress callback error:", safeError(error));
+        }
+      };
+      const result = isKeywordResearchJob(message.job)
+        ? await researchKeywords(this.config, message.job, onStage)
+        : await researchCompetitors(this.config, message.job, onStage);
 
       await postSigned(
         this.config,
-        "/api/internal/competitors/results",
+        `${callbackPrefix}/results`,
         result,
       );
       await this.mns.deleteMessage(this.config.queueName, receipt.value);
@@ -232,20 +259,37 @@ export class CompetitorWorker {
         safeError(error),
       );
       if (permanent || exhausted) {
-        const progress: ResearchProgressPayload = {
-          version: RESEARCH_CONTRACT_VERSION,
-          run_id: message.job.run_id,
-          worker_id: this.config.workerId,
-          stage: "failed",
-          error_code: permanent ? "permanent_provider_error" : "retry_exhausted",
-          error_message: permanent
-            ? "The research provider rejected the request. Check worker configuration."
-            : "Research failed after three attempts.",
-        };
+        const progress: ResearchProgressPayload | KeywordResearchProgressPayload =
+          keywordJob
+            ? {
+                version: KEYWORD_RESEARCH_CONTRACT_VERSION,
+                job_type: KEYWORD_RESEARCH_JOB_TYPE,
+                run_id: message.job.run_id,
+                worker_id: this.config.workerId,
+                stage: "failed",
+                error_code: permanent
+                  ? "permanent_provider_error"
+                  : "retry_exhausted",
+                error_message: permanent
+                  ? "The research provider rejected the request. Check worker configuration."
+                  : "Research failed after three attempts.",
+              }
+            : {
+                version: RESEARCH_CONTRACT_VERSION,
+                run_id: message.job.run_id,
+                worker_id: this.config.workerId,
+                stage: "failed",
+                error_code: permanent
+                  ? "permanent_provider_error"
+                  : "retry_exhausted",
+                error_message: permanent
+                  ? "The research provider rejected the request. Check worker configuration."
+                  : "Research failed after three attempts.",
+              };
         try {
           await postSigned(
             this.config,
-            "/api/internal/competitors/progress",
+            `${callbackPrefix}/progress`,
             progress,
           );
           await this.mns.deleteMessage(this.config.queueName, receipt.value);
