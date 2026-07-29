@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "sourceHash": "29076b501837ebc6",
+  "sourceHash": "09258586cccf1334",
   "routes": [
     "/",
     "/dashboard",
@@ -754,7 +754,7 @@
         "for marketing teams",
         "Upload an ad, predict its average click-through rate, and inspect the cortical response modeled by TRIBE v2.",
         "New",
-        "TRIBE v2 pipeline"
+        "DEMO"
       ]
     },
     {

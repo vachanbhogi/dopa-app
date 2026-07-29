@@ -27,7 +27,7 @@ export function Hero() {
               <span className="rounded-[5px] border border-white/15 bg-white/4 px-1.5 py-0.5 text-[11px] font-medium leading-none text-[#c7cad1]">
                 New
               </span>
-              TRIBE v2 pipeline
+              DEMO
               <ArrowRight className="h-3.5 w-3.5 opacity-70" />
             </a>
           </div>
