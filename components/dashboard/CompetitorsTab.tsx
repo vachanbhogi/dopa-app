@@ -11,6 +11,7 @@ import {
 import type { DiscoveredCompetitor } from "@/app/api/competitors/discover/route";
 import type { CompetitorMove } from "@/app/api/competitors/moves/route";
 import { errorMessage, isJsonObject } from "@/lib/validation";
+import { NavIcon } from "./DashboardShell";
 
 const moveTypes = new Set([
   "ad_launched",
@@ -51,23 +52,31 @@ function isCompetitorMove(value: unknown): value is CompetitorMove {
   );
 }
 
+function riskBadgeClass(level: CompetitorMove["risk_level"]) {
+  switch (level) {
+    case "high":
+      return "border-red-400/25 bg-red-400/8 text-red-300";
+    case "medium":
+      return "border-amber-400/25 bg-amber-400/8 text-amber-200";
+    default:
+      return "border-white/12 bg-white/4 text-secondary";
+  }
+}
+
 export function CompetitorsTab({ business }: { business: Business }) {
   const [competitors, setCompetitors] = useState<CompetitorItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Auto-Discovery State
+
   const [discovering, setDiscovering] = useState(false);
   const [discoveredList, setDiscoveredList] = useState<DiscoveredCompetitor[]>([]);
-  
-  // Manual Modal State
+
   const [modalOpen, setModalOpen] = useState(false);
   const [manualName, setManualName] = useState("");
   const [manualWebsite, setManualWebsite] = useState("");
   const [manualAngle, setManualAngle] = useState("");
   const [pending, startTransition] = useTransition();
 
-  // Moves Timeline State for Selected Competitor
   const [selectedCompetitor, setSelectedCompetitor] = useState<CompetitorItem | null>(null);
   const [moves, setMoves] = useState<CompetitorMove[]>([]);
   const [loadingMoves, setLoadingMoves] = useState(false);
@@ -208,40 +217,40 @@ export function CompetitorsTab({ business }: { business: Business }) {
   }
 
   return (
-    <div className="space-y-8 animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both]">
-      {/* ── Header Controls ── */}
-      <div className="flex flex-col gap-4 dopa-panel p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-[17px] font-medium text-white">Competitor Research</h2>
-            <span className="rounded bg-brand/20 px-2 py-0.5 text-[10px] font-semibold text-brand">
-              AI-assisted
-            </span>
+    <div className="animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both] space-y-6">
+      <p className="text-[14px] leading-6 text-secondary">
+        Build a shortlist of likely rivals and explore planning scenarios for{" "}
+        <span className="text-white">{business.name}</span>. Verify AI suggestions
+        before using them in campaign decisions.
+      </p>
+
+      <div className="dopa-panel flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/8 bg-white/4">
+            <NavIcon name="eye" active />
+          </span>
+          <div>
+            <h2 className="text-[15px] font-medium text-white">Competitor research</h2>
+            <p className="text-[12px] text-secondary">AI-assisted discovery and scenario planning</p>
           </div>
-          <p className="mt-1 text-[13px] text-secondary">
-            Build a shortlist of likely rivals and explore planning scenarios.
-            Verify AI suggestions before using them in campaign decisions.
-          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={handleAutoDiscover}
             disabled={discovering}
-            className="flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-[13px] font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.16)] transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.97] disabled:opacity-50"
           >
             {discovering ? (
               <>
-                <svg className="h-4 w-4 animate-spin text-white" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                <span>Scanning Market...</span>
+                <SpinnerIcon className="h-3.5 w-3.5 animate-spin" />
+                Scanning market…
               </>
             ) : (
               <>
-                <span>✨ Auto-Discover Rivals</span>
+                <SparkleIcon className="h-3.5 w-3.5" />
+                Auto-discover rivals
               </>
             )}
           </button>
@@ -249,96 +258,101 @@ export function CompetitorsTab({ business }: { business: Business }) {
           <button
             type="button"
             onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-[13px] font-medium text-secondary transition-colors hover:border-white/20 hover:text-white"
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-[13px] font-medium text-secondary transition-[border-color,color,transform] duration-150 hover:border-white/20 hover:text-white active:scale-[0.97]"
           >
-            <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
               <path d="M8 3v10M3 8h10" />
             </svg>
-            Add Competitor
+            Add competitor
           </button>
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-4 text-[13px] text-red-300">
+      {error ? (
+        <p
+          role="alert"
+          className="rounded-lg border border-red-400/20 bg-red-400/[0.07] px-4 py-3 text-[13px] text-red-200"
+        >
           {error}
-        </div>
-      )}
+        </p>
+      ) : null}
 
-      {/* ── Discovered Competitors Suggestion Banner ── */}
-      {discoveredList.length > 0 && (
-        <div className="rounded-xl border border-brand/30 bg-brand/10 p-5">
-          <h3 className="text-[14px] font-medium text-white">Discovered Industry Competitors</h3>
-          <p className="mt-1 text-[12px] text-secondary">
-            AI suggested these possible rivals for {business.name}. Review each
-            suggestion before adding it.
-          </p>
+      {discoveredList.length > 0 ? (
+        <div className="dopa-panel p-5 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-[13px] font-medium text-white">Suggested rivals</h3>
+              <p className="mt-1 text-[12px] leading-5 text-secondary">
+                AI found these possible competitors. Review each before tracking.
+              </p>
+            </div>
+            <span className="rounded-[5px] border border-white/10 px-2 py-0.5 text-[10px] text-tertiary">
+              {discoveredList.length} suggestions
+            </span>
+          </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {discoveredList.map((c) => (
               <div
                 key={c.name}
-                className="flex flex-col justify-between rounded-lg border border-white/8 bg-[#111215] p-3.5"
+                className="flex flex-col justify-between rounded-xl border border-white/8 bg-[#0c0d0e] p-4 transition-[border-color] duration-150 hover:border-white/12"
               >
                 <div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-white">{c.name}</span>
-                    <span className="rounded bg-white/6 px-1.5 py-0.5 text-[10px] text-tertiary">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-[13px] font-medium text-white">{c.name}</span>
+                    <span className="shrink-0 rounded-[5px] border border-white/10 px-1.5 py-0.5 text-[10px] text-tertiary">
                       {c.overlap}
                     </span>
                   </div>
-                  <p className="mt-1.5 text-[12px] text-secondary line-clamp-2">{c.primary_angle}</p>
+                  <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-secondary">
+                    {c.primary_angle}
+                  </p>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between border-t border-white/6 pt-2.5">
-                  <span className="font-mono text-[11px] text-emerald-400">
-                    AI CTR estimate: {c.predicted_ctr}%
+                <div className="mt-4 flex items-center justify-between gap-2 border-t border-white/6 pt-3">
+                  <span className="font-mono text-[11px] text-tertiary">
+                    CTR est. {c.predicted_ctr}%
                   </span>
                   <button
                     type="button"
                     onClick={() => handleAddDiscovered(c)}
-                    className="rounded bg-brand px-2.5 py-1 text-[11px] font-medium text-white hover:opacity-90"
+                    className="rounded-lg border border-white/10 px-2.5 py-1 text-[11px] font-medium text-white transition-[border-color,background-color] duration-150 hover:border-white/20 hover:bg-white/4"
                   >
-                    Track Rival +
+                    Track
                   </button>
                 </div>
               </div>
             ))}
           </div>
         </div>
-      )}
+      ) : null}
 
-      {/* ── Tracked competitors and planning scenarios ── */}
       {loading ? (
-        <div className="h-40 animate-pulse rounded-xl border border-white/6 bg-white/2" />
+        <div className="h-40 animate-pulse rounded-xl border border-white/8 bg-[#0c0d0e]" />
       ) : competitors.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-white/1.5 py-16 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/4">
-            <svg className="h-6 w-6 text-white/30" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2">
-              <path d="M2 8s2.5-4.5 6-4.5S14 8 14 8s-2.5 4.5-6 4.5S2 8 2 8Z" />
-              <circle cx="8" cy="8" r="2" />
-            </svg>
-          </div>
-          <h3 className="mt-4 text-[15px] font-medium text-white">No Competitors Tracked Yet</h3>
-          <p className="mt-1.5 max-w-sm text-center text-[13px] leading-5 text-secondary">
-            Click &quot;Auto-Discover Rivals&quot; or manually add competitors
-            to build a research shortlist and explore planning scenarios.
+        <div className="dopa-panel flex flex-col items-center justify-center border-dashed py-16 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/8 bg-white/4">
+            <NavIcon name="eye" />
+          </span>
+          <h3 className="mt-4 text-[15px] font-medium text-white">No competitors tracked</h3>
+          <p className="mt-1.5 max-w-sm text-[13px] leading-5 text-secondary">
+            Auto-discover rivals or add competitors manually to build a research
+            shortlist and explore planning scenarios.
           </p>
         </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-          {/* Competitor List */}
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
           <div className="space-y-3">
-            <h3 className="text-[14px] font-medium text-white">Tracked Competitors</h3>
+            <h3 className="text-[13px] font-medium text-white">Tracked competitors</h3>
             {competitors.map((comp) => {
               const isSelected = selectedCompetitor?.id === comp.id;
               return (
                 <div
                   key={comp.id}
-                  className={`rounded-xl border p-4 transition-all ${
+                  className={`rounded-xl border p-4 transition-[border-color,background-color] duration-150 ${
                     isSelected
-                      ? "border-brand bg-brand/10 shadow-[0_0_20px_rgba(94,106,210,0.15)]"
-                      : "border-white/6 bg-[#0c0d0e] hover:border-white/12"
+                      ? "border-white/16 bg-brand/12"
+                      : "border-white/8 bg-[#0c0d0e] hover:border-white/12"
                   }`}
                 >
                   <button
@@ -347,24 +361,26 @@ export function CompetitorsTab({ business }: { business: Business }) {
                     aria-pressed={isSelected}
                     className="block w-full text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
                   >
-                    <span className="flex items-center justify-between gap-3">
-                      <span className="font-medium text-white">{comp.name}</span>
-                      <span className="font-mono text-[12px] font-semibold text-emerald-400">
+                    <span className="flex items-start justify-between gap-3">
+                      <span className="text-[14px] font-medium text-white">{comp.name}</span>
+                      <span className="shrink-0 font-mono text-[11px] text-tertiary">
                         {comp.predicted_ctr == null
-                          ? "No ad score"
-                          : `AI CTR estimate ${comp.predicted_ctr}%`}
+                          ? "No score"
+                          : `${comp.predicted_ctr}% CTR`}
                       </span>
                     </span>
 
                     {comp.primary_angle ? (
-                      <span className="mt-1.5 block line-clamp-2 text-[12px] leading-4 text-secondary">
+                      <span className="mt-2 block line-clamp-2 text-[12px] leading-5 text-secondary">
                         {comp.primary_angle}
                       </span>
                     ) : null}
                   </button>
 
-                  <div className="mt-3 flex items-center justify-between border-t border-white/6 pt-2 text-[11px] text-tertiary">
-                    <span>{comp.website_url || "No website"}</span>
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/6 pt-2.5 text-[11px]">
+                    <span className="truncate text-tertiary">
+                      {comp.website_url || "No website"}
+                    </span>
                     <button
                       type="button"
                       onClick={async () => {
@@ -376,7 +392,7 @@ export function CompetitorsTab({ business }: { business: Business }) {
                         }
                         await loadCompetitors();
                       }}
-                      className="text-red-400 hover:text-red-300"
+                      className="shrink-0 text-red-400 transition-colors hover:text-red-300"
                     >
                       Remove
                     </button>
@@ -386,28 +402,30 @@ export function CompetitorsTab({ business }: { business: Business }) {
             })}
           </div>
 
-          {/* Planning scenarios for selected competitor */}
-          <div className="dopa-panel p-5">
-            <div className="flex items-center justify-between border-b border-white/6 pb-3">
+          <div className="dopa-panel p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-3 border-b border-white/6 pb-4">
               <div>
                 <h3 className="text-[15px] font-medium text-white">
                   {selectedCompetitor
-                    ? `${selectedCompetitor.name} Planning Scenarios`
-                    : "Select a Competitor"}
+                    ? `${selectedCompetitor.name} scenarios`
+                    : "Select a competitor"}
                 </h3>
-                <p className="text-[12px] text-secondary">
-                  AI-generated possibilities to investigate, not detected events.
+                <p className="mt-1 text-[12px] leading-5 text-secondary">
+                  AI-generated possibilities to investigate — not detected events.
                 </p>
               </div>
-              <span className="rounded bg-brand/15 px-2 py-0.5 font-mono text-[10px] font-semibold text-brand">
-                Scenarios
+              <span className="shrink-0 rounded-[5px] border border-white/10 px-2 py-0.5 text-[10px] text-tertiary">
+                Planning
               </span>
             </div>
 
             {loadingMoves ? (
-              <div className="space-y-3 pt-4">
+              <div className="mt-4 space-y-3">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-20 animate-pulse rounded-lg bg-white/3" />
+                  <div
+                    key={i}
+                    className="h-20 animate-pulse rounded-xl border border-white/8 bg-[#0c0d0e]"
+                  />
                 ))}
               </div>
             ) : moves.length > 0 ? (
@@ -415,77 +433,73 @@ export function CompetitorsTab({ business }: { business: Business }) {
                 {moves.map((move, idx) => (
                   <div
                     key={`${move.move_type}-${move.title}-${idx}`}
-                    className="rounded-lg border border-white/6 bg-[#090a0b] p-3.5 transition-colors hover:border-white/10"
+                    className="rounded-xl border border-white/8 bg-[#0c0d0e] p-4 transition-[border-color] duration-150 hover:border-white/12"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
-                            move.risk_level === "high"
-                              ? "bg-red-500/20 text-red-400"
-                              : move.risk_level === "medium"
-                              ? "bg-amber-500/20 text-amber-400"
-                              : "bg-blue-500/20 text-blue-400"
-                          }`}
+                          className={`rounded-[5px] border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${riskBadgeClass(move.risk_level)}`}
                         >
-                          {move.risk_level} Risk
+                          {move.risk_level}
                         </span>
-                        <span className="text-[12px] font-medium text-white">{move.title}</span>
+                        <span className="text-[13px] font-medium text-white">{move.title}</span>
                       </div>
                       <span className="text-[10px] text-tertiary">{move.timeAgo}</span>
                     </div>
 
-                    <p className="mt-1.5 text-[12px] leading-5 text-secondary">{move.description}</p>
+                    <p className="mt-2 text-[12px] leading-5 text-secondary">
+                      {move.description}
+                    </p>
 
-                    <div className="mt-2.5 flex items-center justify-between border-t border-white/6 pt-2 text-[11px]">
-                      <span className="text-tertiary">Type: {move.move_type.replace("_", " ")}</span>
-                      <span className="font-mono text-emerald-400">
-                        AI CTR estimate: {move.predicted_ctr}%
+                    <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/6 pt-2.5 text-[11px]">
+                      <span className="text-tertiary">
+                        {move.move_type.replace(/_/g, " ")}
+                      </span>
+                      <span className="font-mono text-tertiary">
+                        CTR est. {move.predicted_ctr}%
                       </span>
                     </div>
                   </div>
                 ))}
               </div>
             ) : movesError ? (
-              <div className="py-12 text-center text-[13px] text-red-300">
-                {movesError}
-              </div>
+              <p className="py-12 text-center text-[13px] text-red-300">{movesError}</p>
             ) : (
-              <div className="py-12 text-center text-[13px] text-secondary">
+              <p className="py-12 text-center text-[13px] text-secondary">
                 No planning scenarios are available for this competitor yet.
-              </div>
+              </p>
             )}
           </div>
         </div>
       )}
 
-      {/* ── Manual Add Modal ── */}
-      {modalOpen && (
+      {modalOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm sm:items-center"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-4 backdrop-blur-sm sm:items-center"
           onClick={() => setModalOpen(false)}
           role="presentation"
         >
           <div
-            className="w-full max-w-md rounded-xl border border-white/10 bg-[#111114] p-6 shadow-2xl"
+            className="w-full max-w-md overflow-hidden rounded-xl border border-white/8 bg-[#0f1011] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="add-competitor-title"
           >
-            <h3
-              id="add-competitor-title"
-              className="text-[17px] font-medium text-white"
-            >
-              Add Competitor
-            </h3>
-            <p className="mt-1 text-[13px] text-secondary">
-              Track a specific rival&apos;s ad strategy and moves.
-            </p>
+            <div className="border-b border-white/6 px-5 py-4 sm:px-6">
+              <h3
+                id="add-competitor-title"
+                className="text-[17px] font-medium tracking-[-0.02em] text-white"
+              >
+                Add competitor
+              </h3>
+              <p className="mt-1 text-[13px] text-secondary">
+                Track a rival&apos;s ad strategy and positioning.
+              </p>
+            </div>
 
-            <div className="mt-5 space-y-4">
-              <label className="block space-y-1">
-                <span className="text-[12px] font-medium text-white">Competitor Name *</span>
+            <div className="space-y-4 px-5 py-5 sm:px-6">
+              <Field label="Competitor name" required>
                 <input
                   autoFocus
                   value={manualName}
@@ -493,20 +507,18 @@ export function CompetitorsTab({ business }: { business: Business }) {
                   placeholder="Rival Labs"
                   className={inputClass}
                 />
-              </label>
+              </Field>
 
-              <label className="block space-y-1">
-                <span className="text-[12px] font-medium text-white">Website URL</span>
+              <Field label="Website URL">
                 <input
                   value={manualWebsite}
                   onChange={(e) => setManualWebsite(e.target.value)}
-                  placeholder="https://rivallabs.com"
+                  placeholder="rivallabs.com"
                   className={inputClass}
                 />
-              </label>
+              </Field>
 
-              <label className="block space-y-1">
-                <span className="text-[12px] font-medium text-white">Primary Ad Strategy / Hook</span>
+              <Field label="Primary ad strategy / hook">
                 <textarea
                   value={manualAngle}
                   onChange={(e) => setManualAngle(e.target.value)}
@@ -514,14 +526,14 @@ export function CompetitorsTab({ business }: { business: Business }) {
                   placeholder="Price-slash video montage & 3-second problem hook"
                   className={`${inputClass} resize-none`}
                 />
-              </label>
+              </Field>
             </div>
 
-            <div className="mt-6 flex justify-end gap-2">
+            <div className="flex justify-end gap-2 border-t border-white/6 px-5 py-4 sm:px-6">
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="rounded-lg border border-white/10 px-4 py-2 text-[13px] text-secondary hover:text-white"
+                className="rounded-lg px-4 py-2 text-[13px] text-secondary transition-colors hover:text-white"
               >
                 Cancel
               </button>
@@ -529,17 +541,76 @@ export function CompetitorsTab({ business }: { business: Business }) {
                 type="button"
                 onClick={handleSaveManual}
                 disabled={pending || !manualName.trim()}
-                className="rounded-lg bg-brand px-4 py-2 text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-[13px] font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.16)] transition-[opacity,transform] duration-150 hover:opacity-90 active:scale-[0.97] disabled:opacity-50"
               >
-                {pending ? "Saving..." : "Start Tracking"}
+                {pending ? "Saving…" : "Start tracking"}
               </button>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
 
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="text-[12px] font-medium text-white">
+        {label}
+        {required ? <span className="text-brand"> *</span> : null}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function SparkleIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M8 2v2M8 12v2M2 8h2M12 8h2" />
+      <path d="M4.5 4.5l1 1M10.5 10.5l1 1M10.5 4.5l-1 1M4.5 10.5l-1 1" />
+      <circle cx="8" cy="8" r="2" />
+    </svg>
+  );
+}
+
+function SpinnerIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8v8H4z"
+      />
+    </svg>
+  );
+}
+
 const inputClass =
-  "w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-[13px] text-white outline-none placeholder:text-tertiary focus:border-brand/50";
+  "w-full rounded-xl border border-white/8 bg-[#0c0d0e] px-3.5 py-2.5 text-[14px] text-white outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-tertiary hover:border-white/12 focus:border-brand/50 focus:ring-1 focus:ring-brand/30";

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "sourceHash": "6c988dba2dec5a84",
+  "sourceHash": "e0b46446a9cf7d9a",
   "routes": [
     "/",
     "/dashboard",
@@ -254,9 +254,7 @@
       "source": "components/auth/AuthModal.tsx",
       "text": [
         "Welcome back",
-        "Create your account",
-        "Dopa",
-        "Close"
+        "Create your account"
       ]
     },
     {
@@ -374,32 +372,31 @@
       "area": "Competitors Tab",
       "source": "components/dashboard/CompetitorsTab.tsx",
       "text": [
-        "Competitor Research",
-        "AI-assisted",
-        "Build a shortlist of likely rivals and explore planning scenarios. Verify AI suggestions before using them in campaign decisions.",
-        "Scanning Market...",
-        "✨ Auto-Discover Rivals",
-        "Add Competitor",
-        "Discovered Industry Competitors",
-        "AI suggested these possible rivals for",
-        ". Review each suggestion before adding it.",
-        "AI CTR estimate:",
-        "Track Rival +",
-        "No Competitors Tracked Yet",
-        "Click \"Auto-Discover Rivals\" or manually add competitors to build a research shortlist and explore planning scenarios.",
-        "Tracked Competitors",
+        "Build a shortlist of likely rivals and explore planning scenarios for",
+        ". Verify AI suggestions before using them in campaign decisions.",
+        "Competitor research",
+        "AI-assisted discovery and scenario planning",
+        "Scanning market…",
+        "Auto-discover rivals",
+        "Add competitor",
+        "Suggested rivals",
+        "AI found these possible competitors. Review each before tracking.",
+        "suggestions",
+        "CTR est.",
+        "Track",
+        "No competitors tracked",
+        "Auto-discover rivals or add competitors manually to build a research shortlist and explore planning scenarios.",
+        "Tracked competitors",
         "Remove",
-        "AI-generated possibilities to investigate, not detected events.",
-        "Scenarios",
-        "Risk",
-        "Type:",
+        "AI-generated possibilities to investigate — not detected events.",
+        "Planning",
         "No planning scenarios are available for this competitor yet.",
-        "Track a specific rival's ad strategy and moves.",
-        "Competitor Name *",
+        "Track a rival's ad strategy and positioning.",
+        "Competitor name",
         "Rival Labs",
         "Website URL",
-        "https://rivallabs.com",
-        "Primary Ad Strategy / Hook",
+        "rivallabs.com",
+        "Primary ad strategy / hook",
         "Price-slash video montage & 3-second problem hook",
         "Cancel"
       ]
@@ -507,34 +504,25 @@
       "source": "components/dashboard/ProductsTab.tsx",
       "text": [
         "Product profiles power creative generation and TRIBE v2 pre-tests. Each product inherits",
-        "'s brand defaults unless you override them here.",
+        "'s brand defaults unless you override them in the editor.",
         "Add product",
-        "Audience",
-        "Price tier",
-        "Tone",
-        "Keywords",
         "No products yet",
         "Add your first product to fuel ad ideas, hooks, and TRIBE v2 scoring.",
         "Add first product",
         "more",
-        "Edit",
-        "Delete",
-        "Inherits audience and tone from",
-        "unless overridden.",
         "Product name",
-        "Aura Glow Skin Serum",
+        "iPhone 16 Pro",
         "Category",
         "Select category",
         "Price",
         "Value proposition",
-        "Visible glow in 7 days without oiliness",
+        "Advanced camera and AI capabilities",
         "Target sub-demographic",
-        "Working professionals dealing with screen fatigue",
+        "Tech-forward professionals",
         "Key features",
-        "Vitamin C, Hyaluronic acid, Non-greasy",
+        "A18 chip, 48MP camera, all-day battery",
         "Creative hooks",
-        "7-day glow challenge Before/after split screen Dermatologist-approved",
-        "Cancel"
+        "Capture life's moments Shot on iPhone"
       ]
     },
     {
@@ -851,6 +839,15 @@
         "Goal",
         "Profile completeness",
         "Dopa will use this context for cortical encoding, CTR prediction, and ad generation."
+      ]
+    },
+    {
+      "id": "components-ui-dopamodal-tsx",
+      "area": "Dopa Modal",
+      "source": "components/ui/DopaModal.tsx",
+      "text": [
+        "Dopa",
+        "Close"
       ]
     }
   ]
