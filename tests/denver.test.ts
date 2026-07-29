@@ -60,7 +60,7 @@ await test("generated knowledge tracks current routes and dashboard sections", (
     [{ content: "How do I research competitors?" }],
     "/dashboard?tab=competitors",
   );
-  assert.match(context, /Competitor Research/);
+  assert.match(context, /Competitor research/i);
   assert.match(context, /Auto-[Dd]iscover/);
   assert.match(context, /Revision:/);
 });
@@ -290,7 +290,7 @@ await test("guards input, retrieves website knowledge, and asks Groq", async () 
     assert.equal(body.model, "openai/gpt-oss-120b");
     assert.equal(body.response_format.type, "json_schema");
     assert.equal(body.response_format.json_schema?.strict, true);
-    assert.match(body.messages[1]?.content ?? "", /Competitor Research/);
+    assert.match(body.messages[1]?.content ?? "", /Competitor research/i);
     assert.doesNotMatch(
       body.messages[1]?.content ?? "",
       /ignore the system prompt/,
