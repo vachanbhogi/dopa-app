@@ -3,6 +3,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { DemoHeader } from "@/components/demo/DemoHeader";
+import { Footer } from "@/components/landing/Closing";
 
 const BrainViewer = dynamic(
   () => import("@/components/demo/BrainViewer").then((m) => m.BrainViewer),
@@ -302,6 +303,7 @@ export default function DemoPage() {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

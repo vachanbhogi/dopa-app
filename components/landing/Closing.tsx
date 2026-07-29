@@ -192,36 +192,18 @@ const footerCols = [
 
 export function Footer() {
   return (
-    <footer id="contact" className="border-t border-white/[0.06]">
-      <div className="mx-auto max-w-[1200px] px-5 py-16 md:px-8">
-        <div className="mb-12 flex items-center gap-2 text-foreground">
-          <DopaMark className="h-4 w-4" />
-          <span className="text-[14px] font-medium">Dopa</span>
+    <footer id="contact" className="border-t border-white/[0.06] bg-[#08090a]">
+      <div className="mx-auto flex max-w-[1200px] flex-col md:flex-row items-center justify-between gap-6 px-5 py-8 md:px-8">
+        <div className="flex items-center gap-2 text-foreground">
+          <DopaMark className="h-4 w-4 text-white" />
+          <span className="text-[14px] font-medium text-white">Dopa</span>
+          <span className="text-[12px] text-tertiary ml-2">© {new Date().getFullYear()} Dopa, Inc.</span>
         </div>
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-6">
-          {footerCols.map((col) => (
-            <div key={col.title}>
-              <h3 className="mb-3 text-[13px] font-medium text-foreground">{col.title}</h3>
-              <ul className="space-y-2">
-                {col.links.map((link) => (
-                  <li key={link}>
-                    <a
-                      href={`#${link.toLowerCase().replace(/\s+/g, "-")}`}
-                      className="text-[13px] text-secondary transition-colors hover:text-foreground"
-                    >
-                      {link}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-        <div className="mt-14 flex flex-wrap gap-4 text-[12px] text-tertiary">
-          <span>Privacy</span>
-          <span>Terms</span>
-          <span>DPA</span>
-          <span>AUP</span>
+        <div className="flex flex-wrap items-center gap-6 text-[13px] text-secondary">
+          <a href="/demo" className="transition-colors hover:text-white">Demo</a>
+          <a href="/dashboard" className="transition-colors hover:text-white">Dashboard</a>
+          <a href="/privacy" className="transition-colors hover:text-white">Privacy</a>
+          <a href="/terms" className="transition-colors hover:text-white">Terms</a>
         </div>
       </div>
     </footer>
