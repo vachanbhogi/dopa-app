@@ -370,7 +370,7 @@ export function GoogleAdsTab({
           </div>
 
           {campaigns.length === 0 ? (
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-8 text-center">
+            <div className="dopa-panel p-8 text-center">
               <p className="text-[14px] font-medium text-white">
                 Account connected
               </p>
@@ -401,7 +401,7 @@ export function GoogleAdsTab({
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.015]">
+              <div className="dopa-panel overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-[13px]">
                     <thead>
@@ -571,7 +571,7 @@ function EmptyState({
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 transition-colors hover:border-white/10">
+    <div className="dopa-panel p-4 transition-colors hover:border-white/12">
       <div className="text-[11px] font-medium uppercase tracking-wider text-tertiary">
         {label}
       </div>

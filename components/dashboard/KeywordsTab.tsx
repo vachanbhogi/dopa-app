@@ -71,7 +71,7 @@ export function KeywordsTab({ business }: { business: Business }) {
   return (
     <div className="space-y-6 animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both]">
       {/* ── Scope Header ── */}
-      <div className="flex flex-col gap-4 rounded-xl border border-white/8 bg-[#0f1011] p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 dopa-panel p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-[17px] font-medium text-white">Multi-Source Keyword Intelligence</h2>

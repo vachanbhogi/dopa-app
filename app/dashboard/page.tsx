@@ -14,6 +14,7 @@ const dashboardTabs = new Set<DashboardTab>([
   "keywords",
   "brain",
   "googleAds",
+  "settings",
 ]);
 
 export default async function DashboardPage({

@@ -48,7 +48,7 @@ export function BusinessTab({
           <div className="px-1 text-[11px] font-medium uppercase tracking-wider text-tertiary">
             Businesses
           </div>
-          <div className="space-y-0.5 rounded-xl border border-white/6 bg-white/2 p-1.5">
+          <div className="dopa-panel space-y-0.5 p-1.5">
             {businesses.map((business) => {
               const active = editingId === business.id;
               return (
@@ -173,7 +173,7 @@ function BusinessForm({
   };
 
   return (
-    <div className="space-y-6 rounded-xl border border-white/6 bg-white/2 p-5 sm:p-6">
+    <div className="dopa-panel space-y-6 p-5 sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-[15px] font-medium text-white">

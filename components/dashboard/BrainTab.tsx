@@ -556,7 +556,7 @@ function ScoreResults({
       aria-labelledby="analysis-result"
       className="animate-[stagger-in_500ms_cubic-bezier(0.23,1,0.32,1)_both] space-y-5 border-t border-white/6 pt-7"
     >
-      <div className="grid gap-5 rounded-xl border border-white/8 bg-[linear-gradient(120deg,rgba(94,106,210,0.12),rgba(255,255,255,0.018)_55%)] p-5 sm:grid-cols-[1fr_auto] sm:items-end sm:p-6">
+      <div className="grid gap-5 dopa-panel bg-[linear-gradient(120deg,rgba(94,106,210,0.12),rgba(255,255,255,0.018)_55%)] p-5 sm:grid-cols-[1fr_auto] sm:items-end sm:p-6">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#9298d7]">
             Model output
@@ -578,7 +578,7 @@ function ScoreResults({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-white/8 bg-[#050506]">
+      <div className="dopa-panel overflow-hidden bg-[#050506]">
         <div className="flex items-center justify-between border-b border-white/6 px-4 py-3">
           <div>
             <h3 className="text-[13px] font-medium text-white">

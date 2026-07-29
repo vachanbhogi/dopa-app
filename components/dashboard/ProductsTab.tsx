@@ -186,7 +186,7 @@ function ProductCard({
   const [pending, startTransition] = useTransition();
 
   return (
-    <div className="group rounded-xl border border-white/6 bg-white/2 p-5 transition-[border-color,background-color] duration-150 hover:border-white/10 hover:bg-white/3">
+    <div className="group dopa-panel p-5 transition-[border-color,background-color] duration-150 hover:border-white/12">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-[15px] font-medium text-white">
