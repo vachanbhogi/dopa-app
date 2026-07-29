@@ -30,7 +30,7 @@ export async function Header() {
                 className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[13px] text-[#b4bcd0] transition-colors hover:text-white"
               >
                 {item.label}
-                {item.hasMenu ? (
+                {"hasMenu" in item && item.hasMenu ? (
                   <ChevronDown className="h-3 w-3 opacity-50" />
                 ) : null}
               </a>
