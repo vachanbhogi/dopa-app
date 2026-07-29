@@ -1,15 +1,33 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useDropzone, type FileRejection } from "react-dropzone";
 import {
   DopaApiError,
-  fetchBrainAnimation,
+  fetchBrainModel,
   scoreAd,
+  type BrainModelPayload,
   type BrainRegionResponse,
   type ScoreResponse,
 } from "@/lib/dopa-api";
 import { createClient } from "@/utils/supabase/client";
+
+const CorticalModelViewer = dynamic(
+  () =>
+    import("@/components/dashboard/CorticalModelViewer").then(
+      (module) => module.CorticalModelViewer,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex aspect-[16/9] items-center justify-center gap-2 text-[12px] text-secondary">
+        <Spinner />
+        Preparing the interactive cortex…
+      </div>
+    ),
+  },
+);
 
 const MAX_UPLOAD_BYTES = 250 * 1024 * 1024;
 const MAX_VIDEO_SECONDS = 60;
@@ -19,7 +37,7 @@ type AnalysisPhase =
   | "validating"
   | "uploading"
   | "analyzing"
-  | "loading-animation";
+  | "loading-model";
 
 async function readVideoDuration(file: File): Promise<number | null> {
   const source = URL.createObjectURL(file);
@@ -51,15 +69,19 @@ export function BrainTab() {
   const [file, setFile] = useState<File | null>(null);
   const [duration, setDuration] = useState<number | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [animationUrl, setAnimationUrl] = useState<string | null>(null);
+  const [brainModel, setBrainModel] = useState<BrainModelPayload | null>(null);
   const [result, setResult] = useState<ScoreResponse | null>(null);
   const [phase, setPhase] = useState<AnalysisPhase>("idle");
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [modelDownloadProgress, setModelDownloadProgress] = useState<
+    number | null
+  >(null);
+  const [analysisElapsedSeconds, setAnalysisElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [animationError, setAnimationError] = useState<string | null>(null);
+  const [modelError, setModelError] = useState<string | null>(null);
   const requestRef = useRef<AbortController | null>(null);
   const previewUrlRef = useRef<string | null>(null);
-  const animationUrlRef = useRef<string | null>(null);
+  const analysisStartedAtRef = useRef<number | null>(null);
 
   const busy = phase !== "idle";
 
@@ -69,12 +91,23 @@ export function BrainTab() {
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current);
       }
-      if (animationUrlRef.current) {
-        URL.revokeObjectURL(animationUrlRef.current);
-      }
     },
     [],
   );
+
+  useEffect(() => {
+    if (phase !== "analyzing" || analysisStartedAtRef.current === null) return;
+    const updateElapsed = () => {
+      if (analysisStartedAtRef.current !== null) {
+        setAnalysisElapsedSeconds(
+          (performance.now() - analysisStartedAtRef.current) / 1000,
+        );
+      }
+    };
+    updateElapsed();
+    const interval = window.setInterval(updateElapsed, 250);
+    return () => window.clearInterval(interval);
+  }, [phase]);
 
   const replacePreviewUrl = useCallback((next: string | null) => {
     if (previewUrlRef.current) {
@@ -84,23 +117,18 @@ export function BrainTab() {
     setPreviewUrl(next);
   }, []);
 
-  const replaceAnimationUrl = useCallback((next: string | null) => {
-    if (animationUrlRef.current) {
-      URL.revokeObjectURL(animationUrlRef.current);
-    }
-    animationUrlRef.current = next;
-    setAnimationUrl(next);
-  }, []);
-
   const resetResult = useCallback(() => {
     requestRef.current?.abort();
     requestRef.current = null;
-    replaceAnimationUrl(null);
+    analysisStartedAtRef.current = null;
+    setBrainModel(null);
     setResult(null);
-    setAnimationError(null);
+    setModelError(null);
     setUploadProgress(0);
+    setModelDownloadProgress(null);
+    setAnalysisElapsedSeconds(0);
     setPhase("idle");
-  }, [replaceAnimationUrl]);
+  }, []);
 
   const onDrop = useCallback(
     async (accepted: File[], rejections: FileRejection[]) => {
@@ -143,9 +171,12 @@ export function BrainTab() {
   const analyze = async () => {
     if (!file || busy) return;
     setError(null);
-    setAnimationError(null);
+    setModelError(null);
     setUploadProgress(0);
-    replaceAnimationUrl(null);
+    setModelDownloadProgress(null);
+    setAnalysisElapsedSeconds(0);
+    analysisStartedAtRef.current = null;
+    setBrainModel(null);
     setResult(null);
 
     const controller = new AbortController();
@@ -168,7 +199,12 @@ export function BrainTab() {
           signal: controller.signal,
           onUploadProgress: (percentage) => {
             setUploadProgress(percentage);
-            if (percentage >= 100) setPhase("analyzing");
+            if (percentage >= 100) {
+              if (analysisStartedAtRef.current === null) {
+                analysisStartedAtRef.current = performance.now();
+              }
+              setPhase("analyzing");
+            }
           },
         });
 
@@ -191,6 +227,7 @@ export function BrainTab() {
         ) {
           accessToken = await refreshAccessToken();
           setUploadProgress(0);
+          analysisStartedAtRef.current = null;
           setPhase("uploading");
           score = await submit(accessToken);
         } else {
@@ -199,44 +236,43 @@ export function BrainTab() {
       }
 
       setResult(score);
-      const animationPath = score.brain_response.animation_path;
-      if (
-        score.brain_response.status === "ready" &&
-        animationPath
-      ) {
-        setPhase("loading-animation");
+      const modelPath = score.brain_response.model_path;
+      if (score.brain_response.status === "ready" && modelPath) {
+        setPhase("loading-model");
         try {
-          const loadAnimation = (token: string) =>
-            fetchBrainAnimation({
-              path: animationPath,
+          const loadModel = (token: string) =>
+            fetchBrainModel({
+              path: modelPath,
               accessToken: token,
               signal: controller.signal,
+              onDownloadProgress: setModelDownloadProgress,
             });
-          let animation: Blob;
+          let model: BrainModelPayload;
           try {
-            animation = await loadAnimation(accessToken);
-          } catch (animationRequestError) {
+            model = await loadModel(accessToken);
+          } catch (modelRequestError) {
             if (
-              animationRequestError instanceof DopaApiError &&
-              animationRequestError.status === 401
+              modelRequestError instanceof DopaApiError &&
+              modelRequestError.status === 401
             ) {
               accessToken = await refreshAccessToken();
-              animation = await loadAnimation(accessToken);
+              model = await loadModel(accessToken);
             } else {
-              throw animationRequestError;
+              throw modelRequestError;
             }
           }
-          replaceAnimationUrl(URL.createObjectURL(animation));
-        } catch (animationRequestError) {
-          setAnimationError(
-            animationRequestError instanceof Error
-              ? animationRequestError.message
-              : "The cortical response could not be loaded.",
+          setModelDownloadProgress(100);
+          setBrainModel(model);
+        } catch (modelRequestError) {
+          setModelError(
+            modelRequestError instanceof Error
+              ? modelRequestError.message
+              : "The interactive cortical model could not be loaded.",
           );
         }
       } else {
-        setAnimationError(
-          "The score is ready, but the cortical animation could not be rendered.",
+        setModelError(
+          "The score is ready, but the interactive cortical model could not be prepared.",
         );
       }
     } catch (requestError) {
@@ -344,6 +380,7 @@ export function BrainTab() {
           </div>
 
           {busy ? (
+<<<<<<< HEAD
             <div
               className="overflow-hidden rounded-full bg-white/6"
               aria-label={phaseLabel(phase)}
@@ -366,6 +403,14 @@ export function BrainTab() {
                 }}
               />
             </div>
+=======
+            <AnalysisProgress
+              phase={phase}
+              uploadProgress={uploadProgress}
+              modelDownloadProgress={modelDownloadProgress}
+              analysisElapsedSeconds={analysisElapsedSeconds}
+            />
+>>>>>>> ef46602 (Add interactive cortical response viewer)
           ) : null}
         </div>
       )}
@@ -391,8 +436,8 @@ export function BrainTab() {
       {result ? (
         <ScoreResults
           result={result}
-          animationUrl={animationUrl}
-          animationError={animationError}
+          brainModel={brainModel}
+          modelError={modelError}
         />
       ) : (
         <EmptyResult />
@@ -409,21 +454,126 @@ function phaseLabel(phase: AnalysisPhase): string {
       return "Uploading…";
     case "analyzing":
       return "Analyzing…";
-    case "loading-animation":
-      return "Loading response…";
+    case "loading-model":
+      return "Building 3D model…";
     default:
-      return "Analyze with TRIBE";
+      return "Analyze";
   }
+}
+
+function formatElapsed(seconds: number): string {
+  const wholeSeconds = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(wholeSeconds / 60);
+  return `${minutes}:${String(wholeSeconds % 60).padStart(2, "0")}`;
+}
+
+function AnalysisProgress({
+  phase,
+  uploadProgress,
+  modelDownloadProgress,
+  analysisElapsedSeconds,
+}: {
+  phase: AnalysisPhase;
+  uploadProgress: number;
+  modelDownloadProgress: number | null;
+  analysisElapsedSeconds: number;
+}) {
+  const determinateProgress =
+    phase === "uploading"
+      ? uploadProgress
+      : phase === "loading-model"
+        ? modelDownloadProgress
+        : null;
+  const detail =
+    phase === "validating"
+      ? "Reading the video metadata"
+      : phase === "uploading"
+        ? `${Math.round(uploadProgress)}% sent`
+        : phase === "analyzing"
+          ? `Cortical inference · ${formatElapsed(analysisElapsedSeconds)} elapsed`
+          : modelDownloadProgress === null
+            ? "Downloading the cortical surface"
+            : `${Math.round(modelDownloadProgress)}% downloaded`;
+  const activeStep =
+    phase === "validating" || phase === "uploading"
+      ? 0
+      : phase === "analyzing"
+        ? 1
+        : 2;
+
+  return (
+    <div
+      className="rounded-lg border border-white/[0.07] bg-white/[0.018] px-4 py-3"
+      aria-live="polite"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-[11px] font-medium text-white">
+          {phaseLabel(phase)}
+        </p>
+        <p className="font-mono text-[9px] tabular-nums text-tertiary">
+          {detail}
+        </p>
+      </div>
+
+      <div
+        className="relative mt-3 h-1 overflow-hidden rounded-full bg-white/[0.06]"
+        role="progressbar"
+        aria-label={phaseLabel(phase)}
+        aria-valuemin={determinateProgress === null ? undefined : 0}
+        aria-valuemax={determinateProgress === null ? undefined : 100}
+        aria-valuenow={
+          determinateProgress === null
+            ? undefined
+            : Math.round(determinateProgress)
+        }
+      >
+        {determinateProgress === null ? (
+          <div className="absolute inset-0 animate-[pulse_1.35s_ease-in-out_infinite] bg-[linear-gradient(90deg,transparent_0%,rgba(127,115,255,0.35)_26%,rgba(46,220,255,0.9)_52%,rgba(127,115,255,0.35)_74%,transparent_100%)]" />
+        ) : (
+          <div
+            className="h-full rounded-full bg-[linear-gradient(90deg,#6e63e8,#2edcff)] transition-[width] duration-200"
+            style={{ width: `${Math.max(0, determinateProgress)}%` }}
+          />
+        )}
+      </div>
+
+      <div className="mt-2.5 grid grid-cols-3 gap-2">
+        {["Upload", "Inference", "3D model"].map((label, index) => (
+          <div
+            key={label}
+            className={`flex items-center gap-1.5 font-mono text-[8px] uppercase tracking-[0.11em] ${
+              index < activeStep
+                ? "text-[#73dfef]"
+                : index === activeStep
+                  ? "text-white/75"
+                  : "text-white/25"
+            }`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                index < activeStep
+                  ? "bg-[#2edcff]"
+                  : index === activeStep
+                    ? "animate-pulse bg-[#8176ff]"
+                    : "bg-white/15"
+              }`}
+            />
+            {label}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function ScoreResults({
   result,
-  animationUrl,
-  animationError,
+  brainModel,
+  modelError,
 }: {
   result: ScoreResponse;
-  animationUrl: string | null;
-  animationError: string | null;
+  brainModel: BrainModelPayload | null;
+  modelError: string | null;
 }) {
   const response = result.brain_response;
   return (
@@ -463,38 +613,63 @@ function ScoreResults({
               Average-subject fsaverage5 model · response changes over time
             </p>
           </div>
-          <span className="rounded-full border border-[#f3a35b]/20 bg-[#f3a35b]/10 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.12em] text-[#f3b16f]">
-            TRIBE v2
-          </span>
+          <div className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.11em]">
+            <a
+              href="https://github.com/facebookresearch/tribev2"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-[#7781ff]/20 bg-[#7781ff]/10 px-2 py-1 text-[#aeb4ff] transition-colors hover:border-[#7781ff]/35 hover:text-white"
+            >
+              TRIBE v2
+            </a>
+            <a
+              href="https://github.com/facebookresearch/tribev2/blob/main/LICENSE"
+              target="_blank"
+              rel="noreferrer"
+              className="text-white/35 transition-colors hover:text-white/65"
+            >
+              CC BY-NC 4.0
+            </a>
+          </div>
         </div>
 
-        <div className="aspect-video bg-[radial-gradient(circle_at_50%_45%,rgba(79,49,99,0.25),transparent_58%)]">
-          {animationUrl ? (
-            <video
-              src={animationUrl}
-              className="h-full w-full object-contain"
-              controls
-              loop
-              muted
-              playsInline
-            />
+        <div>
+          {brainModel ? (
+            <CorticalModelViewer model={brainModel} />
           ) : (
+<<<<<<< HEAD
             <div className="flex h-full items-center justify-center px-6 text-center">
               {animationError ? (
                 <p className="max-w-105 text-[12px] leading-5 text-secondary">
                   {animationError}
+=======
+            <div className="flex aspect-[16/9] items-center justify-center bg-[radial-gradient(circle_at_50%_45%,rgba(79,49,99,0.25),transparent_58%)] px-6 text-center">
+              {modelError ? (
+                <p className="max-w-[420px] text-[12px] leading-5 text-secondary">
+                  {modelError}
+>>>>>>> ef46602 (Add interactive cortical response viewer)
                 </p>
               ) : (
                 <div className="flex items-center gap-2 text-[12px] text-secondary">
                   <Spinner />
-                  Loading the cortical playback…
+                  Loading the interactive cortex…
                 </div>
               )}
             </div>
           )}
         </div>
 
+<<<<<<< HEAD
         <div className="grid gap-px border-t border-white/6 bg-white/6 sm:grid-cols-4">
+=======
+        <p className="border-t border-white/[0.07] bg-[#09090b] px-4 py-2.5 text-[10px] leading-4 text-tertiary">
+          Predicted average-subject cortical surface—not a scan or measured
+          nerve map. Animated signal traces are a visual guide to the strongest
+          modeled responses.
+        </p>
+
+        <div className="grid gap-px border-t border-white/[0.07] bg-white/[0.07] sm:grid-cols-4">
+>>>>>>> ef46602 (Add interactive cortical response viewer)
           <DataPoint
             label="Clip"
             value={`${response.duration_seconds.toFixed(1)}s`}
@@ -539,6 +714,7 @@ function ScoreResults({
         </div>
       </div>
 
+<<<<<<< HEAD
       <div className="rounded-lg border border-white/6 bg-white/1.5 px-4 py-3 text-[11px] leading-5 text-tertiary">
         <p>
           This is an in-silico prediction for an average subject. It is not an
@@ -567,6 +743,8 @@ function ScoreResults({
           . Non-commercial demo.
         </p>
       </div>
+=======
+>>>>>>> ef46602 (Add interactive cortical response viewer)
     </section>
   );
 }
@@ -630,8 +808,8 @@ function EmptyResult() {
             Your analysis will appear here
           </p>
           <p className="mt-1.5 text-[11px] leading-5 text-tertiary">
-            One real CTR prediction, cortical playback, and the strongest
-            modeled regions.
+            One real CTR prediction, an interactive cortical model, and the
+            strongest modeled regions.
           </p>
         </div>
       </div>

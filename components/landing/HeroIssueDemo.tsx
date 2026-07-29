@@ -164,7 +164,7 @@ export function HeroIssueDemo() {
                 body={
                   <>
                     returned <Chip>Predicted CTR 2.84%</Chip> with{" "}
-                    <Chip>cortical playback</Chip>
+                    <Chip>interactive cortex</Chip>
                   </>
                 }
               />

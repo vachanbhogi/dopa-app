@@ -15,11 +15,27 @@ export type BrainRegionResponse = {
 
 export type BrainResponse = {
   status: "ready" | "unavailable";
-  animation_path: string | null;
+  model_path: string | null;
   expires_at: string | null;
   duration_seconds: number;
   hemodynamic_lag_seconds: number;
   top_regions: BrainRegionResponse[];
+};
+
+export type BrainHemisphereModel = {
+  hemisphere: "left" | "right";
+  vertex_count: number;
+  positions_f32: string;
+  indices_u32: string;
+  responses_u8: string;
+};
+
+export type BrainModelPayload = {
+  version: 1;
+  frame_count: number;
+  frame_interval_seconds: number;
+  response_encoding: "uint8-absolute-p99";
+  hemispheres: BrainHemisphereModel[];
 };
 
 export type ScoreResponse = {
@@ -126,26 +142,73 @@ export function scoreAd({
   });
 }
 
-export async function fetchBrainAnimation({
+export function fetchBrainModel({
   path,
   accessToken,
   signal,
+  onDownloadProgress,
 }: {
   path: string;
   accessToken: string;
   signal: AbortSignal;
-}): Promise<Blob> {
-  const response = await fetch(apiUrl(path), {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    cache: "no-store",
-    signal,
+  onDownloadProgress: (percentage: number | null) => void;
+}): Promise<BrainModelPayload> {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    const abortRequest = () => request.abort();
+
+    request.open("GET", apiUrl(path));
+    request.setRequestHeader("Authorization", `Bearer ${accessToken}`);
+    request.timeout = 2 * 60 * 1000;
+    request.onprogress = (event) => {
+      onDownloadProgress(
+        event.lengthComputable && event.total > 0
+          ? Math.min(100, (event.loaded / event.total) * 100)
+          : null,
+      );
+    };
+    request.onload = () => {
+      signal.removeEventListener("abort", abortRequest);
+      if (request.status >= 200 && request.status < 300) {
+        try {
+          resolve(JSON.parse(request.responseText) as BrainModelPayload);
+        } catch {
+          reject(
+            new DopaApiError(
+              "The cortical model returned data the browser could not read.",
+            ),
+          );
+        }
+        return;
+      }
+      reject(
+        new DopaApiError(
+          responseDetail(
+            request.responseText,
+            "The cortical model could not be loaded.",
+          ),
+          request.status,
+        ),
+      );
+    };
+    request.onerror = () => {
+      signal.removeEventListener("abort", abortRequest);
+      reject(
+        new DopaApiError(
+          `Could not reach the Dopa API at ${DOPA_API_BASE_URL}.`,
+        ),
+      );
+    };
+    request.ontimeout = () => {
+      signal.removeEventListener("abort", abortRequest);
+      reject(new DopaApiError("The cortical model took too long to load."));
+    };
+    request.onabort = () => {
+      signal.removeEventListener("abort", abortRequest);
+      reject(new DOMException("Analysis cancelled.", "AbortError"));
+    };
+
+    signal.addEventListener("abort", abortRequest, { once: true });
+    request.send();
   });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new DopaApiError(
-      responseDetail(body, "The cortical response could not be loaded."),
-      response.status,
-    );
-  }
-  return response.blob();
 }
