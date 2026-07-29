@@ -34,11 +34,11 @@ substitute for provider-observed evidence.
 
 | Gate | Status | Verified result or exact blocker |
 | --- | --- | --- |
-| Branch and repository | Pass | Local `main` and `origin/main` both resolve to `70950abd175bb25773393fd1a23eb09fcd335f08`; the intentional uncommitted submission work remains in place. |
+| Branch and repository | Pass | The reviewed submission work is committed on `main` as `b0fc1c00afa41b48d8891263f83e997a3773c951` and pushed to `origin/main`. |
 | Repository verification | Pass | `bun run verify:submission` passed the Denver, Google Ads, security, and FC Sandbox tests, ESLint, TypeScript, and the Next.js production build. |
 | Supabase schema | Pass with follow-up | The three FC migrations were applied to project `bdqieraaueobnrjcxwtf`; the remote migration ledger assigned versions `20260729165000`, `20260729165002`, and `20260729165004`, which differ from the local filename versions and must be reconciled before a future CLI migration push. |
 | Supabase security | Pass with advisories | The public FC tables have RLS enabled and no `anon` or `authenticated` table DML; service-role RPCs are present. Catalog inspection still reports `anon`/`authenticated` execute privilege on the two trigger functions, so an explicit least-privilege revoke remains a follow-up. Advisors also report intentional deny-all FC RLS, the authenticated quota RPC, and disabled leaked-password protection for operator review. |
-| Current production | Pending redeploy | Vercel production is still commit `70950abd175bb25773393fd1a23eb09fcd335f08`, not this uncommitted checkout. Public `/demo` and `/fc-proof` render without login, but starting the demo safely returns 503 because `FC_DEMO_TOKEN_SECRET` is not configured. |
+| Current production | Deployed; live run blocked | Vercel production deployment `dpl_3mVHqSSvr8zziN2fgDtWN1VbRdFF` is ready from commit `b0fc1c00afa41b48d8891263f83e997a3773c951`. Public `/demo` and `/fc-proof` render without login and the security headers are active, but starting the demo safely returns 503 because `FC_DEMO_TOKEN_SECRET` is not configured. |
 | Production environment | Pending | The production project does not yet expose the required FC provider, FC secrets, Supabase server secret, Alibaba lifecycle, TRIBE demo-identity, or SLS configuration. |
 | Hibernation | Blocked | The provider returned `PauseSessionForbidden`; do not repeat the scored lifecycle until Alibaba confirms pause/resume enablement for the account/template. |
 | SLS drill | Pending | No SLS project, logstore, alert, or deployable gateway credentials are available in the audited environment, so no controlled failure drill was claimed. |
