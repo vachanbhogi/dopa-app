@@ -10,7 +10,7 @@ import {
 } from "./Sections";
 import { Changelog, FinalCta, Footer, Testimonials } from "./Closing";
 
-export function DopaLanding() {
+export async function DopaLanding() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <a

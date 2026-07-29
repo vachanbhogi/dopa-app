@@ -26,7 +26,23 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const path = request.nextUrl.pathname;
+
+  if (path.startsWith("/dashboard") && !user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    url.searchParams.set("modal", "login");
+    url.searchParams.set("redirectTo", path);
+    return NextResponse.redirect(url);
+  }
+
+  if ((path === "/login" || path === "/signup") && user) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
 
   return supabaseResponse;
 }

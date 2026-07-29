@@ -125,7 +125,7 @@ export function FinalCta() {
         </h2>
         <div className="relative mt-8 flex flex-wrap items-center justify-center gap-3">
           <a
-            href="#signup"
+            href="/?modal=signup"
             className="inline-flex h-10 items-center rounded-lg bg-white px-4 text-[14px] font-medium text-[#08090a] hover:opacity-90"
           >
             Get started
