@@ -4,13 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { signOut } from "@/app/auth/actions";
 import { BrainTab } from "./BrainTab";
+import { GoogleAdsTab } from "./GoogleAdsTab";
 
-type Tab = "keywords" | "competitors" | "brain" | "metrics" | "settings";
+type Tab = "keywords" | "competitors" | "brain" | "googleAds" | "metrics" | "settings";
 
 const tabs: { id: Tab; label: string; icon: string }[] = [
   { id: "keywords", label: "Keywords", icon: "tag" },
   { id: "competitors", label: "Competitors", icon: "eye" },
   { id: "brain", label: "Brain", icon: "brain" },
+  { id: "googleAds", label: "Google Ads", icon: "google" },
   { id: "metrics", label: "Metrics", icon: "chart" },
   { id: "settings", label: "Settings", icon: "gear" },
 ];
@@ -110,6 +112,7 @@ export function DashboardShell({
         <main className="flex-1 overflow-y-auto">
           <div key={active} className="mx-auto max-w-[1000px] px-6 py-8">
             {active === "brain" && <BrainTab />}
+            {active === "googleAds" && <GoogleAdsTab />}
             {active === "keywords" && <PlaceholderPanel title="Keywords" body="Track trending ad keywords and messaging hooks across your campaigns." />}
             {active === "competitors" && <PlaceholderPanel title="Competitors" body="Scrape competitor ads from the open web and score them on the same brain → metric stack." />}
             {active === "metrics" && <PlaceholderPanel title="Metrics" body="High-level ROI trends, tier distributions, and budget efficiency across all campaigns." />}
@@ -176,6 +179,12 @@ function NavIcon({ name, active }: { name: string; active: boolean }) {
           <path d="M8 2v12" />
           <path d="M8 4c-1.5-1.5-4-1-4 1.5S6 8 8 8c-2 0-4.5.5-4 3s2.5 3 4 1.5" />
           <path d="M8 4c1.5-1.5 4-1 4 1.5S10 8 8 8c2 0 4.5.5 4 3s-2.5 3-4 1.5" />
+        </svg>
+      );
+    case "google":
+      return (
+        <svg {...shared} viewBox="0 0 24 24" strokeWidth={0} fill="currentColor">
+          <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972-3.332 0-6.033-2.701-6.033-6.032s2.701-6.032 6.033-6.032c1.498 0 2.866.549 3.921 1.453l2.814-2.814C17.503 2.988 15.139 2 12.545 2 6.721 2 2 6.721 2 12.545S6.721 23.09 12.545 23.09c6.627 0 10.5-4.664 10.5-10.732 0-.663-.067-1.309-.172-1.921h-10.328z" />
         </svg>
       );
     case "chart":

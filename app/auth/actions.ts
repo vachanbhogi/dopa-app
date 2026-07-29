@@ -66,7 +66,7 @@ export async function signOut() {
   redirect("/");
 }
 
-export async function signInWithGoogle(redirectTo = "/dashboard") {
+export async function signInWithGoogle(redirectTo = "/dashboard", requestGoogleAdsScope = false) {
   const supabase = createClient(await cookies());
   const origin = await getOrigin();
 
@@ -74,6 +74,7 @@ export async function signInWithGoogle(redirectTo = "/dashboard") {
     provider: "google",
     options: {
       redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+      scopes: requestGoogleAdsScope ? "https://www.googleapis.com/auth/adwords" : undefined,
     },
   });
 
