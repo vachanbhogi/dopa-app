@@ -19,6 +19,9 @@ export const metadata: Metadata = {
   title: "Dopa – The agentic campaign system for marketing teams",
   description:
     "Upload ads → Meta TRIBE v2 → Dopa predicts ROI, CVR, and click metrics. Designed for the AI era.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
