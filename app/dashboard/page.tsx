@@ -8,13 +8,12 @@ import {
 import { getBusinessesForUser } from "@/lib/businesses";
 
 const dashboardTabs = new Set<DashboardTab>([
-  "keywords",
+  "business",
   "competitors",
   "products",
+  "keywords",
   "brain",
   "googleAds",
-  "metrics",
-  "settings",
 ]);
 
 export default async function DashboardPage({
@@ -37,7 +36,7 @@ export default async function DashboardPage({
   const initialTab =
     tab && dashboardTabs.has(tab as DashboardTab)
       ? (tab as DashboardTab)
-      : "brain";
+      : "business";
 
   const { businesses, selectedBusinessId } = await getBusinessesForUser(user.id);
 

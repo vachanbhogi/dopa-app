@@ -18,7 +18,7 @@ import {
   type BusinessInput,
 } from "@/lib/business-types";
 
-export function SettingsTab({
+export function BusinessTab({
   businesses,
   selectedBusinessId,
 }: {

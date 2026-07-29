@@ -6,28 +6,26 @@ import { signOut } from "@/app/auth/actions";
 import { selectBusiness } from "@/app/dashboard/actions";
 import type { Business } from "@/lib/business-types";
 import { BrainTab } from "./BrainTab";
+import { BusinessTab } from "./BusinessTab";
 import { GoogleAdsTab } from "./GoogleAdsTab";
 import { KeywordsTab } from "./KeywordsTab";
 import { ProductsTab } from "./ProductsTab";
-import { SettingsTab } from "./SettingsTab";
 
 export type DashboardTab =
-  | "keywords"
+  | "business"
   | "competitors"
   | "products"
+  | "keywords"
   | "brain"
-  | "googleAds"
-  | "metrics"
-  | "settings";
+  | "googleAds";
 
 const tabs: { id: DashboardTab; label: string; icon: string }[] = [
-  { id: "keywords", label: "Keywords", icon: "tag" },
+  { id: "business", label: "Business", icon: "gear" },
   { id: "competitors", label: "Competitors", icon: "eye" },
   { id: "products", label: "Products", icon: "box" },
+  { id: "keywords", label: "Keywords", icon: "tag" },
   { id: "brain", label: "Brain", icon: "brain" },
   { id: "googleAds", label: "Google Ads", icon: "google" },
-  { id: "metrics", label: "Metrics", icon: "chart" },
-  { id: "settings", label: "Settings", icon: "gear" },
 ];
 
 export function DashboardShell({
@@ -159,7 +157,7 @@ export function DashboardShell({
                 type="button"
                 onClick={() => {
                   setBusinessMenuOpen(false);
-                  setActive("settings");
+                  setActive("business");
                 }}
                 className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] text-secondary transition-[background-color,color] duration-150 hover:bg-white/4 hover:text-white"
               >
@@ -232,6 +230,24 @@ export function DashboardShell({
 
         <main className="flex-1 overflow-y-auto">
           <div key={active} className="mx-auto max-w-250 px-6 py-8">
+            {active === "business" && (
+              <BusinessTab
+                businesses={businesses}
+                selectedBusinessId={selectedBusinessId}
+              />
+            )}
+            {active === "competitors" && (
+              <PlaceholderPanel
+                title="Competitors"
+                body="Scrape competitor ads from the open web and score them on the same brain → metric stack."
+              />
+            )}
+            {active === "products" && selectedBusiness ? (
+              <ProductsTab businessId={selectedBusiness.id} business={selectedBusiness} />
+            ) : null}
+            {active === "keywords" && selectedBusiness ? (
+              <KeywordsTab business={selectedBusiness} />
+            ) : null}
             {active === "brain" && <BrainTab />}
             {active === "googleAds" && (
               <GoogleAdsTab
@@ -239,20 +255,7 @@ export function DashboardShell({
                 oauthResult={googleAdsResult}
               />
             )}
-            {active === "keywords" && selectedBusiness ? (
-              <KeywordsTab business={selectedBusiness} />
-            ) : null}
-            {active === "competitors" && <PlaceholderPanel title="Competitors" body="Scrape competitor ads from the open web and score them on the same brain → metric stack." />}
-            {active === "products" && selectedBusiness ? (
-              <ProductsTab businessId={selectedBusiness.id} business={selectedBusiness} />
-            ) : null}
-            {active === "metrics" && <PlaceholderPanel title="Metrics" body="Predicted average CTR results and model runtime details across analyzed creatives." />}
-            {active === "settings" && (
-              <SettingsTab
-                businesses={businesses}
-                selectedBusinessId={selectedBusinessId}
-              />
-            )}
+
           </div>
         </main>
       </div>
