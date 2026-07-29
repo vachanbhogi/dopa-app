@@ -271,7 +271,16 @@ export function DashboardShell({
           })}
         </nav>
 
-        <div className="relative px-3 pb-3" ref={accountMenuRef}>
+        <div className="relative flex items-center gap-1.5 px-3 pb-3" ref={accountMenuRef}>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("dopa:open-denver"))}
+            title="Ask Denver AI"
+            aria-label="Ask Denver AI"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/4 text-secondary transition-all hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95"
+          >
+            <NavIcon name="denver" />
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -281,7 +290,7 @@ export function DashboardShell({
             aria-haspopup="menu"
             aria-expanded={accountMenuOpen}
             aria-label="Account menu"
-            className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-white/4"
+            className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/4"
           >
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand/25 text-[10px] font-medium text-brand">
               {initials}
@@ -414,6 +423,18 @@ export function DashboardShell({
               <BusinessTab
                 businesses={businesses}
                 selectedBusinessId={selectedBusinessId}
+                onSelectBusiness={(id) => {
+                  const previousBusinessId = selectedBusinessId;
+                  setSelectedBusinessId(id);
+                  setBusinessError(null);
+                  startSelectBusiness(async () => {
+                    const result = await selectBusiness(id);
+                    if (result.error) {
+                      setSelectedBusinessId(previousBusinessId);
+                      setBusinessError(result.error);
+                    }
+                  });
+                }}
               />
             )}
             {active === "competitors" && selectedBusiness ? (
@@ -515,6 +536,12 @@ export function NavIcon({ name, active }: { name: string; active?: boolean }) {
       return (
         <svg {...shared} viewBox="0 0 24 24" strokeWidth={0} fill="currentColor">
           <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972-3.332 0-6.033-2.701-6.033-6.032s2.701-6.032 6.033-6.032c1.498 0 2.866.549 3.921 1.453l2.814-2.814C17.503 2.988 15.139 2 12.545 2 6.721 2 2 6.721 2 12.545S6.721 23.09 12.545 23.09c6.627 0 10.5-4.664 10.5-10.732 0-.663-.067-1.309-.172-1.921h-10.328z" />
+        </svg>
+      );
+    case "denver":
+      return (
+        <svg {...shared} viewBox="0 0 16 16" strokeWidth={0} fill="currentColor">
+          <path fillRule="evenodd" clipRule="evenodd" d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z" />
         </svg>
       );
     case "chart":

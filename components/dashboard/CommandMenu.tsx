@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Command } from "cmdk";
 import { type DashboardTab, NavIcon } from "./DashboardShell";
 import type { Business } from "@/lib/business-types";
@@ -14,13 +14,14 @@ type CommandMenuProps = {
   onSelectBusiness: (businessId: string) => void;
 };
 
-const navigationItems: { id: DashboardTab; label: string; icon: string }[] = [
+const navigationItems: { id: string; label: string; icon: string }[] = [
   { id: "business", label: "Business", icon: "gear" },
   { id: "competitors", label: "Competitors", icon: "eye" },
   { id: "products", label: "Products", icon: "box" },
   { id: "keywords", label: "Keywords", icon: "tag" },
   { id: "brain", label: "Brain", icon: "brain" },
   { id: "googleAds", label: "Google Ads", icon: "google" },
+  { id: "denver", label: "Denver AI", icon: "denver" },
 ];
 
 export function CommandMenu({
@@ -31,28 +32,53 @@ export function CommandMenu({
   selectedBusinessId,
   onSelectBusiness,
 }: CommandMenuProps) {
+  const [searchValue, setSearchValue] = useState("");
   const otherBusinesses = businesses.filter((b) => b.id !== selectedBusinessId);
+
+  useEffect(() => {
+    if (!open) {
+      setSearchValue("");
+    }
+  }, [open]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         onOpenChange(!open);
+        return;
+      }
+      if (open && e.key === "Escape") {
+        e.preventDefault();
+        onOpenChange(false);
       }
     };
+
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, onOpenChange]);
 
   if (!open) return null;
 
+  const handleAskDenver = (query: string) => {
+    const prompt = query.trim();
+    onOpenChange(false);
+    window.setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent("dopa:open-denver", {
+          detail: prompt ? { prompt } : undefined,
+        }),
+      );
+    }, 180);
+  };
+
   return (
     <div
-      className="fixed inset-0 z-150 flex items-start justify-center pt-[15vh] bg-black/50 backdrop-blur-xs p-4"
+      className="fixed inset-0 z-150 flex items-start justify-center bg-black/75 p-4 pt-[15vh] backdrop-blur-sm"
       onClick={() => onOpenChange(false)}
     >
       <div
-        className="w-full max-w-xl overflow-hidden rounded-xl border border-white/10 bg-[#0f1011] shadow-[0_24px_80px_rgba(0,0,0,0.6)] animate-fade-up dopa-panel"
+        className="dopa-panel w-full max-w-xl overflow-hidden animate-fade-up"
         onClick={(e) => e.stopPropagation()}
       >
         <Command className="w-full">
@@ -71,18 +97,44 @@ export function CommandMenu({
             </svg>
             <Command.Input
               autoFocus
-              placeholder="Search views, products, or actions…"
+              onValueChange={setSearchValue}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && searchValue.trim()) {
+                  const matchesTab = navigationItems.some((n) =>
+                    n.label.toLowerCase().includes(searchValue.toLowerCase()),
+                  );
+                  const matchesBiz = otherBusinesses.some((b) =>
+                    b.name.toLowerCase().includes(searchValue.toLowerCase()),
+                  );
+                  if (!matchesTab && !matchesBiz) {
+                    e.preventDefault();
+                    handleAskDenver(searchValue);
+                  }
+                }
+              }}
+              placeholder="Ask Denver AI a question or search views…"
               className="h-12 w-full bg-transparent text-[14px] text-white outline-none placeholder:text-tertiary"
             />
-            <kbd className="rounded border border-white/10 bg-white/6 px-1.5 py-0.5 text-[10px] text-tertiary">
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="rounded border border-white/10 bg-white/6 px-1.5 py-0.5 text-[10px] text-tertiary hover:bg-white/10 hover:text-white"
+            >
               ESC
-            </kbd>
+            </button>
           </div>
 
           {/* Search Items */}
           <Command.List className="max-h-80 overflow-y-auto p-2 text-white">
-            <Command.Empty className="p-4 text-center text-[13px] text-tertiary">
-              No matching commands found.
+            <Command.Empty className="p-2">
+              <button
+                type="button"
+                onClick={() => handleAskDenver(searchValue)}
+                className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg border border-brand/30 bg-brand/15 px-3 py-2.5 text-left text-[13px] text-white transition-colors hover:bg-brand/25"
+              >
+                <NavIcon name="denver" />
+                <span>Ask Denver AI: &quot;{searchValue}&quot;</span>
+              </button>
             </Command.Empty>
 
             {/* Navigation Category */}
@@ -94,8 +146,15 @@ export function CommandMenu({
                 <Command.Item
                   key={item.id}
                   onSelect={() => {
-                    onSelectTab(item.id);
-                    onOpenChange(false);
+                    if (item.id === "denver") {
+                      onOpenChange(false);
+                      window.setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent("dopa:open-denver"));
+                      }, 180);
+                    } else {
+                      onSelectTab(item.id as DashboardTab);
+                      onOpenChange(false);
+                    }
                   }}
                   className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-secondary transition-colors data-[selected=true]:bg-white/8 data-[selected=true]:text-white"
                 >
