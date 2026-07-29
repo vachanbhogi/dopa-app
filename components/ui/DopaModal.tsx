@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { DopaMark } from "@/components/landing/icons";
+
+const subscribeToClient = () => () => {};
 
 export function DopaModal({
   title,
@@ -20,11 +22,11 @@ export function DopaModal({
   size?: "default" | "wide";
   children: React.ReactNode;
 }) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    subscribeToClient,
+    () => true,
+    () => false,
+  );
 
   const closeClassName =
     "flex h-7 w-7 items-center justify-center rounded-md text-tertiary transition-colors hover:bg-white/6 hover:text-white";

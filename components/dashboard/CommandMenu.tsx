@@ -35,21 +35,26 @@ export function CommandMenu({
   const [searchValue, setSearchValue] = useState("");
   const otherBusinesses = businesses.filter((b) => b.id !== selectedBusinessId);
 
-  useEffect(() => {
-    if (!open) {
-      setSearchValue("");
-    }
-  }, [open]);
+  const closeMenu = () => {
+    setSearchValue("");
+    onOpenChange(false);
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        onOpenChange(!open);
+        if (open) {
+          setSearchValue("");
+          onOpenChange(false);
+        } else {
+          onOpenChange(true);
+        }
         return;
       }
       if (open && e.key === "Escape") {
         e.preventDefault();
+        setSearchValue("");
         onOpenChange(false);
       }
     };
@@ -62,7 +67,7 @@ export function CommandMenu({
 
   const handleAskDenver = (query: string) => {
     const prompt = query.trim();
-    onOpenChange(false);
+    closeMenu();
     window.setTimeout(() => {
       window.dispatchEvent(
         new CustomEvent("dopa:open-denver", {
@@ -75,7 +80,7 @@ export function CommandMenu({
   return (
     <div
       className="fixed inset-0 z-150 flex items-start justify-center bg-black/75 p-4 pt-[15vh] backdrop-blur-sm"
-      onClick={() => onOpenChange(false)}
+      onClick={closeMenu}
     >
       <div
         className="dopa-panel w-full max-w-xl overflow-hidden animate-fade-up"
@@ -97,6 +102,7 @@ export function CommandMenu({
             </svg>
             <Command.Input
               autoFocus
+              value={searchValue}
               onValueChange={setSearchValue}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && searchValue.trim()) {
@@ -117,7 +123,7 @@ export function CommandMenu({
             />
             <button
               type="button"
-              onClick={() => onOpenChange(false)}
+              onClick={closeMenu}
               className="rounded border border-white/10 bg-white/6 px-1.5 py-0.5 text-[10px] text-tertiary hover:bg-white/10 hover:text-white"
             >
               ESC
@@ -147,13 +153,13 @@ export function CommandMenu({
                   key={item.id}
                   onSelect={() => {
                     if (item.id === "denver") {
-                      onOpenChange(false);
+                      closeMenu();
                       window.setTimeout(() => {
                         window.dispatchEvent(new CustomEvent("dopa:open-denver"));
                       }, 180);
                     } else {
                       onSelectTab(item.id as DashboardTab);
-                      onOpenChange(false);
+                      closeMenu();
                     }
                   }}
                   className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-secondary transition-colors data-[selected=true]:bg-white/8 data-[selected=true]:text-white"
@@ -175,7 +181,7 @@ export function CommandMenu({
                     key={b.id}
                     onSelect={() => {
                       onSelectBusiness(b.id);
-                      onOpenChange(false);
+                      closeMenu();
                     }}
                     className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-secondary transition-colors data-[selected=true]:bg-white/8 data-[selected=true]:text-white"
                   >

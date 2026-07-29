@@ -37,10 +37,11 @@ export const PRODUCT_CATEGORIES = [
 ] as const;
 
 function parseAmount(raw: string): number | null {
+  if (/[-–—]/.test(raw)) return null;
   const cleaned = raw.replace(/[^0-9.]/g, "");
   if (!cleaned) return null;
   const parsed = Number(cleaned);
-  return Number.isFinite(parsed) ? parsed : null;
+  return Number.isFinite(parsed) && parsed <= 999_999_999 ? parsed : null;
 }
 
 function formatUsd(amount: number): string {
@@ -140,7 +141,8 @@ function parseList(value?: string): string[] {
   return value
     .split(/[,\n]/)
     .map((s) => s.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .slice(0, 50);
 }
 
 function parsePriceInput(raw: string) {
@@ -178,10 +180,40 @@ export function normalizeProductInput(input: ProductInput) {
   if (!product_name) {
     return { error: "Product name is required" as const };
   }
+  if (product_name.length > 160 || /[\u0000]/.test(product_name)) {
+    return { error: "Product name must be 160 characters or fewer" as const };
+  }
+
+  const fields = [
+    ["category", input.category, 120],
+    ["value proposition", input.value_prop, 2_000],
+    ["target demographic", input.target_sub_demographic, 2_000],
+    ["key features", input.key_features, 5_000],
+    ["creative hooks", input.creative_hooks, 5_000],
+  ] as const;
+  const invalidField = fields.find(
+    ([, value, maximum]) =>
+      value !== undefined &&
+      (value.length > maximum || /[\u0000]/.test(value)),
+  );
+  if (invalidField) {
+    return {
+      error: `${invalidField[0]} is too long or contains invalid characters`,
+    };
+  }
 
   const priceParsed = parsePriceInput(input.price ?? "");
   if ("error" in priceParsed) {
     return { error: priceParsed.error };
+  }
+
+  const keyFeatures = parseList(input.key_features);
+  const creativeHooks = parseList(input.creative_hooks);
+  if (
+    keyFeatures.some((item) => item.length > 500) ||
+    creativeHooks.some((item) => item.length > 500)
+  ) {
+    return { error: "List items must be 500 characters or fewer" as const };
   }
 
   return {
@@ -192,8 +224,8 @@ export function normalizeProductInput(input: ProductInput) {
       price_label: priceParsed.price_label,
       value_prop: input.value_prop?.trim() || null,
       target_sub_demographic: input.target_sub_demographic?.trim() || null,
-      key_features: parseList(input.key_features),
-      creative_hooks: parseList(input.creative_hooks),
+      key_features: keyFeatures,
+      creative_hooks: creativeHooks,
     },
   };
 }

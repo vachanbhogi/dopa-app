@@ -1,10 +1,11 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
-import { revalidatePath } from "next/cache";
 import { normalizedDomain } from "@/lib/competitor-intelligence/validation";
-import { isUuid } from "@/lib/validation";
+import { isUuid, normalizeOptionalHttpUrl } from "@/lib/validation";
+import { databaseFailure } from "@/utils/action-security";
+import { createClient } from "@/utils/supabase/server";
+import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 
 export type CompetitorItem = {
   id: string;
@@ -38,6 +39,9 @@ type CandidateRecord = {
   why_now: string;
 };
 
+const COMPETITOR_SELECT =
+  "id, business_id, name, website_url, logo_url, primary_angle, candidate_id, normalized_domain, relationship, threat_score, confidence, threat_horizon, why_now, status, created_at";
+
 async function requireUser() {
   const supabase = createClient(await cookies());
   const {
@@ -59,31 +63,60 @@ async function assertBusinessOwner(
     .eq("owner_id", userId)
     .maybeSingle();
 
-  if (error) return { error: error.message };
+  if (error) {
+    return databaseFailure(
+      "assert_competitor_business_owner",
+      error,
+      "The business could not be verified. Try again.",
+    );
+  }
   if (!data) return { error: "Business not found" };
   return { ok: true as const };
 }
 
 export async function listCompetitors(businessId: string) {
-  if (!isUuid(businessId)) return { error: "Invalid business" };
+  if (!isUuid(businessId)) {
+    return {
+      error: "Invalid business ID",
+      competitors: [] as CompetitorItem[],
+    };
+  }
+
   const auth = await requireUser();
-  if (auth.error || !auth.user) return { error: auth.error ?? "Not authenticated" };
+  if (auth.error || !auth.user) {
+    return {
+      error: auth.error ?? "Not authenticated",
+      competitors: [] as CompetitorItem[],
+    };
+  }
 
   const owned = await assertBusinessOwner(
     auth.supabase,
     auth.user.id,
     businessId,
   );
-  if ("error" in owned) return { error: owned.error };
+  if ("error" in owned) {
+    return { error: owned.error, competitors: [] as CompetitorItem[] };
+  }
 
   const { data, error } = await auth.supabase
     .from("competitors")
-    .select("*")
+    .select(COMPETITOR_SELECT)
     .eq("business_id", businessId)
     .order("created_at", { ascending: false });
 
-  if (error) return { error: error.message };
-  return { competitors: data as CompetitorItem[] };
+  if (error) {
+    return {
+      ...databaseFailure(
+        "list_competitors",
+        error,
+        "Competitors could not be loaded. Try again.",
+      ),
+      competitors: [] as CompetitorItem[],
+    };
+  }
+
+  return { competitors: data as CompetitorItem[], error: null };
 }
 
 export async function addCompetitor(
@@ -93,14 +126,30 @@ export async function addCompetitor(
     website_url?: string;
     primary_angle?: string;
     candidateId?: string;
-  }
+  },
 ) {
-  if (!isUuid(businessId)) return { error: "Invalid business" };
+  if (!isUuid(businessId)) return { error: "Invalid business ID" };
+
   const auth = await requireUser();
-  if (auth.error || !auth.user) return { error: auth.error ?? "Not authenticated" };
+  if (auth.error || !auth.user) {
+    return { error: auth.error ?? "Not authenticated" };
+  }
 
   const name = input.name.trim();
   if (!name) return { error: "Competitor name is required" };
+  if (name.length > 160 || /[\u0000]/.test(name)) {
+    return { error: "Competitor name must be 160 characters or fewer" };
+  }
+
+  const website = normalizeOptionalHttpUrl(input.website_url);
+  if (!website.success) return { error: website.error };
+  const primaryAngle = input.primary_angle?.trim() || null;
+  if (
+    (primaryAngle && primaryAngle.length > 1_000) ||
+    primaryAngle?.includes("\u0000")
+  ) {
+    return { error: "Primary angle must be 1,000 characters or fewer" };
+  }
 
   const owned = await assertBusinessOwner(
     auth.supabase,
@@ -122,21 +171,26 @@ export async function addCompetitor(
       .eq("id", input.candidateId)
       .eq("business_id", businessId)
       .maybeSingle();
-    if (candidateError) return { error: candidateError.message };
+
+    if (candidateError) {
+      return databaseFailure(
+        "load_competitor_candidate",
+        candidateError,
+        "The research candidate could not be loaded. Try again.",
+      );
+    }
     if (!found) return { error: "Research candidate not found" };
     candidate = found as CandidateRecord;
   }
 
-  const websiteUrl =
-    candidate?.website_url ?? (input.website_url?.trim() || null);
+  const websiteUrl = candidate?.website_url ?? website.value;
   const { data, error } = await auth.supabase
     .from("competitors")
     .insert({
       business_id: businessId,
       name: candidate?.name ?? name,
       website_url: websiteUrl,
-      primary_angle:
-        candidate?.why_competitor ?? (input.primary_angle?.trim() || null),
+      primary_angle: candidate?.why_competitor ?? primaryAngle,
       candidate_id: candidate?.id ?? null,
       normalized_domain:
         candidate?.normalized_domain ?? normalizedDomain(websiteUrl),
@@ -147,19 +201,22 @@ export async function addCompetitor(
       why_now: candidate?.why_now ?? null,
       status: "tracking",
     })
-    .select()
+    .select(COMPETITOR_SELECT)
     .single();
 
-  if (error) return { error: error.message };
+  if (error) return databaseFailure("create_competitor", error);
 
   revalidatePath("/dashboard");
-  return { competitor: data as CompetitorItem };
+  return { competitor: data as CompetitorItem, error: null };
 }
 
 export async function deleteCompetitor(competitorId: string) {
-  if (!isUuid(competitorId)) return { error: "Invalid competitor" };
+  if (!isUuid(competitorId)) return { error: "Invalid competitor ID" };
+
   const auth = await requireUser();
-  if (auth.error || !auth.user) return { error: auth.error ?? "Not authenticated" };
+  if (auth.error || !auth.user) {
+    return { error: auth.error ?? "Not authenticated" };
+  }
 
   const { data: existing, error: fetchError } = await auth.supabase
     .from("competitors")
@@ -167,7 +224,13 @@ export async function deleteCompetitor(competitorId: string) {
     .eq("id", competitorId)
     .maybeSingle();
 
-  if (fetchError) return { error: fetchError.message };
+  if (fetchError) {
+    return databaseFailure(
+      "load_competitor_for_delete",
+      fetchError,
+      "The competitor could not be deleted. Try again.",
+    );
+  }
   if (!existing) return { error: "Competitor not found" };
 
   const owned = await assertBusinessOwner(
@@ -182,8 +245,14 @@ export async function deleteCompetitor(competitorId: string) {
     .delete()
     .eq("id", competitorId);
 
-  if (error) return { error: error.message };
+  if (error) {
+    return databaseFailure(
+      "delete_competitor",
+      error,
+      "The competitor could not be deleted. Try again.",
+    );
+  }
 
   revalidatePath("/dashboard");
-  return { success: true };
+  return { success: true, error: null };
 }

@@ -40,10 +40,6 @@ export function BusinessTab({
 }) {
   const [creatingNew, setCreatingNew] = useState(false);
 
-  useEffect(() => {
-    setCreatingNew(false);
-  }, [selectedBusinessId]);
-
   const editingId = creatingNew
     ? "new"
     : (selectedBusinessId ?? businesses[0]?.id ?? null);
@@ -226,16 +222,6 @@ function BusinessForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
-
-  useEffect(() => {
-    if (editingId === "new") {
-      setForm(emptyBusinessInput());
-    } else if (currentBusiness) {
-      setForm(businessToInput(currentBusiness));
-    }
-    setMessage(null);
-    setError(null);
-  }, [editingId, currentBusiness?.id]);
 
   const setField = <K extends keyof BusinessInput>(key: K, value: BusinessInput[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));

@@ -4,11 +4,18 @@ import { getApiAuth } from "@/utils/api-auth";
 export async function GET(request: Request) {
   const auth = await getApiAuth();
   if (!auth) {
-    return Response.json({ error: "Sign in to view competitor signals." }, { status: 401 });
+    return Response.json(
+      { error: "Sign in to view competitor signals." },
+      { status: 401 },
+    );
   }
+
   const competitorId = new URL(request.url).searchParams.get("competitorId");
   if (!isUuid(competitorId)) {
-    return Response.json({ error: "A valid competitorId is required." }, { status: 400 });
+    return Response.json(
+      { error: "A valid competitorId is required." },
+      { status: 400 },
+    );
   }
 
   const { data, error } = await auth.supabase
@@ -19,8 +26,16 @@ export async function GET(request: Request) {
     .eq("competitor_id", competitorId)
     .order("observed_at", { ascending: false })
     .limit(50);
+
   if (error) {
-    return Response.json({ error: "Could not load competitor signals." }, { status: 500 });
+    return Response.json(
+      { error: "Could not load competitor signals." },
+      { status: 500 },
+    );
   }
-  return Response.json({ signals: data ?? [] }, { headers: { "Cache-Control": "private, no-store" } });
+
+  return Response.json(
+    { signals: data ?? [] },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }

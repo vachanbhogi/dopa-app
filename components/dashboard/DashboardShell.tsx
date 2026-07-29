@@ -275,15 +275,6 @@ export function DashboardShell({
         <div className="relative flex items-center gap-1.5 px-3 pb-3" ref={accountMenuRef}>
           <button
             type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent("dopa:open-denver"))}
-            title="Ask Denver AI"
-            aria-label="Ask Denver AI"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/4 text-secondary transition-all hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95"
-          >
-            <NavIcon name="denver" />
-          </button>
-          <button
-            type="button"
             onClick={() => {
               setBusinessMenuOpen(false);
               setAccountMenuOpen((open) => !open);
@@ -428,6 +419,7 @@ export function DashboardShell({
             ) : null}
             {active === "business" && (
               <BusinessTab
+                key={selectedBusinessId}
                 businesses={businesses}
                 selectedBusinessId={selectedBusinessId}
                 onSelectBusiness={(id) => {
