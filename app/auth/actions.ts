@@ -10,7 +10,9 @@ import { safeNextPath } from "@/utils/safe-next-url";
 async function getOrigin() {
   const headersList = await headers();
   const configured = normalizedOrigin(process.env.NEXT_PUBLIC_SITE_URL);
-  if (configured) return configured;
+  // Preview OAuth must return to the preview host so its auth cookie is set
+  // there. Production continues to use the explicitly configured canonical URL.
+  if (configured && process.env.VERCEL_ENV !== "preview") return configured;
 
   const requestHost = (
     headersList.get("x-forwarded-host") ??
