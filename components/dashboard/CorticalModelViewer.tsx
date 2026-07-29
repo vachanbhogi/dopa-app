@@ -26,10 +26,10 @@ type DecodeResult =
   | { data: DecodedHemisphere[]; error: null }
   | { data: null; error: string };
 
-const LOW_COLOR = [0.055, 0.075, 0.115] as const;
-const VIOLET_COLOR = [0.38, 0.3, 0.98] as const;
-const CYAN_COLOR = [0.08, 0.82, 1] as const;
-const AMBER_COLOR = [1, 0.49, 0.16] as const;
+const LOW_COLOR = [0.055, 0.06, 0.09] as const;
+const VIOLET_COLOR = [0.37, 0.42, 0.82] as const;
+const CYAN_COLOR = [0.44, 0.44, 1] as const;
+const AMBER_COLOR = [0.72, 0.71, 1] as const;
 
 function decodeBytes(value: string): Uint8Array {
   const decoded = window.atob(value);
@@ -340,10 +340,10 @@ function createSignalRoutes(
         points: curve.getPoints(42),
         color:
           lineIndex % 3 === 0
-            ? "#ff8a3d"
+            ? "#a8a7ff"
             : lineIndex % 2 === 0
-              ? "#2edcff"
-              : "#8b7cff",
+              ? "#7170ff"
+              : "#5e6ad2",
       };
     }),
   );
@@ -454,9 +454,9 @@ function CortexScene({
   return (
     <>
       <ambientLight intensity={0.72} />
-      <hemisphereLight args={["#b8c7ff", "#08090f", 1.15]} />
+      <hemisphereLight args={["#b8c0ef", "#08090a", 1.15]} />
       <directionalLight position={[120, 80, 100]} intensity={2.2} color="#9faeff" />
-      <directionalLight position={[-100, -40, 60]} intensity={1.3} color="#27d9ff" />
+      <directionalLight position={[-100, -40, 60]} intensity={1.1} color="#7170ff" />
       <group rotation={[0, -0.08, -0.04]}>
         {hemispheres.map((surface) => (
           <CortexSurface
@@ -485,10 +485,17 @@ function CortexScene({
   );
 }
 
-export function CorticalModelViewer({ model }: { model: BrainModelPayload }) {
+export function CorticalModelViewer({
+  model,
+  compact = false,
+}: {
+  model: BrainModelPayload;
+  compact?: boolean;
+}) {
   const decoded = useMemo(() => decodeModel(model), [model]);
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(model.frame_count > 1);
+  const frameAspect = compact ? "aspect-5/4" : "aspect-video";
 
   useEffect(() => {
     if (!playing || model.frame_count <= 1) return;
@@ -501,7 +508,9 @@ export function CorticalModelViewer({ model }: { model: BrainModelPayload }) {
 
   if (decoded.error || !decoded.data) {
     return (
-      <div className="flex aspect-[16/9] items-center justify-center px-6 text-center text-[12px] leading-5 text-secondary">
+      <div
+        className={`flex items-center justify-center bg-background px-6 text-center text-[12px] leading-5 text-secondary ${frameAspect}`}
+      >
         {decoded.error}
       </div>
     );
@@ -509,7 +518,9 @@ export function CorticalModelViewer({ model }: { model: BrainModelPayload }) {
 
   return (
     <div>
-      <div className="relative aspect-[16/9] overflow-hidden bg-[radial-gradient(circle_at_58%_40%,rgba(50,75,124,0.24),transparent_34%),radial-gradient(circle_at_35%_64%,rgba(93,63,168,0.18),transparent_42%),#06080d]">
+      <div
+        className={`relative overflow-hidden bg-[radial-gradient(ellipse_at_58%_40%,rgba(94,106,210,0.2),transparent_42%),radial-gradient(ellipse_at_35%_64%,rgba(113,112,255,0.12),transparent_48%),var(--background)] ${frameAspect}`}
+      >
         <Canvas
           dpr={[1, 1.7]}
           camera={{ position: [188, 30, 22], fov: 35, near: 0.1, far: 800 }}
@@ -527,27 +538,29 @@ export function CorticalModelViewer({ model }: { model: BrainModelPayload }) {
           />
         </Canvas>
 
-        <div className="pointer-events-none absolute left-4 top-4 rounded-md border border-white/[0.08] bg-black/35 px-3 py-2 backdrop-blur-md">
-          <p className="font-mono text-[8px] uppercase tracking-[0.16em] text-white/45">
+        <div className="pointer-events-none absolute left-3 top-3 rounded-lg border border-white/10 bg-surface/80 px-2.5 py-1.5 backdrop-blur-md">
+          <p className="text-[8px] font-medium uppercase tracking-[0.12em] text-tertiary">
             Relative response
           </p>
-          <div className="mt-1.5 flex items-center gap-2">
-            <span className="text-[9px] text-white/45">Low</span>
-            <span className="h-1.5 w-24 rounded-full bg-[linear-gradient(90deg,#131a2a_0%,#6851f1_38%,#21d7f2_70%,#ff7c2e_100%)]" />
-            <span className="text-[9px] text-white/45">High</span>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-[9px] text-tertiary">Low</span>
+            <span className="h-1.5 w-20 rounded-full bg-[linear-gradient(90deg,#13161f_0%,#5e6ad2_42%,#7170ff_72%,#a8a7ff_100%)]" />
+            <span className="text-[9px] text-tertiary">High</span>
           </div>
         </div>
 
-        <div className="pointer-events-none absolute bottom-3 right-4 rounded-full border border-white/[0.08] bg-black/35 px-2.5 py-1 text-[9px] text-white/45 backdrop-blur-md">
-          Drag to rotate · Scroll to zoom
-        </div>
+        {!compact ? (
+          <div className="pointer-events-none absolute bottom-3 right-4 rounded-full border border-white/10 bg-surface/80 px-2.5 py-1 text-[9px] text-tertiary backdrop-blur-md">
+            Drag to rotate · Scroll to zoom
+          </div>
+        ) : null}
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-white/[0.07] bg-[#090b10] px-4 py-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 border-t border-white/6 bg-surface px-3 py-2.5 sm:flex-row sm:items-center">
         <button
           type="button"
           onClick={() => setPlaying((current) => !current)}
-          className="inline-flex w-20 shrink-0 items-center justify-center gap-1.5 rounded-md border border-white/10 px-2.5 py-1.5 text-[10px] text-white/70 transition-colors hover:border-white/20 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="inline-flex w-18 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/3 px-2 py-1.5 text-[10px] text-secondary transition-[border-color,color,background-color,transform] duration-150 hover:border-white/20 hover:bg-white/6 hover:text-white active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         >
           {playing ? <PauseIcon /> : <PlayIcon />}
           {playing ? "Pause" : "Play"}
@@ -563,16 +576,23 @@ export function CorticalModelViewer({ model }: { model: BrainModelPayload }) {
               setPlaying(false);
               setFrame(Number(event.currentTarget.value));
             }}
-            className="h-1 w-full cursor-pointer accent-[#7f73ff]"
+            className="brain-scrubber h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/8 outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+            style={{
+              background: `linear-gradient(to right, var(--brand) 0%, var(--brand) ${
+                model.frame_count <= 1
+                  ? 100
+                  : (frame / Math.max(1, model.frame_count - 1)) * 100
+              }%, rgba(255,255,255,0.08) ${
+                model.frame_count <= 1
+                  ? 100
+                  : (frame / Math.max(1, model.frame_count - 1)) * 100
+              }%, rgba(255,255,255,0.08) 100%)`,
+            }}
           />
-          <span className="w-9 shrink-0 font-mono text-[10px] tabular-nums text-white/55">
+          <span className="w-9 shrink-0 font-mono text-[10px] tabular-nums text-secondary">
             {Math.round(frame * model.frame_interval_seconds)}s
           </span>
         </label>
-        <div className="flex shrink-0 items-center gap-1.5 text-[9px] text-white/40">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#2edcff] shadow-[0_0_8px_#2edcff]" />
-          Stylized signal traces
-        </div>
       </div>
     </div>
   );
