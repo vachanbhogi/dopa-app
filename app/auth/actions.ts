@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { GOOGLE_ADS_TOKEN_COOKIE } from "@/utils/google-ads-token";
 import { headers } from "next/headers";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -61,8 +62,10 @@ export async function signup(formData: FormData) {
 }
 
 export async function signOut() {
-  const supabase = createClient(await cookies());
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
   await supabase.auth.signOut();
+  cookieStore.delete(GOOGLE_ADS_TOKEN_COOKIE);
   redirect("/");
 }
 

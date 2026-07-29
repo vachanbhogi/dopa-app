@@ -1,10 +1,26 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
-import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import {
+  DashboardShell,
+  type DashboardTab,
+} from "@/components/dashboard/DashboardShell";
 import { getBusinessesForUser } from "@/lib/businesses";
 
-export default async function DashboardPage() {
+const dashboardTabs = new Set<DashboardTab>([
+  "keywords",
+  "competitors",
+  "brain",
+  "googleAds",
+  "metrics",
+  "settings",
+]);
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; googleAds?: string }>;
+}) {
   const supabase = createClient(await cookies());
   const {
     data: { user },
@@ -16,6 +32,11 @@ export default async function DashboardPage() {
 
   const displayName =
     user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "User";
+  const { tab, googleAds } = await searchParams;
+  const initialTab =
+    tab && dashboardTabs.has(tab as DashboardTab)
+      ? (tab as DashboardTab)
+      : "brain";
 
   const { businesses, selectedBusinessId } = await getBusinessesForUser(user.id, {
     fullName: user.user_metadata?.full_name,
@@ -28,6 +49,8 @@ export default async function DashboardPage() {
       email={user.email ?? ""}
       businesses={businesses}
       initialSelectedBusinessId={selectedBusinessId}
+      initialTab={initialTab}
+      googleAdsResult={googleAds}
     />
   );
 }

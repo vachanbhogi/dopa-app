@@ -9,9 +9,15 @@ import { BrainTab } from "./BrainTab";
 import { GoogleAdsTab } from "./GoogleAdsTab";
 import { SettingsTab } from "./SettingsTab";
 
-type Tab = "keywords" | "competitors" | "brain" | "googleAds" | "metrics" | "settings";
+export type DashboardTab =
+  | "keywords"
+  | "competitors"
+  | "brain"
+  | "googleAds"
+  | "metrics"
+  | "settings";
 
-const tabs: { id: Tab; label: string; icon: string }[] = [
+const tabs: { id: DashboardTab; label: string; icon: string }[] = [
   { id: "keywords", label: "Keywords", icon: "tag" },
   { id: "competitors", label: "Competitors", icon: "eye" },
   { id: "brain", label: "Brain", icon: "brain" },
@@ -25,13 +31,17 @@ export function DashboardShell({
   email,
   businesses,
   initialSelectedBusinessId,
+  initialTab = "brain",
+  googleAdsResult,
 }: {
   displayName: string;
   email: string;
   businesses: Business[];
   initialSelectedBusinessId: string | null;
+  initialTab?: DashboardTab;
+  googleAdsResult?: string;
 }) {
-  const [active, setActive] = useState<Tab>("brain");
+  const [active, setActive] = useState<DashboardTab>(initialTab);
   const [selectedBusinessId, setSelectedBusinessId] = useState(
     initialSelectedBusinessId ?? businesses[0]?.id ?? "",
   );
@@ -49,10 +59,6 @@ export function DashboardShell({
     .join("")
     .slice(0, 2)
     .toUpperCase();
-
-  useEffect(() => {
-    setSelectedBusinessId(initialSelectedBusinessId ?? businesses[0]?.id ?? "");
-  }, [initialSelectedBusinessId, businesses]);
 
   useEffect(() => {
     if (!businessMenuOpen) return;
@@ -223,7 +229,12 @@ export function DashboardShell({
         <main className="flex-1 overflow-y-auto">
           <div key={active} className="mx-auto max-w-250 px-6 py-8">
             {active === "brain" && <BrainTab />}
-            {active === "googleAds" && <GoogleAdsTab />}
+            {active === "googleAds" && (
+              <GoogleAdsTab
+                dopaEmail={email}
+                oauthResult={googleAdsResult}
+              />
+            )}
             {active === "keywords" && <PlaceholderPanel title="Keywords" body="Track trending ad keywords and messaging hooks across your campaigns." />}
             {active === "competitors" && <PlaceholderPanel title="Competitors" body="Scrape competitor ads from the open web and score them on the same brain → metric stack." />}
             {active === "metrics" && <PlaceholderPanel title="Metrics" body="Predicted average CTR results and model runtime details across analyzed creatives." />}

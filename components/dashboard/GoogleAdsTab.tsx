@@ -1,427 +1,462 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
+import type {
+  GoogleAdsApiResponse,
+  GoogleAdsErrorCode,
+  LiveCampaignData,
+} from "@/utils/google-ads-client";
 
-type Account = {
-  id: string;
-  name: string;
-  currency?: string;
-  timeZone?: string;
-  status?: string;
-};
+type ConnectionState =
+  | "loading"
+  | "connected"
+  | "oauth_required"
+  | "configuration_required"
+  | "error";
 
-type Campaign = {
-  id: string;
-  name: string;
-  type: string;
-  status: string;
-  spend: number;
-  impressions: number;
-  clicks: number;
-  actualCtr: number;
-  predictedCtr: number;
-  conversions: number;
-  roas: number;
-  tier: number;
-  health: "Healthy" | "Fatigue Risk" | "Outperforming";
-  lastSynced: string;
-};
+type CampaignFilter =
+  | "All"
+  | "Performance Max"
+  | "YouTube"
+  | "Search"
+  | "Display";
 
-export function GoogleAdsTab() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [connectedEmail, setConnectedEmail] = useState<string | null>(null);
+const filters: CampaignFilter[] = [
+  "All",
+  "Performance Max",
+  "YouTube",
+  "Search",
+  "Display",
+];
+
+function matchesFilter(
+  campaign: LiveCampaignData,
+  filter: CampaignFilter,
+): boolean {
+  if (filter === "All") return true;
+  const channel = campaign.channelType.toUpperCase();
+  if (filter === "Performance Max") return channel === "PERFORMANCE_MAX";
+  if (filter === "YouTube") return channel.includes("VIDEO");
+  return channel.includes(filter.toUpperCase());
+}
+
+function humanizeChannel(channel: string): string {
+  return channel
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function connectionStateFor(
+  code: GoogleAdsErrorCode | undefined,
+): ConnectionState {
+  if (code === "configuration_required") return "configuration_required";
+  if (code === "oauth_required") return "oauth_required";
+  return "error";
+}
+
+function oauthNotice(result: string | undefined): string | null {
+  if (result === "configuration_required") {
+    return "Google authorization succeeded, but secure token storage is not configured.";
+  }
+  if (result === "oauth_error") {
+    return "Google did not return an Ads access token. Reconnect and approve the requested access.";
+  }
+  return null;
+}
+
+export function GoogleAdsTab({
+  dopaEmail,
+  oauthResult,
+}: {
+  dopaEmail: string;
+  oauthResult?: string;
+}) {
+  const [connectionState, setConnectionState] =
+    useState<ConnectionState>("loading");
   const [isConnectingOAuth, setIsConnectingOAuth] = useState(false);
-  const [isLoadingApi, setIsLoadingApi] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [account, setAccount] =
+    useState<GoogleAdsApiResponse["accountDetails"]>();
+  const [campaigns, setCampaigns] = useState<LiveCampaignData[]>([]);
+  const [filter, setFilter] = useState<CampaignFilter>("All");
+  const [notice, setNotice] = useState<string | null>(() =>
+    oauthNotice(oauthResult),
+  );
 
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const fetchGoogleAds = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const response = await fetch("/api/google-ads", {
+        cache: "no-store",
+        signal,
+      });
+      const data = (await response.json()) as GoogleAdsApiResponse;
 
-  const [filterType, setFilterType] = useState<string>("All");
-  const [showAccountModal, setShowAccountModal] = useState(false);
-  const [analyzingCmp, setAnalyzingCmp] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  // Check Supabase Auth user session & fetch Google Ads API data
-  useEffect(() => {
-    async function initSessionAndData() {
-      setIsLoadingApi(true);
-      setApiError(null);
-
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        setIsConnected(true);
-        setConnectedEmail(user.email ?? "Google User");
+      if (response.ok && data.success) {
+        setCampaigns(data.campaigns);
+        setAccount(data.accountDetails);
+        setConnectionState("connected");
+        return;
       }
 
-      try {
-        const res = await fetch("/api/google-ads");
-        const data = await res.json();
-        setIsLoadingApi(false);
-
-        if (data.success && data.campaigns) {
-          setIsConnected(true);
-          setCampaigns(data.campaigns);
-
-          if (data.accountDetails?.customerId) {
-            const customerId = data.accountDetails.customerId;
-            setSelectedAccountId(customerId);
-            setAccounts([
-              {
-                id: customerId,
-                name: `Google Ads Account #${customerId}`,
-                currency: "USD",
-                timeZone: "UTC",
-                status: "Active",
-              },
-            ]);
-          }
-        } else {
-          if (data.error && !user) {
-            setApiError(data.error);
-          }
-        }
-      } catch (err: unknown) {
-        setIsLoadingApi(false);
-        const msg = err instanceof Error ? err.message : String(err);
-        if (!user) {
-          setApiError(`API fetch error: ${msg}`);
-        }
-      }
+      setCampaigns([]);
+      setAccount(undefined);
+      setApiError(data.error ?? "Google Ads could not be connected.");
+      setConnectionState(connectionStateFor(data.code));
+    } catch (error: unknown) {
+      if (signal?.aborted) return;
+      setCampaigns([]);
+      setAccount(undefined);
+      setApiError(
+        error instanceof Error
+          ? `Could not load Google Ads: ${error.message}`
+          : "Could not load Google Ads.",
+      );
+      setConnectionState("error");
     }
-
-    initSessionAndData();
   }, []);
 
-  const selectedAccount = accounts.find((a) => a.id === selectedAccountId) || accounts[0];
+  useEffect(() => {
+    const controller = new AbortController();
+    queueMicrotask(() => void fetchGoogleAds(controller.signal));
+    return () => controller.abort();
+  }, [fetchGoogleAds]);
+
+  const refreshGoogleAds = () => {
+    setConnectionState("loading");
+    setApiError(null);
+    void fetchGoogleAds();
+  };
 
   const handleOAuthConnect = async () => {
     setIsConnectingOAuth(true);
+    setNotice(null);
+
     try {
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set("next", "/dashboard?tab=googleAds");
+      callbackUrl.searchParams.set("google_ads", "1");
+
       const supabase = createClient();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+          redirectTo: callbackUrl.toString(),
           scopes: "https://www.googleapis.com/auth/adwords",
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
       });
 
       if (error) throw error;
-    } catch (err: unknown) {
+    } catch (error: unknown) {
       setIsConnectingOAuth(false);
-      const msg = err instanceof Error ? err.message : String(err);
-      setNotice(`Google Auth notice: ${msg}`);
+      setNotice(
+        error instanceof Error
+          ? `Google authorization failed: ${error.message}`
+          : "Google authorization failed.",
+      );
     }
   };
 
   const handleDisconnect = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    setIsConnected(false);
-    setConnectedEmail(null);
-    setCampaigns([]);
-    setAccounts([]);
-    setNotice("Disconnected Google Ads account.");
-    setTimeout(() => setNotice(null), 3000);
+    setNotice(null);
+
+    try {
+      const response = await fetch("/api/google-ads", {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Could not clear the Google Ads connection.");
+      }
+
+      setCampaigns([]);
+      setAccount(undefined);
+      setConnectionState("oauth_required");
+      setNotice(
+        "Google Ads disconnected. Your Dopa session is still active.",
+      );
+    } catch (error: unknown) {
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : "Could not disconnect Google Ads.",
+      );
+    }
   };
 
-  const handleAnalyzeWithBrain = (cmpId: string, cmpName: string) => {
-    setAnalyzingCmp(cmpId);
-    setTimeout(() => {
-      setAnalyzingCmp(null);
-      setNotice(`Synced "${cmpName}" with Dopa Brain neural encoder! Pre-launch predicted iCTR vs real CTR variance calculated.`);
-      setTimeout(() => setNotice(null), 5000);
-    }, 1400);
-  };
-
-  const filteredCampaigns = campaigns.filter((c) =>
-    filterType === "All" ? true : c.type.toLowerCase().includes(filterType.toLowerCase())
+  const filteredCampaigns = useMemo(
+    () => campaigns.filter((campaign) => matchesFilter(campaign, filter)),
+    [campaigns, filter],
   );
-
-  const totalSpend = campaigns.reduce((acc, c) => acc + c.spend, 0);
-  const totalConversions = campaigns.reduce((acc, c) => acc + c.conversions, 0);
-  const avgRoas = campaigns.length > 0 ? +(campaigns.reduce((acc, c) => acc + c.roas, 0) / campaigns.length).toFixed(2) : 0;
-  const avgCtr = campaigns.length > 0 ? +(campaigns.reduce((acc, c) => acc + c.actualCtr, 0) / campaigns.length).toFixed(2) : 0;
+  const totalSpend = campaigns.reduce(
+    (total, campaign) => total + campaign.spend,
+    0,
+  );
+  const totalConversions = campaigns.reduce(
+    (total, campaign) => total + campaign.conversions,
+    0,
+  );
+  const totalConversionValue = campaigns.reduce(
+    (total, campaign) => total + campaign.conversionsValue,
+    0,
+  );
+  const totalImpressions = campaigns.reduce(
+    (total, campaign) => total + campaign.impressions,
+    0,
+  );
+  const totalClicks = campaigns.reduce(
+    (total, campaign) => total + campaign.clicks,
+    0,
+  );
+  const aggregateRoas =
+    totalSpend > 0 ? totalConversionValue / totalSpend : 0;
+  const aggregateCtr =
+    totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+  const currency = account?.currencyCode ?? "USD";
 
   return (
     <div className="space-y-8">
-      {/* Header intro */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both]">
         <div>
           <div className="flex items-center gap-2.5">
-            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-500/10 text-blue-400">
-              <svg className="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24">
-                <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972-3.332 0-6.033-2.701-6.033-6.032s2.701-6.032 6.033-6.032c1.498 0 2.866.549 3.921 1.453l2.814-2.814C17.503 2.988 15.139 2 12.545 2 6.721 2 2 6.721 2 12.545S6.721 23.09 12.545 23.09c6.627 0 10.5-4.664 10.5-10.732 0-.663-.067-1.309-.172-1.921h-10.328z" />
-              </svg>
-            </span>
-            <h2 className="text-[15px] font-medium text-white">Google Ads Integration</h2>
-            
-            {isConnected ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Google OAuth Connected ({connectedEmail})
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-medium text-amber-400">
-                Not Connected
-              </span>
-            )}
+            <GoogleMark />
+            <h2 className="text-[15px] font-medium text-white">
+              Google Ads Integration
+            </h2>
+            <ConnectionBadge state={connectionState} />
           </div>
           <p className="mt-1 text-[13px] text-secondary">
-            Connect your Google Ads account to sync live campaigns via Google OAuth 2.0.
+            Live campaign performance from the last 30 days.
           </p>
         </div>
 
-        {/* Action Controls */}
         <div className="flex items-center gap-2">
-          {isConnected ? (
-            <div className="flex items-center gap-2">
-              {accounts.length > 0 && selectedAccount && (
-                <div className="relative">
-                  <button
-                    onClick={() => setShowAccountModal(!showAccountModal)}
-                    className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/3 px-3 py-1.5 text-[12px] font-medium text-white hover:border-white/20"
-                  >
-                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                    <span className="truncate max-w-40">{selectedAccount.name}</span>
-                    <svg className="h-3 w-3 text-secondary" viewBox="0 0 16 16" fill="none" stroke="currentColor">
-                      <path d="M4 6l4 4 4-4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-
-                  {showAccountModal && (
-                    <div className="absolute right-0 top-10 z-30 w-64 rounded-xl border border-white/10 bg-[#16161a] p-1.5 shadow-2xl animate-fade-in text-[12px]">
-                      <div className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-tertiary">
-                        Connected Google Ads Account
-                      </div>
-                      {accounts.map((acc) => (
-                        <button
-                          key={acc.id}
-                          onClick={() => {
-                            setSelectedAccountId(acc.id);
-                            setShowAccountModal(false);
-                          }}
-                          className={`flex w-full flex-col gap-0.5 rounded-lg px-2.5 py-2 text-left transition-colors ${
-                            acc.id === selectedAccountId
-                              ? "bg-brand/20 text-white font-medium"
-                              : "text-secondary hover:bg-white/5 hover:text-white"
-                          }`}
-                        >
-                          <div className="truncate font-medium">{acc.name}</div>
-                          <div className="font-mono text-[10px] text-tertiary">ID: #{acc.id}</div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
+          {connectionState === "connected" ? (
+            <>
               <button
-                onClick={handleDisconnect}
-                className="rounded-lg border border-white/10 px-3 py-1.5 text-[12px] text-secondary hover:text-red-400 transition-colors"
+                onClick={refreshGoogleAds}
+                className="rounded-lg border border-white/10 px-3 py-1.5 text-[12px] text-secondary transition-colors hover:border-white/20 hover:text-white"
               >
-                Disconnect
+                Refresh
               </button>
-            </div>
+              <button
+                onClick={() => void handleDisconnect()}
+                className="rounded-lg border border-white/10 px-3 py-1.5 text-[12px] text-secondary transition-colors hover:border-red-400/30 hover:text-red-400"
+              >
+                Disconnect Ads
+              </button>
+            </>
+          ) : connectionState !== "configuration_required" ? (
+            <ConnectButton
+              isConnecting={isConnectingOAuth}
+              onClick={() => void handleOAuthConnect()}
+            />
           ) : (
             <button
-              onClick={handleOAuthConnect}
-              disabled={isConnectingOAuth}
-              className="inline-flex items-center gap-2.5 rounded-lg bg-white text-black px-4 py-2 text-[13px] font-medium transition-all hover:bg-white/90 active:scale-[0.97] shadow-lg"
+              onClick={refreshGoogleAds}
+              className="rounded-lg border border-white/10 px-3 py-1.5 text-[12px] text-secondary transition-colors hover:border-white/20 hover:text-white"
             >
-              {isConnectingOAuth ? (
-                <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/30 border-t-black" />
-                  Redirecting to Google OAuth…
-                </>
-              ) : (
-                <>
-                  <svg className="h-4 w-4 fill-current text-blue-600" viewBox="0 0 24 24">
-                    <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972-3.332 0-6.033-2.701-6.033-6.032s2.701-6.032 6.033-6.032c1.498 0 2.866.549 3.921 1.453l2.814-2.814C17.503 2.988 15.139 2 12.545 2 6.721 2 2 6.721 2 12.545S6.721 23.09 12.545 23.09c6.627 0 10.5-4.664 10.5-10.732 0-.663-.067-1.309-.172-1.921h-10.328z" />
-                  </svg>
-                  Connect with Google
-                </>
-              )}
+              Check configuration
             </button>
           )}
         </div>
       </div>
 
       {notice && (
-        <div className="rounded-lg border border-brand/30 bg-brand/10 px-4 py-3 text-[13px] text-brand flex items-center justify-between animate-fade-in">
+        <div className="flex items-center justify-between rounded-lg border border-brand/30 bg-brand/10 px-4 py-3 text-[13px] text-brand animate-fade-in">
           <span>{notice}</span>
-          <button onClick={() => setNotice(null)} className="text-brand/70 hover:text-brand">
+          <button
+            onClick={() => setNotice(null)}
+            className="text-brand/70 hover:text-brand"
+            aria-label="Dismiss notice"
+          >
             ✕
           </button>
         </div>
       )}
 
-      {/* Main Connection / Empty State */}
-      {isLoadingApi ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-white/6 bg-white/1.5 py-20 px-6 text-center">
-          <span className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-          <p className="mt-4 text-[13px] text-secondary">Checking Google OAuth session & campaign stream…</p>
-        </div>
-      ) : !isConnected ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/1 py-16 px-6 text-center animate-fade-in">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400">
-            <svg className="h-7 w-7 fill-current" viewBox="0 0 24 24">
-              <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972-3.332 0-6.033-2.701-6.033-6.032s2.701-6.032 6.033-6.032c1.498 0 2.866.549 3.921 1.453l2.814-2.814C17.503 2.988 15.139 2 12.545 2 6.721 2 2 6.721 2 12.545S6.721 23.09 12.545 23.09c6.627 0 10.5-4.664 10.5-10.732 0-.663-.067-1.309-.172-1.921h-10.328z" />
-            </svg>
-          </div>
-          <h3 className="mt-4 text-[16px] font-medium text-white">Connect your Google Ads account</h3>
-          <p className="mt-1.5 max-w-105 text-[13px] text-secondary leading-relaxed">
-            {apiError
-              ? apiError
-              : "Sign in with Google to grant Dopa access to stream your live Google Ads campaigns and score ad creatives."}
-          </p>
-
-          <button
-            onClick={handleOAuthConnect}
-            disabled={isConnectingOAuth}
-            className="mt-6 inline-flex items-center gap-2.5 rounded-lg bg-white text-black px-5 py-2.5 text-[14px] font-medium transition-transform hover:scale-[1.02] active:scale-[0.98] shadow-xl"
-          >
-            <svg className="h-4 w-4 fill-current text-blue-600" viewBox="0 0 24 24">
-              <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972-3.332 0-6.033-2.701-6.033-6.032s2.701-6.032 6.033-6.032c1.498 0 2.866.549 3.921 1.453l2.814-2.814C17.503 2.988 15.139 2 12.545 2 6.721 2 2 6.721 2 12.545S6.721 23.09 12.545 23.09c6.627 0 10.5-4.664 10.5-10.732 0-.663-.067-1.309-.172-1.921h-10.328z" />
-            </svg>
-            Sign in with Google
-          </button>
-        </div>
+      {connectionState === "loading" ? (
+        <LoadingState />
+      ) : connectionState === "configuration_required" ? (
+        <EmptyState
+          title="Google Ads configuration required"
+          body={
+            apiError ??
+            "Add the server-side Google Ads credentials, then check again."
+          }
+          action={
+            <button
+              onClick={refreshGoogleAds}
+              className="mt-6 rounded-lg bg-white px-5 py-2.5 text-[14px] font-medium text-black transition-transform hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Check again
+            </button>
+          }
+        />
+      ) : connectionState !== "connected" ? (
+        <EmptyState
+          title={
+            connectionState === "oauth_required"
+              ? "Connect your Google Ads account"
+              : "Google Ads needs attention"
+          }
+          body={
+            apiError ??
+            "Authorize Dopa to read campaign performance from Google Ads."
+          }
+          action={
+            <ConnectButton
+              isConnecting={isConnectingOAuth}
+              onClick={() => void handleOAuthConnect()}
+              large
+            />
+          }
+        />
       ) : (
         <>
-          {/* Connected Account Overview Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/3 px-4 py-3 text-[12px] text-secondary">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.03] px-4 py-3 text-[12px] text-secondary">
+            <div className="flex flex-wrap items-center gap-4">
               <div>
-                Connected Account: <span className="font-medium text-white">{connectedEmail}</span>
+                Account:{" "}
+                <span className="font-medium text-white">
+                  {account?.descriptiveName ??
+                    `Google Ads #${account?.customerId}`}
+                </span>
               </div>
-              <div className="hidden sm:block text-white/20">|</div>
+              <div className="hidden text-white/20 sm:block">|</div>
               <div>
-                OAuth Provider: <span className="font-medium text-emerald-400">Google OAuth 2.0 (Verified)</span>
+                Dopa session:{" "}
+                <span className="font-medium text-white">{dopaEmail}</span>
               </div>
+              {account?.timeZone && (
+                <>
+                  <div className="hidden text-white/20 sm:block">|</div>
+                  <div>{account.timeZone}</div>
+                </>
+              )}
             </div>
-
-            <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Authenticated Session Active
+            <span className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              Google Ads API v25
             </span>
           </div>
 
+          <div className="grid gap-3 sm:grid-cols-4 animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both]">
+            <MetricCard
+              label="Total live spend"
+              value={new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency,
+                maximumFractionDigits: 2,
+              }).format(totalSpend)}
+            />
+            <MetricCard
+              label="Live conversions"
+              value={totalConversions.toLocaleString()}
+            />
+            <MetricCard
+              label="Total ROAS"
+              value={`${aggregateRoas.toFixed(2)}×`}
+            />
+            <MetricCard
+              label="Total live CTR"
+              value={`${aggregateCtr.toFixed(2)}%`}
+            />
+          </div>
+
           {campaigns.length === 0 ? (
-            <div className="rounded-xl border border-white/6 bg-white/1.5 p-8 text-center">
-              <p className="text-[14px] font-medium text-white">Google OAuth Account Connected ({connectedEmail})</p>
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-8 text-center">
+              <p className="text-[14px] font-medium text-white">
+                Account connected
+              </p>
               <p className="mt-1.5 text-[13px] text-secondary">
-                To stream campaign metrics directly from Google Ads API, ensure your Google Ads Customer ID is linked or configured in your workspace settings.
+                Google Ads returned no campaigns for the last 30 days.
               </p>
             </div>
           ) : (
-            <>
-              {/* Summary Metrics */}
-              <div className="grid gap-3 sm:grid-cols-4 animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both]" style={{ animationDelay: "50ms" }}>
-                <MetricCard label="Total Live Spend" value={`$${totalSpend.toLocaleString()}`} change="+12.4% vs last period" positive />
-                <MetricCard label="Live Conversions" value={totalConversions.toLocaleString()} change="+8.1% vs target" positive />
-                <MetricCard label="Avg ROAS (Live)" value={`${avgRoas}×`} benchmark="Dopa Brain Target: 3.2×" />
-                <MetricCard label="Live CTR vs Predicted" value={`${avgCtr}%`} benchmark="Predicted iCTR: 3.65%" />
+            <div className="space-y-4 animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both]">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h3 className="text-[14px] font-medium text-white">
+                  Live Google Ads Campaigns ({filteredCampaigns.length})
+                </h3>
+                <div className="flex items-center gap-1.5 overflow-x-auto rounded-lg border border-white/[0.06] bg-white/[0.02] p-1">
+                  {filters.map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => setFilter(option)}
+                      className={`rounded-md px-2.5 py-1 text-[12px] transition-colors ${
+                        filter === option
+                          ? "bg-white/10 font-medium text-white"
+                          : "text-secondary hover:text-white"
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Main Campaign Performance Section */}
-              <div className="space-y-4 animate-[stagger-in_400ms_cubic-bezier(0.23,1,0.32,1)_both]" style={{ animationDelay: "100ms" }}>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <h3 className="text-[14px] font-medium text-white">Live Google Ads Campaigns ({filteredCampaigns.length})</h3>
-
-                  {/* Filter Pills */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto rounded-lg border border-white/6 bg-white/1.5 p-1">
-                    {["All", "Performance Max", "YouTube", "Search", "Display"].map((type) => (
-                      <button
-                        key={type}
-                        onClick={() => setFilterType(type)}
-                        className={`rounded-md px-2.5 py-1 text-[12px] transition-colors ${
-                          filterType === type
-                            ? "bg-white/10 font-medium text-white"
-                            : "text-secondary hover:text-white"
-                        }`}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Campaign Table */}
-                <div className="overflow-hidden rounded-xl border border-white/6 bg-white/2">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-[13px]">
-                      <thead>
-                        <tr className="border-b border-white/6 bg-white/2 text-[11px] font-medium uppercase tracking-wider text-tertiary">
-                          <th className="px-4 py-3">Campaign Name & Channel</th>
-                          <th className="px-4 py-3">Live Spend</th>
-                          <th className="px-4 py-3">Live CTR</th>
-                          <th className="px-4 py-3">Dopa Predicted iCTR</th>
-                          <th className="px-4 py-3">Live ROAS</th>
-                          <th className="px-4 py-3">Status</th>
-                          <th className="px-4 py-3 text-right">Brain Score</th>
+              <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.015]">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-[13px]">
+                    <thead>
+                      <tr className="border-b border-white/[0.06] bg-white/[0.02] text-[11px] font-medium uppercase tracking-wider text-tertiary">
+                        <th className="px-4 py-3">Campaign & channel</th>
+                        <th className="px-4 py-3">Spend</th>
+                        <th className="px-4 py-3">CTR</th>
+                        <th className="px-4 py-3">Conversions</th>
+                        <th className="px-4 py-3">ROAS</th>
+                        <th className="px-4 py-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.04]">
+                      {filteredCampaigns.map((campaign) => (
+                        <tr
+                          key={campaign.id}
+                          className="transition-colors hover:bg-white/[0.02]"
+                        >
+                          <td className="px-4 py-3.5">
+                            <div className="font-medium text-white">
+                              {campaign.name}
+                            </div>
+                            <div className="mt-0.5 text-[11px] text-tertiary">
+                              {humanizeChannel(campaign.channelType)}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5 font-medium text-white">
+                            {new Intl.NumberFormat("en-US", {
+                              style: "currency",
+                              currency,
+                              maximumFractionDigits: 2,
+                            }).format(campaign.spend)}
+                          </td>
+                          <td className="px-4 py-3.5 font-medium text-white">
+                            {campaign.ctr.toFixed(2)}%
+                          </td>
+                          <td className="px-4 py-3.5 text-white">
+                            {campaign.conversions.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3.5 font-medium text-emerald-400">
+                            {campaign.roas.toFixed(2)}×
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                              {campaign.status}
+                            </span>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/4">
-                        {filteredCampaigns.map((cmp) => {
-                          const isAnalyzing = analyzingCmp === cmp.id;
-                          return (
-                            <tr key={cmp.id} className="transition-colors hover:bg-white/2">
-                              <td className="px-4 py-3.5">
-                                <div className="font-medium text-white">{cmp.name}</div>
-                                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-tertiary">
-                                  <span className="rounded bg-white/6 px-1.5 py-0.5 text-secondary">{cmp.type}</span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3.5 font-medium text-white">${cmp.spend.toLocaleString()}</td>
-                              <td className="px-4 py-3.5 font-medium text-white">{cmp.actualCtr}%</td>
-                              <td className="px-4 py-3.5">
-                                <span className="text-secondary">{cmp.predictedCtr}%</span>
-                              </td>
-                              <td className="px-4 py-3.5 font-medium text-emerald-400">{cmp.roas}×</td>
-                              <td className="px-4 py-3.5">
-                                <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400">
-                                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                                  {cmp.status}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3.5 text-right">
-                                <button
-                                  onClick={() => handleAnalyzeWithBrain(cmp.id, cmp.name)}
-                                  disabled={isAnalyzing}
-                                  className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2.5 py-1 text-[12px] text-secondary transition-[border-color,color] hover:border-white/20 hover:text-white active:scale-[0.97] disabled:opacity-50"
-                                >
-                                  {isAnalyzing ? (
-                                    <>
-                                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                                      Encoding…
-                                    </>
-                                  ) : (
-                                    <>
-                                      <svg className="h-3 w-3 text-brand" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                        <path d="M8 2v12M8 4c-1.5-1.5-4-1-4 1.5S6 8 8 8c-2 0-4.5.5-4 3s2.5 3 4 1.5" />
-                                      </svg>
-                                      Re-score Creative
-                                    </>
-                                  )}
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </>
       )}
@@ -429,29 +464,120 @@ export function GoogleAdsTab() {
   );
 }
 
-function MetricCard({
-  label,
-  value,
-  change,
-  benchmark,
-  positive,
+function GoogleMark() {
+  return (
+    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-500/10 text-blue-400">
+      <svg className="h-3.5 w-3.5 fill-current" viewBox="0 0 24 24">
+        <path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972-3.332 0-6.033-2.701-6.033-6.032s2.701-6.032 6.033-6.032c1.498 0 2.866.549 3.921 1.453l2.814-2.814C17.503 2.988 15.139 2 12.545 2 6.721 2 2 6.721 2 12.545S6.721 23.09 12.545 23.09c6.627 0 10.5-4.664 10.5-10.732 0-.663-.067-1.309-.172-1.921h-10.328z" />
+      </svg>
+    </span>
+  );
+}
+
+function ConnectionBadge({ state }: { state: ConnectionState }) {
+  const connected = state === "connected";
+  const label =
+    state === "loading"
+      ? "Checking"
+      : connected
+        ? "Campaign data connected"
+        : state === "configuration_required"
+          ? "Configuration needed"
+          : "Not connected";
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${
+        connected
+          ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+          : "border-amber-500/20 bg-amber-500/10 text-amber-400"
+      }`}
+    >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          connected ? "bg-emerald-400" : "bg-amber-400"
+        }`}
+      />
+      {label}
+    </span>
+  );
+}
+
+function ConnectButton({
+  isConnecting,
+  onClick,
+  large = false,
 }: {
-  label: string;
-  value: string;
-  change?: string;
-  benchmark?: string;
-  positive?: boolean;
+  isConnecting: boolean;
+  onClick: () => void;
+  large?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-white/6 bg-white/2 p-4 transition-colors hover:border-white/10">
-      <div className="text-[11px] font-medium uppercase tracking-wider text-tertiary">{label}</div>
-      <div className="mt-1.5 text-[24px] font-semibold tracking-[-0.03em] text-white">{value}</div>
-      {change && (
-        <div className={`mt-1 text-[11px] ${positive ? "text-emerald-400" : "text-amber-400"}`}>
-          {change}
-        </div>
+    <button
+      onClick={onClick}
+      disabled={isConnecting}
+      className={`inline-flex items-center gap-2.5 rounded-lg bg-white font-medium text-black shadow-lg transition-all hover:bg-white/90 active:scale-[0.97] disabled:cursor-wait disabled:opacity-70 ${
+        large ? "mt-6 px-5 py-2.5 text-[14px]" : "px-4 py-2 text-[13px]"
+      }`}
+    >
+      {isConnecting ? (
+        <>
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/30 border-t-black" />
+          Redirecting to Google…
+        </>
+      ) : (
+        <>
+          <GoogleMark />
+          Connect with Google
+        </>
       )}
-      {benchmark && <div className="mt-1 text-[11px] text-secondary">{benchmark}</div>}
+    </button>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.015] px-6 py-20 text-center">
+      <span className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+      <p className="mt-4 text-[13px] text-secondary">
+        Checking Google Ads authorization and campaign data…
+      </p>
+    </div>
+  );
+}
+
+function EmptyState({
+  title,
+  body,
+  action,
+}: {
+  title: string;
+  body: string;
+  action: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.01] px-6 py-16 text-center animate-fade-in">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400">
+        <GoogleMark />
+      </div>
+      <h3 className="mt-4 text-[16px] font-medium text-white">{title}</h3>
+      <p className="mt-1.5 max-w-[480px] text-[13px] leading-relaxed text-secondary">
+        {body}
+      </p>
+      {action}
+    </div>
+  );
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 transition-colors hover:border-white/10">
+      <div className="text-[11px] font-medium uppercase tracking-wider text-tertiary">
+        {label}
+      </div>
+      <div className="mt-1.5 text-[24px] font-semibold tracking-[-0.03em] text-white">
+        {value}
+      </div>
     </div>
   );
 }
