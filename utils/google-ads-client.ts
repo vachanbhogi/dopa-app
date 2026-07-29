@@ -1,11 +1,11 @@
-/**
- * Google Ads API Client Utility for Dopa
- * Uses Google Ads REST API v16/v17 to fetch live campaign performance telemetry.
- */
+const GOOGLE_ADS_API_VERSION = "v25";
+const GOOGLE_ADS_API_ORIGIN = "https://googleads.googleapis.com";
+const GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
 export interface GoogleAdsCredentials {
-  customerId: string; // e.g. "1234567890" (without hyphens)
+  customerId: string;
   developerToken: string;
+  loginCustomerId?: string;
   clientId?: string;
   clientSecret?: string;
   refreshToken?: string;
@@ -17,35 +17,90 @@ export interface LiveCampaignData {
   name: string;
   status: string;
   channelType: string;
-  spend: number; // calculated from cost_micros / 1_000_000
+  spend: number;
   impressions: number;
   clicks: number;
-  ctr: number; // percentage
+  ctr: number;
   conversions: number;
   conversionsValue: number;
   roas: number;
 }
 
+export type GoogleAdsErrorCode =
+  | "configuration_required"
+  | "oauth_required"
+  | "access_denied"
+  | "google_ads_api_error"
+  | "network_error";
+
 export interface GoogleAdsApiResponse {
   success: boolean;
   configured: boolean;
-  source: "live_api" | "demo_fallback";
+  source: "live_api" | "unavailable";
+  code?: GoogleAdsErrorCode;
   error?: string;
+  requestId?: string;
   accountDetails?: {
     customerId: string;
     descriptiveName?: string;
+    currencyCode?: string;
+    timeZone?: string;
   };
   campaigns: LiveCampaignData[];
-  rawResponse?: unknown;
 }
 
-/**
- * Refresh OAuth 2.0 Access Token using Google OAuth Endpoint
- */
+type GoogleAdsStreamRow = {
+  campaign?: {
+    id?: string | number;
+    name?: string;
+    status?: string;
+    advertisingChannelType?: string;
+    advertising_channel_type?: string;
+  };
+  customer?: {
+    descriptiveName?: string;
+    descriptive_name?: string;
+    currencyCode?: string;
+    currency_code?: string;
+    timeZone?: string;
+    time_zone?: string;
+  };
+  metrics?: {
+    costMicros?: string | number;
+    cost_micros?: string | number;
+    impressions?: string | number;
+    clicks?: string | number;
+    ctr?: string | number;
+    conversions?: string | number;
+    conversionsValue?: string | number;
+    conversions_value?: string | number;
+  };
+};
+
+type GoogleAdsStreamBatch = {
+  results?: GoogleAdsStreamRow[];
+};
+
+function cleanCustomerId(customerId: string): string {
+  return customerId.replaceAll("-", "").trim();
+}
+
+function errorMessage(body: string): string | undefined {
+  try {
+    const parsed = JSON.parse(body) as
+      | { error?: { message?: string } }
+      | Array<{ error?: { message?: string } }>;
+    const error = Array.isArray(parsed) ? parsed[0]?.error : parsed.error;
+    return typeof error?.message === "string" ? error.message : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function refreshGoogleAccessToken(
   clientId: string,
   clientSecret: string,
-  refreshToken: string
+  refreshToken: string,
 ): Promise<string> {
   const params = new URLSearchParams({
     client_id: clientId,
@@ -54,72 +109,132 @@ export async function refreshGoogleAccessToken(
     grant_type: "refresh_token",
   });
 
-  const res = await fetch("https://oauth2.googleapis.com/token", {
+  const response = await fetch(GOOGLE_OAUTH_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: params.toString(),
+    cache: "no-store",
   });
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Google OAuth Token Refresh Failed (${res.status}): ${errText}`);
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(
+      errorMessage(body) ??
+        `Google OAuth token refresh failed with status ${response.status}.`,
+    );
   }
 
-  const data = await res.json();
+  const data = (await response.json()) as { access_token?: unknown };
+  if (typeof data.access_token !== "string" || !data.access_token) {
+    throw new Error("Google OAuth token refresh returned no access token.");
+  }
+
   return data.access_token;
 }
 
-/**
- * Fetch live campaign telemetry from Google Ads REST API
- */
+function campaignFromRow(row: GoogleAdsStreamRow): LiveCampaignData {
+  const campaign = row.campaign ?? {};
+  const metrics = row.metrics ?? {};
+  const costMicros = Number(metrics.costMicros ?? metrics.cost_micros ?? 0);
+  const spend = Number((costMicros / 1_000_000).toFixed(2));
+  const conversionsValue = Number(
+    Number(
+      metrics.conversionsValue ?? metrics.conversions_value ?? 0,
+    ).toFixed(2),
+  );
+
+  return {
+    id: String(campaign.id ?? "unknown"),
+    name: campaign.name || "Unnamed Campaign",
+    status: campaign.status || "UNKNOWN",
+    channelType:
+      campaign.advertisingChannelType ??
+      campaign.advertising_channel_type ??
+      "UNKNOWN",
+    spend,
+    impressions: Number(metrics.impressions ?? 0),
+    clicks: Number(metrics.clicks ?? 0),
+    ctr: Number((Number(metrics.ctr ?? 0) * 100).toFixed(2)),
+    conversions: Number(Number(metrics.conversions ?? 0).toFixed(1)),
+    conversionsValue,
+    roas:
+      spend > 0 ? Number((conversionsValue / spend).toFixed(2)) : 0,
+  };
+}
+
 export async function fetchLiveGoogleAdsData(
-  creds: GoogleAdsCredentials
+  credentials: GoogleAdsCredentials,
 ): Promise<GoogleAdsApiResponse> {
-  const cleanCustomerId = creds.customerId.replace(/-/g, "").trim();
-  if (!cleanCustomerId || !creds.developerToken) {
+  const customerId = cleanCustomerId(credentials.customerId);
+  const developerToken = credentials.developerToken.trim();
+
+  if (!customerId || !developerToken) {
     return {
       success: false,
       configured: false,
-      source: "demo_fallback",
-      error: "Missing Customer ID or Developer Token",
+      source: "unavailable",
+      code: "configuration_required",
+      error: "Google Ads customer ID and developer token are required.",
       campaigns: [],
     };
   }
 
-  let token = creds.accessToken;
-  if (!token && creds.clientId && creds.clientSecret && creds.refreshToken) {
+  let accessToken = credentials.accessToken?.trim();
+  if (
+    !accessToken &&
+    credentials.clientId &&
+    credentials.clientSecret &&
+    credentials.refreshToken
+  ) {
     try {
-      token = await refreshGoogleAccessToken(
-        creds.clientId,
-        creds.clientSecret,
-        creds.refreshToken
+      accessToken = await refreshGoogleAccessToken(
+        credentials.clientId,
+        credentials.clientSecret,
+        credentials.refreshToken,
       );
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
+    } catch (error: unknown) {
       return {
         success: false,
         configured: true,
-        source: "demo_fallback",
-        error: `OAuth Authentication Error: ${msg}`,
+        source: "unavailable",
+        code: "oauth_required",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Google OAuth token refresh failed.",
         campaigns: [],
       };
     }
   }
 
-  if (!token) {
+  if (!accessToken) {
     return {
       success: false,
       configured: true,
-      source: "demo_fallback",
-      error: "No Access Token available. Please provide an Access Token or Client ID/Secret/Refresh Token.",
+      source: "unavailable",
+      code: "oauth_required",
+      error: "Connect Google Ads to authorize campaign access.",
       campaigns: [],
     };
   }
 
-  // Google Ads REST API v16 searchStream query
-  const url = `https://googleads.googleapis.com/v16/customers/${cleanCustomerId}/googleAds:searchStream`;
-  const gaqlQuery = `
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+    "developer-token": developerToken,
+  };
+  const loginCustomerId = cleanCustomerId(
+    credentials.loginCustomerId ?? "",
+  );
+  if (loginCustomerId) {
+    headers["login-customer-id"] = loginCustomerId;
+  }
+
+  const query = `
     SELECT
+      customer.descriptive_name,
+      customer.currency_code,
+      customer.time_zone,
       campaign.id,
       campaign.name,
       campaign.status,
@@ -132,83 +247,80 @@ export async function fetchLiveGoogleAdsData(
       metrics.conversions_value
     FROM campaign
     WHERE segments.date DURING LAST_30_DAYS
+    ORDER BY metrics.cost_micros DESC
     LIMIT 50
   `.trim();
 
   try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "developer-token": creds.developerToken.trim(),
-        Authorization: `Bearer ${token.trim()}`,
+    const response = await fetch(
+      `${GOOGLE_ADS_API_ORIGIN}/${GOOGLE_ADS_API_VERSION}/customers/${customerId}/googleAds:searchStream`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ query }),
+        cache: "no-store",
       },
-      body: JSON.stringify({ query: gaqlQuery }),
-    });
+    );
+    const requestId =
+      response.headers.get("request-id") ??
+      response.headers.get("google-ads-request-id") ??
+      undefined;
 
-    if (!res.ok) {
-      const errBody = await res.text();
+    if (!response.ok) {
+      const body = await response.text();
+      const message =
+        errorMessage(body) ??
+        `Google Ads API request failed with status ${response.status}.`;
+      const code: GoogleAdsErrorCode =
+        response.status === 401
+          ? "oauth_required"
+          : response.status === 403
+            ? "access_denied"
+            : "google_ads_api_error";
+
       return {
         success: false,
         configured: true,
-        source: "demo_fallback",
-        error: `Google Ads API Error (${res.status}): ${errBody}`,
+        source: "unavailable",
+        code,
+        error: message,
+        requestId,
         campaigns: [],
       };
     }
 
-    const streamData = await res.json();
-    const campaigns: LiveCampaignData[] = [];
-
-    // Parse searchStream result chunks
-    if (Array.isArray(streamData)) {
-      for (const batch of streamData) {
-        if (batch.results && Array.isArray(batch.results)) {
-          for (const row of batch.results) {
-            const cmp = row.campaign || {};
-            const m = row.metrics || {};
-            const costMicros = Number(m.costMicros || m.cost_micros || 0);
-            const spend = +(costMicros / 1_000_000).toFixed(2);
-            const clicks = Number(m.clicks || 0);
-            const impressions = Number(m.impressions || 0);
-            const ctr = +(Number(m.ctr || 0) * 100).toFixed(2);
-            const conversions = +(Number(m.conversions || 0)).toFixed(1);
-            const conversionsValue = +(Number(m.conversionsValue || m.conversions_value || 0)).toFixed(2);
-            const roas = spend > 0 ? +(conversionsValue / spend).toFixed(2) : 0;
-
-            campaigns.push({
-              id: String(cmp.id || `cmp-${Math.random().toString(36).substring(2, 7)}`),
-              name: cmp.name || "Unnamed Campaign",
-              status: cmp.status || "ENABLED",
-              channelType: cmp.advertisingChannelType || cmp.advertising_channel_type || "SEARCH",
-              spend,
-              impressions,
-              clicks,
-              ctr,
-              conversions,
-              conversionsValue,
-              roas,
-            });
-          }
-        }
-      }
-    }
+    const stream = (await response.json()) as GoogleAdsStreamBatch[];
+    const rows = Array.isArray(stream)
+      ? stream.flatMap((batch) =>
+          Array.isArray(batch.results) ? batch.results : [],
+        )
+      : [];
+    const customer = rows[0]?.customer;
 
     return {
       success: true,
       configured: true,
       source: "live_api",
-      accountDetails: { customerId: cleanCustomerId },
-      campaigns,
-      rawResponse: streamData,
+      requestId,
+      accountDetails: {
+        customerId,
+        descriptiveName:
+          customer?.descriptiveName ?? customer?.descriptive_name,
+        currencyCode: customer?.currencyCode ?? customer?.currency_code,
+        timeZone: customer?.timeZone ?? customer?.time_zone,
+      },
+      campaigns: rows.map(campaignFromRow),
     };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
+  } catch (error: unknown) {
     return {
       success: false,
       configured: true,
-      source: "demo_fallback",
-      error: `Network / API Error: ${msg}`,
+      source: "unavailable",
+      code: "network_error",
+      error:
+        error instanceof Error
+          ? `Could not reach Google Ads: ${error.message}`
+          : "Could not reach Google Ads.",
       campaigns: [],
     };
   }
