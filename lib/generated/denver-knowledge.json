@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "sourceHash": "f4ea299fc4abafcf",
+  "sourceHash": "59b00bc88488263f",
   "routes": [
     "/",
     "/dashboard",
@@ -571,6 +571,19 @@
       ]
     },
     {
+      "id": "components-dashboard-googleadsonboarding-tsx",
+      "area": "Google Ads Onboarding",
+      "source": "components/dashboard/GoogleAdsOnboarding.tsx",
+      "text": [
+        "Google said:",
+        "Ask Denver to guide me",
+        "Read-only means Dopa cannot launch campaigns, edit budgets, or trigger ad spend.",
+        "What needs to happen",
+        "Google Ads access path",
+        "Complete"
+      ]
+    },
+    {
       "id": "components-dashboard-googleadstab-tsx",
       "area": "Google Ads Tab",
       "source": "components/dashboard/GoogleAdsTab.tsx",
@@ -580,14 +593,12 @@
         "YouTube",
         "Search",
         "Display",
+        "consent",
         "Google Ads Integration",
         "Live campaign performance from the last 30 days.",
         "Refresh",
         "Disconnect Ads",
-        "Check configuration",
         "Dismiss notice",
-        "Google Ads configuration required",
-        "Check again",
         "Account:",
         "Dopa session:",
         "Google Ads API v25",
@@ -714,6 +725,37 @@
         "Your Dopa login and profile details.",
         "Name",
         "Email"
+      ]
+    },
+    {
+      "id": "components-dashboard-google-ads-onboarding-content-tsx",
+      "area": "Google Ads Onboarding Content",
+      "source": "components/dashboard/google-ads-onboarding-content.tsx",
+      "text": [
+        "Sign in with Google",
+        "Approve read-only Google Ads access for Dopa.",
+        "Link customer and manager",
+        "Your customer account holds campaigns. Your manager account holds API access. The customer account must accept the manager’s link request.",
+        "Confirm production API access",
+        "The manager account needs Basic or Standard API access. Test Account Access cannot read a real Ads account.",
+        "This needs a Dopa configuration update.",
+        "Your Google account is not the problem. A Dopa administrator needs to finish the server-side Google Ads credentials before anyone can connect.",
+        "Why does Google Ads say configuration required, and what does the Dopa administrator need to check?",
+        "Google Ads server credentials",
+        "Customer ID, manager ID, OAuth credentials, developer token, and secure token storage must be configured together.",
+        "Google sign-in worked. Account access still needs setup.",
+        "Signing in proves who you are. It does not automatically connect the Google Ads customer account that owns your campaigns to the manager account Dopa uses for API access.",
+        "Google sign-in worked but campaign access is denied. Walk me through linking my Google Ads customer account to the manager account and checking Basic API access.",
+        "Google returned an Ads access token to Dopa.",
+        "Your setup may be fine. Google Ads did not answer.",
+        "Try the connection check again before changing account permissions. If it keeps failing, Denver can help separate a temporary API issue from an account-access issue.",
+        "Dopa could not load Google Ads. Help me check whether this is a temporary API problem or an account-access problem.",
+        "Retry the account check",
+        "A temporary Google Ads response should not require reconnecting.",
+        "Review account access",
+        "If the retry is denied, confirm the customer-manager link and the developer token’s access level.",
+        "Dopa only reads campaign performance. It cannot create ads, change budgets, or spend money.",
+        "Walk me through connecting Google Ads to Dopa. Explain the customer account, manager account, and read-only permissions."
       ]
     },
     {
